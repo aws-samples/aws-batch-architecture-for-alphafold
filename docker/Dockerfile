@@ -57,7 +57,8 @@ RUN conda update -qy conda \
       cudatoolkit==${CUDA_VERSION} \
       pdbfixer \
       pip \
-      python=3.7
+      python=3.7 \
+      awscli
 
 COPY . /app/alphafold
 RUN wget -q -P /app/alphafold/alphafold/common/ \
