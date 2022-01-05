@@ -350,6 +350,9 @@ def predict_structure(
 
 
 def main(argv):
+    logging.info(f"Inside main argv are {argv}")
+    logging.info(f"Inside main FLAGS are {FLAGS}")
+
     if len(argv) > 1:
         raise app.UsageError("Too many command-line arguments.")
 
@@ -565,5 +568,5 @@ if __name__ == "__main__":
             "obsolete_pdbs_path",
         ]
     )
-
+    logging.info(f"outside app.run flags are {flags}")
     app.run(main)

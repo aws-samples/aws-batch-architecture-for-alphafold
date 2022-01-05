@@ -237,7 +237,6 @@ def main(argv):
     logging.info("Creating docker client")
     client = docker.from_env()
     logging.info("Submitting run command")
-    logging.info(f"s3_name value is {FLAGS.s3_name}")
     logging.info(F"Command args are {command_args}")
     container = client.containers.run(
         image=FLAGS.docker_image_name,
