@@ -559,7 +559,8 @@ if __name__ == "__main__":
     flags.mark_flags_as_required(
         [
             # "fasta_paths",
-            "s3_urls",
+            "s3_bucket",
+            "s3_keys",
             "output_dir",
             "data_dir",
             "uniref90_database_path",
