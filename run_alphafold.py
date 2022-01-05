@@ -350,8 +350,6 @@ def predict_structure(
 
 
 def main(argv):
-    logging.info(f"Inside main argv are {argv}")
-    logging.info(f"Inside main FLAGS are {FLAGS}")
 
     if len(argv) > 1:
         raise app.UsageError("Too many command-line arguments.")
@@ -530,7 +528,7 @@ def main(argv):
     if FLAGS.s3_name is not None:
         local_files = os.listdir(FLAGS.output_dir)
         for key in local_files:
-            print(f"Uploading {key} to {FLAGS.s3_name}")
+            logging.info(f"Uploading {key} to {FLAGS.s3_name}")
             file_path = os.path.join(FLAGS.output_dir, key)
             s3.upload_file(file_path, FLAGS.s3_name, key)
 
@@ -539,8 +537,8 @@ def main(argv):
 
 
 def _list_s3_obj_keys_by_extension(
-    bucket: str, extensions: tuple[str] = (""), s3: object = boto3.client("s3")
-) -> list[str]:
+    bucket: str, extensions: tuple = (""), s3: object = boto3.client("s3")
+) -> list:
 
     """
     Return a list of object keys from a S3 bucket with the specified
@@ -568,6 +566,4 @@ if __name__ == "__main__":
             "obsolete_pdbs_path",
         ]
     )
-    print(f"outside app.run flags are {flags}")
-    logging.info(f"outside app.run flags are {flags}")
     app.run(main)

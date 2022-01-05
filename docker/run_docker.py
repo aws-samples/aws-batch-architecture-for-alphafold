@@ -60,7 +60,7 @@ flags.DEFINE_string(
     "and template databases. Set to the target of download_all_databases.sh.",
 )
 flags.DEFINE_string(
-    "docker_image_name", "alphafold", "Name of the AlphaFold Docker image."
+    "docker_image_name", "aws-alphafold", "Name of the AlphaFold Docker image."
 )
 flags.DEFINE_string(
     "max_template_date",
@@ -237,7 +237,6 @@ def main(argv):
     logging.info("Creating docker client")
     client = docker.from_env()
     logging.info("Submitting run command")
-    logging.info(F"Command args are {command_args}")
     container = client.containers.run(
         image=FLAGS.docker_image_name,
         command=command_args,
