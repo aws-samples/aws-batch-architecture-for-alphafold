@@ -354,15 +354,15 @@ def main(argv):
     if len(argv) > 1:
         raise app.UsageError("Too many command-line arguments.")
 
-    # --------- Added code here to download .fasta and .pkl files from s3 -----------
+    # --------- Added code here to download .fasta and .fa files from s3 to cwd ----
     if FLAGS.s3_name is not None:
         s3 = boto3.client("s3")
         keys = _list_s3_obj_keys_by_extension(
-            bucket=FLAGS.s3_name, extensions=(".fa", ".fasta", ".pkl"), s3=s3
+            bucket=FLAGS.s3_name, extensions=(".fa", ".fasta",), s3=s3
         )
         for key in keys:
             print(f"Downloading {key} from s3://{FLAGS.s3_name}")
-            s3.download_file(FLAGS.s3_name, key, os.path.join(FLAGS.output_dir, key))
+            s3.download_file(FLAGS.s3_name, key, os.path.join(os.getcwd(), key))
     # ------------------------------------------------------------------------------
 
     for tool_name in (
@@ -526,14 +526,9 @@ def main(argv):
 
     # ---- Add code here to upload results back to s3 -----------------------
     if FLAGS.s3_name is not None:
-        local_files = os.listdir(FLAGS.output_dir)
-        for key in local_files:
-            logging.info(f"Uploading {key} to {FLAGS.s3_name}")
-            file_path = os.path.join(FLAGS.output_dir, key)
-            s3.upload_file(file_path, FLAGS.s3_name, key)
-
-
-# ----------------------------
+        logging.info(f"Uploading contents of {FLAGS.output_dir} to {FLAGS.s3_name}")
+        os.system(f"aws s3 cp {FLAGS.output_dir} {FLAGS.s3_name} --recursive")
+    # ----------------------------
 
 
 def _list_s3_obj_keys_by_extension(
