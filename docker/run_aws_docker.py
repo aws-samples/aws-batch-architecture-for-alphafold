@@ -41,14 +41,15 @@ flags.DEFINE_string(
 #     "separated by commas. All FASTA paths must have a unique basename as the "
 #     "basename is used to name the output directories for each prediction.",
 # )
-flags.DEFINE_list(
-    "s3_urls", 
+flags.DEFINE_string(
+    "s3_bucket", 
     None, 
-    "S3 URLs to FASTA files, each containing a prediction "
-    "target that will be folded one after another. If a FASTA file contains "
-    "multiple sequences, then it will be folded as a multimer. Paths should be "
-    "separated by commas. All FASTA paths must have a unique basename as the "
-    "basename is used to name the output directories for each prediction.",
+    "Name of S3 bucket (without the s3://) used for file storage.",
+)
+flags.DEFINE_list(
+    "s3_keys", 
+    None, 
+    "Name of fasta files in S3 bucket.",
 )
 flags.DEFINE_list(
     "is_prokaryote_list",
@@ -109,7 +110,7 @@ FLAGS = flags.FLAGS
 
 _ROOT_MOUNT_DIRECTORY = "/mnt/"
 
-def dock(mount_name: str, path: str) -> Tuple[types.Mount, str]:
+def _create_mount(mount_name: str, path: str) -> Tuple[types.Mount, str]:
     path = os.path.abspath(path)
     source_path = os.path.dirname(path)
     target_path = os.path.join(_ROOT_MOUNT_DIRECTORY, mount_name)
@@ -187,7 +188,8 @@ def main(argv):
     #     target_fasta_paths.append(target_path)
     # command_args.append(f'--fasta_paths={",".join(target_fasta_paths)}')
 
-    command_args.append(f'--s3_urls={FLAGS.s3_urls}')
+    command_args.append(f'--s3_bucket={FLAGS.s3_bucket}')
+    command_args.append(f'--s3_keys={FLAGS.s3_keys}')
 
     database_paths = [
         ("uniref90_database_path", uniref90_database_path),
@@ -268,7 +270,8 @@ if __name__ == "__main__":
         [
             "data_dir",
             # "fasta_paths",
-            "s3_urls",
+            "s3_bucket",
+            "s3_keys",
             "max_template_date",
         ]
     )

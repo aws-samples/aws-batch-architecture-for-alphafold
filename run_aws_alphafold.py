@@ -55,14 +55,15 @@ logging.set_verbosity(logging.INFO)
 #     "separated by commas. All FASTA paths must have a unique basename as the "
 #     "basename is used to name the output directories for each prediction.",
 # )
-flags.DEFINE_list(
-    "s3_urls", 
+flags.DEFINE_string(
+    "s3_bucket", 
     None, 
-    "S3 URLs to FASTA files, each containing a prediction "
-    "target that will be folded one after another. If a FASTA file contains "
-    "multiple sequences, then it will be folded as a multimer. Paths should be "
-    "separated by commas. All FASTA paths must have a unique basename as the "
-    "basename is used to name the output directories for each prediction.",
+    "Name of S3 bucket (without the s3://) used for file storage.",
+)
+flags.DEFINE_list(
+    "s3_keys", 
+    None, 
+    "Name of fasta files in S3 bucket.",
 )
 flags.DEFINE_list(
     "is_prokaryote_list",
@@ -400,14 +401,14 @@ def main(argv):
         num_ensemble = 1
 
     # Check for duplicate FASTA file names.
-    fasta_names = [pathlib.Path(p).stem for p in FLAGS.s3_urls]
-    if len(fasta_names) != len(set(fasta_names)):
+    # fasta_names = [pathlib.Path(p).stem for p in FLAGS.s3_keys]
+    if len(FLAGS.s3_keys) != len(set(FLAGS.s3_keys)):
         raise ValueError("All FASTA paths must have a unique basename.")
 
     # Check that is_prokaryote_list has same number of elements as fasta_paths,
     # and convert to bool.
     if FLAGS.is_prokaryote_list:
-        if len(FLAGS.is_prokaryote_list) != len(FLAGS.s3_urls):
+        if len(FLAGS.is_prokaryote_list) != len(FLAGS.s3_keys):
             raise ValueError(
                 "--is_prokaryote_list must either be omitted or match "
                 "length of --fasta_paths."
@@ -507,14 +508,13 @@ def main(argv):
 
     # Predict structure for each of the sequences.
     s3 = boto3.client("s3")
-    logging.info(FLAGS.s3_urls)
-    for i, fasta_path in enumerate(FLAGS.s3_urls):
-        bucket_name = pathlib.Path(fasta_path).parts[1]
-        key = pathlib.Path(fasta_path).name
+    logging.info(FLAGS.s3_bucket)
+    logging.info(FLAGS.s3_keys)
+    for i, key in enumerate(FLAGS.s3_keys):
         local_fasta_path = os.path.join(os.getcwd(), key)
-        logging.info(f"Downloading {key} from {bucket_name} to {local_fasta_path}")
+        logging.info(f"Downloading {key} from {FLAGS.s3_bucket} to {local_fasta_path}")
         try:
-            s3.download_file(bucket_name, key, local_fasta_path)
+            s3.download_file(FLAGS.s3_bucket, key, local_fasta_path)
         except:
             next()
         is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
