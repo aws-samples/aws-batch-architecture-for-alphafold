@@ -97,6 +97,7 @@ flags.DEFINE_boolean(
 )
 flags.DEFINE_string("s3_name", None, "S3 bucket name for input/output data.")
 
+
 FLAGS = flags.FLAGS
 
 _ROOT_MOUNT_DIRECTORY = "/mnt/"
@@ -220,10 +221,14 @@ def main(argv):
             f"--model_preset={FLAGS.model_preset}",
             f"--benchmark={FLAGS.benchmark}",
             f"--use_precomputed_msas={FLAGS.use_precomputed_msas}",
-            f"--s3_name={FLAGS.s3_name}",
             "--logtostderr",
         ]
     )
+    
+    if FLAGS.s3_name is not None:
+        command_args.append(
+            f"--s3_name={FLAGS.s3_name}"
+        )
 
     if FLAGS.is_prokaryote_list:
         command_args.append(
