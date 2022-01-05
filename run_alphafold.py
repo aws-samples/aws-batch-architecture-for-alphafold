@@ -568,5 +568,6 @@ if __name__ == "__main__":
             "obsolete_pdbs_path",
         ]
     )
+    print(f"outside app.run flags are {flags}")
     logging.info(f"outside app.run flags are {flags}")
     app.run(main)
