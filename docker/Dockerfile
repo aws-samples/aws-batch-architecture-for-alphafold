@@ -82,6 +82,6 @@ RUN patch -p0 < /app/alphafold/docker/openmm.patch
 WORKDIR /app/alphafold
 RUN echo $'#!/bin/bash\n\
 ldconfig\n\
-python /app/alphafold/run_alphafold.py "$@"' > /app/run_alphafold.sh \
-  && chmod +x /app/run_alphafold.sh
-ENTRYPOINT ["/app/run_alphafold.sh"]
+python /app/alphafold/run_aws_alphafold.py "$@"' > /app/run_aws_alphafold.sh \
+  && chmod +x /app/run_aws_alphafold.sh
+ENTRYPOINT ["/app/run_aws_alphafold.sh"]
