@@ -509,7 +509,7 @@ def main(argv):
     s3 = boto3.client("s3")
     for i, fasta_path in enumerate(FLAGS.s3_urls):
         bucket_name = pathlib.Path(fasta_path).parts[1]
-        key = pathlib.Path(fasta_path).parts[2]
+        key = pathlib.Path(fasta_path).name
         local_fasta_path = os.path.join(os.getcwd(), key)
         logging.info(f"Downloading {key} from {bucket_name} to {local_fasta_path}")
         try:
