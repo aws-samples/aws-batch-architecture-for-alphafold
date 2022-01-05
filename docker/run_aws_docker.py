@@ -32,10 +32,19 @@ flags.DEFINE_string(
     "all",
     "Comma separated list of devices to pass to NVIDIA_VISIBLE_DEVICES.",
 )
+# flags.DEFINE_list(
+#     "fasta_paths",
+#     None,
+#     "Paths to FASTA files, each containing a prediction "
+#     "target that will be folded one after another. If a FASTA file contains "
+#     "multiple sequences, then it will be folded as a multimer. Paths should be "
+#     "separated by commas. All FASTA paths must have a unique basename as the "
+#     "basename is used to name the output directories for each prediction.",
+# )
 flags.DEFINE_list(
-    "fasta_paths",
-    None,
-    "Paths to FASTA files, each containing a prediction "
+    "s3_urls", 
+    None, 
+    "S3 URLs to FASTA files, each containing a prediction "
     "target that will be folded one after another. If a FASTA file contains "
     "multiple sequences, then it will be folded as a multimer. Paths should be "
     "separated by commas. All FASTA paths must have a unique basename as the "
@@ -95,15 +104,12 @@ flags.DEFINE_boolean(
     "Whether to read MSAs that have been written to disk. WARNING: This will "
     "not check if the sequence, database or configuration have changed.",
 )
-flags.DEFINE_string("s3_name", None, "S3 bucket name for input/output data.")
-
 
 FLAGS = flags.FLAGS
 
 _ROOT_MOUNT_DIRECTORY = "/mnt/"
 
-
-def _create_mount(mount_name: str, path: str) -> Tuple[types.Mount, str]:
+def dock(mount_name: str, path: str) -> Tuple[types.Mount, str]:
     path = os.path.abspath(path)
     source_path = os.path.dirname(path)
     target_path = os.path.join(_ROOT_MOUNT_DIRECTORY, mount_name)
@@ -174,12 +180,14 @@ def main(argv):
     command_args = []
 
     # Mount each fasta path as a unique target directory.
-    target_fasta_paths = []
-    for i, fasta_path in enumerate(FLAGS.fasta_paths):
-        mount, target_path = _create_mount(f"fasta_path_{i}", fasta_path)
-        mounts.append(mount)
-        target_fasta_paths.append(target_path)
-    command_args.append(f'--fasta_paths={",".join(target_fasta_paths)}')
+    # target_fasta_paths = []
+    # for i, fasta_path in enumerate(FLAGS.fasta_paths):
+    #     mount, target_path = _create_mount(f"fasta_path_{i}", fasta_path)
+    #     mounts.append(mount)
+    #     target_fasta_paths.append(target_path)
+    # command_args.append(f'--fasta_paths={",".join(target_fasta_paths)}')
+
+    command_args.append(f'--s3_urls={FLAGS.s3_urls}')
 
     database_paths = [
         ("uniref90_database_path", uniref90_database_path),
@@ -224,11 +232,6 @@ def main(argv):
             "--logtostderr",
         ]
     )
-    
-    if FLAGS.s3_name is not None:
-        command_args.append(
-            f"--s3_name={FLAGS.s3_name}"
-        )
 
     if FLAGS.is_prokaryote_list:
         command_args.append(
@@ -264,7 +267,8 @@ if __name__ == "__main__":
     flags.mark_flags_as_required(
         [
             "data_dir",
-            "fasta_paths",
+            # "fasta_paths",
+            "s3_urls",
             "max_template_date",
         ]
     )

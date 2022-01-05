@@ -46,10 +46,19 @@ import boto3
 
 logging.set_verbosity(logging.INFO)
 
+# flags.DEFINE_list(
+#     "fasta_paths",
+#     None,
+#     "Paths to FASTA files, each containing a prediction "
+#     "target that will be folded one after another. If a FASTA file contains "
+#     "multiple sequences, then it will be folded as a multimer. Paths should be "
+#     "separated by commas. All FASTA paths must have a unique basename as the "
+#     "basename is used to name the output directories for each prediction.",
+# )
 flags.DEFINE_list(
-    "fasta_paths",
-    None,
-    "Paths to FASTA files, each containing a prediction "
+    "s3_urls", 
+    None, 
+    "S3 URLs to FASTA files, each containing a prediction "
     "target that will be folded one after another. If a FASTA file contains "
     "multiple sequences, then it will be folded as a multimer. Paths should be "
     "separated by commas. All FASTA paths must have a unique basename as the "
@@ -183,7 +192,6 @@ flags.DEFINE_boolean(
     "have been written to disk. WARNING: This will not check "
     "if the sequence, database or configuration have changed.",
 )
-flags.DEFINE_string("s3_name", None, "S3 bucket name for input/output data.")
 
 FLAGS = flags.FLAGS
 
@@ -354,17 +362,6 @@ def main(argv):
     if len(argv) > 1:
         raise app.UsageError("Too many command-line arguments.")
 
-    # --------- Added code here to download .fasta and .fa files from s3 to cwd ----
-    if FLAGS.s3_name is not None:
-        s3 = boto3.client("s3")
-        keys = _list_s3_obj_keys_by_extension(
-            bucket=FLAGS.s3_name, extensions=(".fa", ".fasta",), s3=s3
-        )
-        for key in keys:
-            print(f"Downloading {key} from s3://{FLAGS.s3_name}")
-            s3.download_file(FLAGS.s3_name, key, os.path.join(os.getcwd(), key))
-    # ------------------------------------------------------------------------------
-
     for tool_name in (
         "jackhmmer",
         "hhblits",
@@ -403,14 +400,14 @@ def main(argv):
         num_ensemble = 1
 
     # Check for duplicate FASTA file names.
-    fasta_names = [pathlib.Path(p).stem for p in FLAGS.fasta_paths]
+    fasta_names = [pathlib.Path(p).stem for p in FLAGS.s3_urls]
     if len(fasta_names) != len(set(fasta_names)):
         raise ValueError("All FASTA paths must have a unique basename.")
 
     # Check that is_prokaryote_list has same number of elements as fasta_paths,
     # and convert to bool.
     if FLAGS.is_prokaryote_list:
-        if len(FLAGS.is_prokaryote_list) != len(FLAGS.fasta_paths):
+        if len(FLAGS.is_prokaryote_list) != len(FLAGS.s3_urls):
             raise ValueError(
                 "--is_prokaryote_list must either be omitted or match "
                 "length of --fasta_paths."
@@ -509,11 +506,19 @@ def main(argv):
     logging.info("Using random seed %d for the data pipeline", random_seed)
 
     # Predict structure for each of the sequences.
-    for i, fasta_path in enumerate(FLAGS.fasta_paths):
+    s3 = boto3.client("s3")
+    for i, fasta_path in enumerate(FLAGS.s3_urls):
+        bucket_name = pathlib.Path(fasta_path).parts[1]
+        key = pathlib.Path(fasta_path).parts[2]
+        local_fasta_path = os.path.join(os.getcwd(), key)
+        try:
+            s3.download_file(bucket_name, key, local_fasta_path)
+        except:
+            next()
         is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
         fasta_name = fasta_names[i]
         predict_structure(
-            fasta_path=fasta_path,
+            fasta_path=local_fasta_path,
             fasta_name=fasta_name,
             output_dir_base=FLAGS.output_dir,
             data_pipeline=data_pipeline,
@@ -531,27 +536,28 @@ def main(argv):
     # ----------------------------
 
 
-def _list_s3_obj_keys_by_extension(
-    bucket: str, extensions: tuple = (""), s3: object = boto3.client("s3")
-) -> list:
+# def _list_s3_obj_keys_by_extension(
+#     bucket: str, extensions: tuple = (""), s3: object = boto3.client("s3")
+# ) -> list:
 
-    """
-    Return a list of object keys from a S3 bucket with the specified
-    (optional) extensions.
-    """
+#     """
+#     Return a list of object keys from a S3 bucket with the specified
+#     (optional) extensions.
+#     """
 
-    obj_list = s3.list_objects_v2(Bucket=bucket)
-    keys = []
-    for obj in obj_list["Contents"]:
-        if obj["Key"].endswith(extensions):
-            keys.append(obj["Key"])
-    return keys
+#     obj_list = s3.list_objects_v2(Bucket=bucket)
+#     keys = []
+#     for obj in obj_list["Contents"]:
+#         if obj["Key"].endswith(extensions):
+#             keys.append(obj["Key"])
+#     return keys
 
 
 if __name__ == "__main__":
     flags.mark_flags_as_required(
         [
-            "fasta_paths",
+            # "fasta_paths",
+            "s3_urls",
             "output_dir",
             "data_dir",
             "uniref90_database_path",
