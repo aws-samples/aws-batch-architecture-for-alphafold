@@ -66,7 +66,8 @@ RUN wget -q -P /app/alphafold/alphafold/common/ \
 RUN pip3 install --upgrade pip \
     && pip3 install -r /app/alphafold/requirements.txt \
     && pip3 install --upgrade jax jaxlib>=0.1.69+cuda${CUDA/./} -f \
-      https://storage.googleapis.com/jax-releases/jax_releases.html
+      https://storage.googleapis.com/jax-releases/jax_releases.html \
+    && pip3 install boto3
 
 # Apply OpenMM patch.
 WORKDIR /opt/conda/lib/python3.7/site-packages
