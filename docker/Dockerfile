@@ -30,8 +30,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       kalign \
       tzdata \
       wget \
-    && rm -rf /var/lib/apt/lists/* \
-    && nano
+      nano \
+    && rm -rf /var/lib/apt/lists/*
 
 # Compile HHsuite from source.
 RUN git clone --branch v3.3.0 https://github.com/soedinglab/hh-suite.git /tmp/hh-suite \
