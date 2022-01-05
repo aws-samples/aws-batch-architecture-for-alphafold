@@ -507,6 +507,7 @@ def main(argv):
 
     # Predict structure for each of the sequences.
     s3 = boto3.client("s3")
+    logging.info(FLAGS.s3_urls)
     for i, fasta_path in enumerate(FLAGS.s3_urls):
         bucket_name = pathlib.Path(fasta_path).parts[1]
         key = pathlib.Path(fasta_path).name
