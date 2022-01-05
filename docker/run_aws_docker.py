@@ -46,7 +46,7 @@ flags.DEFINE_string(
     None, 
     "Name of S3 bucket (without the s3://) used for file storage.",
 )
-flags.DEFINE_list(
+flags.DEFINE_string(
     "s3_keys", 
     None, 
     "Name of fasta files in S3 bucket.",
