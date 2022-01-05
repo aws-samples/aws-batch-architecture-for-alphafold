@@ -511,6 +511,7 @@ def main(argv):
         bucket_name = pathlib.Path(fasta_path).parts[1]
         key = pathlib.Path(fasta_path).parts[2]
         local_fasta_path = os.path.join(os.getcwd(), key)
+        logging.info(f"Downloading {key} from {bucket_name} to {local_fasta_path}")
         try:
             s3.download_file(bucket_name, key, local_fasta_path)
         except:
