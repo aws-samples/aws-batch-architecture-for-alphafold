@@ -401,7 +401,7 @@ def main(argv):
         num_ensemble = 1
 
     # Check for duplicate FASTA file names.
-    # fasta_names = [pathlib.Path(p).stem for p in FLAGS.s3_keys]
+    fasta_names = [pathlib.Path(p).stem for p in FLAGS.s3_keys]
     if len(FLAGS.s3_keys) != len(set(FLAGS.s3_keys)):
         raise ValueError("All FASTA paths must have a unique basename.")
 
