@@ -532,9 +532,9 @@ def main(argv):
         )
 
     # ---- Add code here to upload results back to s3 -----------------------
-    if FLAGS.s3_name is not None:
-        logging.info(f"Uploading contents of {FLAGS.output_dir} to {FLAGS.s3_name}")
-        os.system(f"aws s3 cp {FLAGS.output_dir} {FLAGS.s3_name} --recursive")
+    if FLAGS.s3_bucket is not None:
+        logging.info(f"Uploading contents of {FLAGS.output_dir} to {FLAGS.s3_bucket}")
+        os.system(f"aws s3 cp {FLAGS.output_dir} s3://{FLAGS.s3_bucket} --recursive")
     # ----------------------------
 
 
