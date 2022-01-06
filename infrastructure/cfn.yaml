@@ -482,7 +482,7 @@ Resources:
         BranchName: "main"
         S3:
           Bucket: "aws-af-testing"
-          Key: "aws-alphafold.zip"
+          Key: "code/aws-alphafold.zip"
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [
