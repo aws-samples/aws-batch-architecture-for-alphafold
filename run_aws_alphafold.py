@@ -194,8 +194,8 @@ flags.DEFINE_boolean(
     "if the sequence, database or configuration have changed.",
 )
 # From parallelfold
-# flags.DEFINE_boolean('run_feature', False, 'Calculate MSA and template to generate '
-#                      'feature')
+flags.DEFINE_boolean('run_feature', False, 'Calculate MSA and template to generate '
+                     'feature')
 
 FLAGS = flags.FLAGS
 
@@ -226,7 +226,7 @@ def predict_structure(
     benchmark: bool,
     random_seed: int,
     # From Parallelfold
-    # run_feature: bool,
+    run_feature: bool,
     is_prokaryote: Optional[bool] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
@@ -293,8 +293,8 @@ def predict_structure(
     s3.upload_file(features_output_path, FLAGS.s3_bucket, s3_object_name)
 
 # From Parallelfold
-    # if run_feature:
-    #     sys.exit(0)
+    if run_feature:
+        sys.exit(0)
 
     unrelaxed_pdbs = {}
     relaxed_pdbs = {}
@@ -574,7 +574,7 @@ def main(argv):
             random_seed=random_seed,
             is_prokaryote=is_prokaryote,
             # From Parallelfold
-            # run_feature = FLAGS.run_feature
+            run_feature = FLAGS.run_feature
         )
 
     # ---- Add code here to upload results back to s3 -----------------------
