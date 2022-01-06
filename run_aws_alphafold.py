@@ -193,6 +193,9 @@ flags.DEFINE_boolean(
     "have been written to disk. WARNING: This will not check "
     "if the sequence, database or configuration have changed.",
 )
+# From parallelfold
+# flags.DEFINE_boolean('run_feature', False, 'Calculate MSA and template to generate '
+#                      'feature')
 
 FLAGS = flags.FLAGS
 
@@ -222,6 +225,8 @@ def predict_structure(
     amber_relaxer: relax.AmberRelaxation,
     benchmark: bool,
     random_seed: int,
+    # From Parallelfold
+    # run_feature: bool,
     is_prokaryote: Optional[bool] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
@@ -236,6 +241,25 @@ def predict_structure(
 
     # Get features.
     t_0 = time.time()
+
+# From ParallelFold
+    # features_output_path = os.path.join(output_dir, 'features.pkl')
+  
+  # If we already have feature.pkl file, skip the MSA and template finding step
+    # if os.path.exists(features_output_path):
+    #     feature_dict = pickle.load(open(features_output_path, 'rb'))
+    
+    # else:
+    #     if is_prokaryote is None:
+    #     feature_dict = data_pipeline.process(
+    #         input_fasta_path=fasta_path,
+    #         msa_output_dir=msa_output_dir)
+    #     else:
+    #     feature_dict = data_pipeline.process(
+    #         input_fasta_path=fasta_path,
+    #         msa_output_dir=msa_output_dir,
+    #         is_prokaryote=is_prokaryote)
+
     if is_prokaryote is None:
         feature_dict = data_pipeline.process(
             input_fasta_path=fasta_path, msa_output_dir=msa_output_dir
@@ -249,9 +273,19 @@ def predict_structure(
     timings["features"] = time.time() - t_0
 
     # Write out features as a pickled dictionary.
-    features_output_path = os.path.join(output_dir, "features.pkl")
+    feature_file_name = "features.pkl"
+    features_output_path = os.path.join(output_dir, feature_file_name)
     with open(features_output_path, "wb") as f:
         pickle.dump(feature_dict, f, protocol=4)
+
+    # Copy feature .pkl file to S3
+    s3 = boto3.client("s3")    
+    s3_object_name = os.path.join(fasta_name, feature_file_name)
+    s3.upload_file(features_output_path, FLAGS.s3_bucket, s3_object_name)
+
+# From Parallelfold
+    # if run_feature:
+    #     sys.exit(0)
 
     unrelaxed_pdbs = {}
     relaxed_pdbs = {}
@@ -356,6 +390,7 @@ def predict_structure(
     timings_output_path = os.path.join(output_dir, "timings.json")
     with open(timings_output_path, "w") as f:
         f.write(json.dumps(timings, indent=4))
+   
 
 
 def main(argv):
@@ -529,6 +564,8 @@ def main(argv):
             benchmark=FLAGS.benchmark,
             random_seed=random_seed,
             is_prokaryote=is_prokaryote,
+            # From Parallelfold
+            # run_feature = FLAGS.run_feature
         )
 
     # ---- Add code here to upload results back to s3 -----------------------
