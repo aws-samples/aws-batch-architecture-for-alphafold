@@ -5,7 +5,7 @@ phases:
     commands:
       - echo Build started on `date`
       - zip -r aws-alphafold.zip
-  post-build:
+  post_build:
     commands:
       - echo Build completed on `date`
 artifacts:
