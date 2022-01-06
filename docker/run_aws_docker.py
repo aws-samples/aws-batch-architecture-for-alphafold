@@ -243,6 +243,7 @@ def main(argv):
     client = docker.from_env()
     # logging.info("Submitting run command")
     logging.info(f"Submitting run command with command args {command_args}")
+    logging.info(f"Mounts are {mounts}")
     container = client.containers.run(
         image=FLAGS.docker_image_name,
         command=command_args,
