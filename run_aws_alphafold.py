@@ -244,6 +244,13 @@ def predict_structure(
 
 # From ParallelFold
     # features_output_path = os.path.join(output_dir, 'features.pkl')
+
+    # Check and see if features.pkl exists in os.path.join(fasta_name, feature_file_name)
+    # If so, download it to features_output_path
+
+    # s3 = boto3.client("s3")    
+    # s3_object_name = os.path.join(fasta_name, feature_file_name)
+    # s3.download_file(FLAGS.s3_bucket, s3_object_name, features_output_path)
   
   # If we already have feature.pkl file, skip the MSA and template finding step
     # if os.path.exists(features_output_path):
@@ -279,6 +286,8 @@ def predict_structure(
         pickle.dump(feature_dict, f, protocol=4)
 
     # Copy feature .pkl file to S3
+    logging.info(f"Uploading {features_output_path} to {FLAGS.s3_bucket}/{s3_object_name}")
+
     s3 = boto3.client("s3")    
     s3_object_name = os.path.join(fasta_name, feature_file_name)
     s3.upload_file(features_output_path, FLAGS.s3_bucket, s3_object_name)
