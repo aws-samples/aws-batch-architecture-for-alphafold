@@ -30,6 +30,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       kalign \
       tzdata \
       wget \
+    && apt-get install -y --only-upgrade openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Compile HHsuite from source.
