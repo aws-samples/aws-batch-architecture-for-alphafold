@@ -42,13 +42,13 @@ flags.DEFINE_string(
 #     "basename is used to name the output directories for each prediction.",
 # )
 flags.DEFINE_string(
-    "s3_bucket", 
-    None, 
+    "s3_bucket",
+    None,
     "Name of S3 bucket (without the s3://) used for file storage.",
 )
 flags.DEFINE_string(
-    "s3_keys", 
-    None, 
+    "s3_keys",
+    None,
     "Name of fasta files in S3 bucket.",
 )
 flags.DEFINE_list(
@@ -105,10 +105,15 @@ flags.DEFINE_boolean(
     "Whether to read MSAs that have been written to disk. WARNING: This will "
     "not check if the sequence, database or configuration have changed.",
 )
+# From parallelfold
+flags.DEFINE_boolean(
+    "run_features_only", False, "Calculate MSA and template to generate " "feature"
+)
 
 FLAGS = flags.FLAGS
 
 _ROOT_MOUNT_DIRECTORY = "/mnt/"
+
 
 def _create_mount(mount_name: str, path: str) -> Tuple[types.Mount, str]:
     path = os.path.abspath(path)
@@ -188,8 +193,8 @@ def main(argv):
     #     target_fasta_paths.append(target_path)
     # command_args.append(f'--fasta_paths={",".join(target_fasta_paths)}')
 
-    command_args.append(f'--s3_bucket={FLAGS.s3_bucket}')
-    command_args.append(f'--s3_keys={FLAGS.s3_keys}')
+    command_args.append(f"--s3_bucket={FLAGS.s3_bucket}")
+    command_args.append(f"--s3_keys={FLAGS.s3_keys}")
 
     database_paths = [
         ("uniref90_database_path", uniref90_database_path),
@@ -231,6 +236,7 @@ def main(argv):
             f"--model_preset={FLAGS.model_preset}",
             f"--benchmark={FLAGS.benchmark}",
             f"--use_precomputed_msas={FLAGS.use_precomputed_msas}",
+            f"--run_features_only={FLAGS.run_features_only}",
             "--logtostderr",
         ]
     )

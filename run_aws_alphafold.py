@@ -56,13 +56,13 @@ logging.set_verbosity(logging.INFO)
 #     "basename is used to name the output directories for each prediction.",
 # )
 flags.DEFINE_string(
-    "s3_bucket", 
-    None, 
+    "s3_bucket",
+    None,
     "Name of S3 bucket (without the s3://) used for file storage.",
 )
 flags.DEFINE_list(
-    "s3_keys", 
-    None, 
+    "s3_keys",
+    None,
     "Name of fasta files in S3 bucket.",
 )
 flags.DEFINE_list(
@@ -194,8 +194,9 @@ flags.DEFINE_boolean(
     "if the sequence, database or configuration have changed.",
 )
 # From parallelfold
-flags.DEFINE_boolean('run_feature', False, 'Calculate MSA and template to generate '
-                     'feature')
+flags.DEFINE_boolean(
+    "run_features_only", False, "Whether to halt after calculating features"
+)
 
 FLAGS = flags.FLAGS
 
@@ -226,7 +227,7 @@ def predict_structure(
     benchmark: bool,
     random_seed: int,
     # From Parallelfold
-    run_feature: bool,
+    run_features_only: bool,
     is_prokaryote: Optional[bool] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
@@ -241,58 +242,58 @@ def predict_structure(
 
     # Get features.
     t_0 = time.time()
-
-# From ParallelFold
-    # features_output_path = os.path.join(output_dir, 'features.pkl')
+    feature_file_name = "features.pkl"
+    # From ParallelFold
+    features_output_path = os.path.join(output_dir, feature_file_name)
 
     # Check and see if features.pkl exists in os.path.join(fasta_name, feature_file_name)
     # If so, download it to features_output_path
 
-    # s3 = boto3.client("s3")    
-    # s3_object_name = os.path.join(fasta_name, feature_file_name)
-    # s3.download_file(FLAGS.s3_bucket, s3_object_name, features_output_path)
-  
-  # If we already have feature.pkl file, skip the MSA and template finding step
-    # if os.path.exists(features_output_path):
-    #     feature_dict = pickle.load(open(features_output_path, 'rb'))
-    
-    # else:
-    #     if is_prokaryote is None:
-    #     feature_dict = data_pipeline.process(
-    #         input_fasta_path=fasta_path,
-    #         msa_output_dir=msa_output_dir)
-    #     else:
-    #     feature_dict = data_pipeline.process(
-    #         input_fasta_path=fasta_path,
-    #         msa_output_dir=msa_output_dir,
-    #         is_prokaryote=is_prokaryote)
+    s3 = boto3.client("s3")
+    s3_object_name = os.path.join(fasta_name, feature_file_name)
+    try:
+        logging.info(f"Checking for {s3_object_name} in s3://{FLAGS.s3_bucket}.")
+        s3.download_file(FLAGS.s3_bucket, s3_object_name, features_output_path)
+    except:
+        logging.info(f"s3://{FLAGS.s3_bucket}/{s3_object_name} not found.")
 
-    if is_prokaryote is None:
-        feature_dict = data_pipeline.process(
-            input_fasta_path=fasta_path, msa_output_dir=msa_output_dir
-        )
+    # If we already have feature.pkl file, skip the MSA and template finding step
+    if os.path.exists(features_output_path):
+        feature_dict = pickle.load(open(features_output_path, "rb"))
     else:
-        feature_dict = data_pipeline.process(
-            input_fasta_path=fasta_path,
-            msa_output_dir=msa_output_dir,
-            is_prokaryote=is_prokaryote,
+        if is_prokaryote is None:
+            feature_dict = data_pipeline.process(
+                input_fasta_path=fasta_path, msa_output_dir=msa_output_dir
+            )
+        else:
+            feature_dict = data_pipeline.process(
+                input_fasta_path=fasta_path,
+                msa_output_dir=msa_output_dir,
+                is_prokaryote=is_prokaryote,
+            )
+
+        with open(features_output_path, "wb") as f:
+            pickle.dump(feature_dict, f, protocol=4)
+
+        # Copy feature .pkl file to S3
+        s3 = boto3.client("s3")
+        s3_object_name = os.path.join(fasta_name, feature_file_name)
+        logging.info(
+            f"Uploading {features_output_path} to {FLAGS.s3_bucket}/{s3_object_name}"
         )
+        s3.upload_file(features_output_path, FLAGS.s3_bucket, s3_object_name)
+
     timings["features"] = time.time() - t_0
 
-    # Write out features as a pickled dictionary.
-    feature_file_name = "features.pkl"
-    features_output_path = os.path.join(output_dir, feature_file_name)
-    with open(features_output_path, "wb") as f:
-        pickle.dump(feature_dict, f, protocol=4)
-
-    # Copy feature .pkl file to S3
-    s3 = boto3.client("s3")    
-    s3_object_name = os.path.join(fasta_name, feature_file_name)
-    logging.info(f"Uploading {features_output_path} to {FLAGS.s3_bucket}/{s3_object_name}")
-    s3.upload_file(features_output_path, FLAGS.s3_bucket, s3_object_name)
-
-# From Parallelfold
-    if run_feature:
+    # From Parallelfold
+    if run_features_only:
+        logging.info(
+            f"Ending early since run_features_only set to {run_features_only}."
+        )
+        logging.info(f"Final timings for {fasta_name}: {timings}")
+        timings_output_path = os.path.join(output_dir, "timings.json")
+        with open(timings_output_path, "w") as f:
+            f.write(json.dumps(timings, indent=4))
         sys.exit(0)
 
     unrelaxed_pdbs = {}
@@ -398,7 +399,6 @@ def predict_structure(
     timings_output_path = os.path.join(output_dir, "timings.json")
     with open(timings_output_path, "w") as f:
         f.write(json.dumps(timings, indent=4))
-   
 
 
 def main(argv):
@@ -573,7 +573,7 @@ def main(argv):
             random_seed=random_seed,
             is_prokaryote=is_prokaryote,
             # From Parallelfold
-            run_feature = FLAGS.run_feature
+            run_features_only=FLAGS.run_features_only,
         )
 
     # ---- Add code here to upload results back to s3 -----------------------
