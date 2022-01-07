@@ -286,10 +286,9 @@ def predict_structure(
         pickle.dump(feature_dict, f, protocol=4)
 
     # Copy feature .pkl file to S3
-    logging.info(f"Uploading {features_output_path} to {FLAGS.s3_bucket}/{s3_object_name}")
-
     s3 = boto3.client("s3")    
     s3_object_name = os.path.join(fasta_name, feature_file_name)
+    logging.info(f"Uploading {features_output_path} to {FLAGS.s3_bucket}/{s3_object_name}")
     s3.upload_file(features_output_path, FLAGS.s3_bucket, s3_object_name)
 
 # From Parallelfold
