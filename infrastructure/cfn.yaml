@@ -513,25 +513,13 @@ Resources:
               ],
             ]
 
-  ContainerRegistry:
+  FoldingContainerRegistry:
     Type: AWS::ECR::Repository
     Properties:
       EncryptionConfiguration:
         EncryptionType: AES256
       ImageScanningConfiguration:
         ScanOnPush: true
-      # RepositoryName:
-      #   !Join [
-      #     "-",
-      #     [
-      #       "AWS-Alphafold",
-      #       "container-repo",
-      #       !Select [
-      #         4,
-      #         !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-      #       ],
-      #     ],
-      #   ]
       Tags:
         - Key: Application
           Value: AWS-Alphafold
@@ -541,7 +529,7 @@ Resources:
               "-",
               [
                 "AWS-Alphafold",
-                "container-repo",
+                "folding-container-repo",
                 !Select [
                   4,
                   !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
@@ -550,6 +538,32 @@ Resources:
             ]
     DeletionPolicy: Retain
     UpdateReplacePolicy : Retain
+
+  DownloadContainerRegistry:
+    Type: AWS::ECR::Repository
+    Properties:
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      Tags:
+        - Key: Application
+          Value: AWS-Alphafold
+        - Key: Name
+          Value:
+            !Join [
+              "-",
+              [
+                "AWS-Alphafold",
+                "download-container-repo",
+                !Select [
+                  4,
+                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+                ],
+              ],
+            ]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy : Retain    
 
   CodeBuildRole:
     Type: AWS::IAM::Role
@@ -716,10 +730,14 @@ Resources:
       Environment:
         ComputeType: BUILD_GENERAL1_MEDIUM
         EnvironmentVariables:
-          - Name: IMAGE_TAG
+          - Name: FOLDING_IMAGE_TAG
             Value: latest
-          - Name: IMAGE_REPO_NAME
-            Value: !Ref ContainerRegistry
+          - Name: FOLDING_IMAGE_REPO_NAME
+            Value: !Ref FoldingContainerRegistry
+          - Name: DOWNLOAD_IMAGE_TAG
+            Value: latest
+          - Name: DOWNLOAD_IMAGE_REPO_NAME
+            Value: !Ref DownloadContainerRegistry            
           - Name: ACCOUNT_ID
             Value: !Ref AWS::AccountId
         Image: aws/codebuild/standard:4.0
@@ -1010,18 +1028,6 @@ Resources:
   CPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
-      # ComputeEnvironmentName:
-      #   !Join [
-      #     "-",
-      #     [
-      #       "AWS-Alphafold",
-      #       "ce-cpu",
-      #       !Select [
-      #         4,
-      #         !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-      #       ],
-      #     ],
-      #   ]
       ComputeResources:
         AllocationStrategy: BEST_FIT_PROGRESSIVE
         InstanceRole: !Ref InstanceProfile
@@ -1057,18 +1063,6 @@ Resources:
   GPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
-      # ComputeEnvironmentName:
-      #   !Join [
-      #     "-",
-      #     [
-      #       "AWS-Alphafold",
-      #       "ce-gpu",
-      #       !Select [
-      #         4,
-      #         !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-      #       ],
-      #     ],
-      #   ]
       ComputeResources:
         AllocationStrategy: BEST_FIT_PROGRESSIVE
         InstanceRole: !Ref InstanceProfile
@@ -1107,18 +1101,6 @@ Resources:
       ComputeEnvironmentOrder:
         - ComputeEnvironment: !Ref CPUComputeEnvironment
           Order: 1
-      # JobQueueName:
-      #   !Join [
-      #     "-",
-      #     [
-      #       "AWS-Alphafold",
-      #       "queue-cpu",
-      #       !Select [
-      #         4,
-      #         !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-      #       ],
-      #     ],
-      #   ]
       Priority: 10
       State: ENABLED
       Tags:
@@ -1142,18 +1124,6 @@ Resources:
       ComputeEnvironmentOrder:
         - ComputeEnvironment: !Ref GPUComputeEnvironment
           Order: 1
-      # JobQueueName:
-      #   !Join [
-      #     "-",
-      #     [
-      #       "AWS-Alphafold",
-      #       "queue-gpu",
-      #       !Select [
-      #         4,
-      #         !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-      #       ],
-      #     ],
-      #   ]
       Priority: 10
       State: ENABLED
       Tags:
@@ -1171,14 +1141,14 @@ Resources:
             ],
           ]
 
-  CPUDataPrepJobDefinition:
+  CPUFoldingJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
       ContainerProperties:
         Command:
           - "echo 'hello, world'"          
         Image:
-          !Join [":", [!GetAtt ContainerRegistry.RepositoryUri, "latest"]]
+          !Join [":", [!GetAtt FoldingContainerRegistry.RepositoryUri, "latest"]]
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
@@ -1194,18 +1164,6 @@ Resources:
           - Name: fsx
             Host:
               SourcePath: /fsx
-      JobDefinitionName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "job-def-cpudataprep",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       PlatformCapabilities:
         - EC2
       PropagateTags: true
@@ -1218,23 +1176,23 @@ Resources:
             "-",
             [
               "AWS-Alphafold",
-              "job-def-cpudataprep",
+              "cpu-folding-job-def",
               !Select [
                 4,
                 !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
               ],
             ],
           ]
-      Type: container    
+      Type: container       
 
-  GPUPredictJobDefinition:
+  GPUFoldingobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
       ContainerProperties:
         Command:
           - "nvidia-smi"
         Image:
-          !Join [":", [!GetAtt ContainerRegistry.RepositoryUri, "latest"]]
+          !Join [":", [!GetAtt FoldingContainerRegistry.RepositoryUri, "latest"]]
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
@@ -1252,18 +1210,6 @@ Resources:
           - Name: fsx
             Host:
               SourcePath: /fsx
-      JobDefinitionName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "job-def-gpupredict",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       PlatformCapabilities:
         - EC2
       PropagateTags: true
@@ -1276,7 +1222,7 @@ Resources:
             "-",
             [
               "AWS-Alphafold",
-              "job-def-gpupredict",
+              "gpu-folding-job-def",
               !Select [
                 4,
                 !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
@@ -1285,58 +1231,46 @@ Resources:
           ]
       Type: container
 
-  CPUPredictJobDefinition:
-    Type: AWS::Batch::JobDefinition
-    Properties:
-      ContainerProperties:
-        Command:
-          - "echo 'hello, world'"
-        Image:
-          !Join [":", [!GetAtt ContainerRegistry.RepositoryUri, "latest"]]
-        LogConfiguration:
-          LogDriver: awslogs
-        MountPoints:
-          - ContainerPath: /fsx
-            ReadOnly: False
-            SourceVolume: fsx
-        ResourceRequirements:
-          - Type: VCPU
-            Value: 2
-          - Type: MEMORY
-            Value: 8000
-        Volumes:
-          - Name: fsx
-            Host:
-              SourcePath: /fsx
-      JobDefinitionName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "job-def-cpupredict",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
-      PlatformCapabilities:
-        - EC2
-      PropagateTags: true
-      RetryStrategy:
-        Attempts: 3
-      Tags:
-        Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "job-def-cpupredict",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+  CPUDownloadJobDefinition:
+      Type: AWS::Batch::JobDefinition
+      Properties:
+        ContainerProperties:
+          Command:
+            - "echo 'hello, world'"          
+          Image:
+            !Join [":", [!GetAtt DownloadContainerRegistry.RepositoryUri, "latest"]]
+          LogConfiguration:
+            LogDriver: awslogs
+          MountPoints:
+            - ContainerPath: /fsx
+              ReadOnly: False
+              SourceVolume: fsx
+          ResourceRequirements:
+            - Type: VCPU
+              Value: 8
+            - Type: MEMORY
+              Value: 16000
+          Volumes:
+            - Name: fsx
+              Host:
+                SourcePath: /fsx
+        PlatformCapabilities:
+          - EC2
+        PropagateTags: true
+        RetryStrategy:
+          Attempts: 3
+        Tags:
+          Application: AWS-Alphafold
+          Name:
+            !Join [
+              "-",
+              [
+                "AWS-Alphafold",
+                "cpu-download-job-def",
+                !Select [
+                  4,
+                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+                ],
               ],
-            ],
-          ]
-      Type: container      
+            ]
+        Type: container      

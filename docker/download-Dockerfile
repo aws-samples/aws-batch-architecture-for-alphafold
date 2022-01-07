@@ -1,0 +1,7 @@
+FROM public.ecr.aws/amazonlinux/amazonlinux:latest
+RUN amazon-linux-extras install epel -y \
+  && yum update -y \
+  && yum install aria2 tar -y
+VOLUME /fsx
+COPY scripts .
+ENTRYPOINT ["usr/bin/bash"]
