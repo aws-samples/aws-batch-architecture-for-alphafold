@@ -488,8 +488,8 @@ Resources:
         NetworkInterfaces:
           - AssociatePublicIpAddress: True
             SubnetId: !Ref PublicSubnet0
-        SecurityGroupIds:
-          - !GetAtt VPC.DefaultSecurityGroup
+            Groups:
+            - !GetAtt VPC.DefaultSecurityGroup
         TagSpecifications:
           - ResourceType: "instance"
             Tags:
