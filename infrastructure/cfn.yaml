@@ -487,7 +487,9 @@ Resources:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
           - AssociatePublicIpAddress: True
-            SubnetId: PublicSubnet0
+            SubnetId: !Ref PublicSubnet0
+        SecurityGroupIds:
+          - !GetAtt VPC.DefaultSecurityGroup
         TagSpecifications:
           - ResourceType: "instance"
             Tags:
@@ -1141,8 +1143,8 @@ Resources:
           Version: $Latest
         MaxvCpus: 256
         MinvCpus: 0
-        SecurityGroupIds:
-          - !GetAtt VPC.DefaultSecurityGroup
+        # SecurityGroupIds:
+        #   - !GetAtt VPC.DefaultSecurityGroup
         Subnets:
           - Ref: PublicSubnet0
         Type: EC2
