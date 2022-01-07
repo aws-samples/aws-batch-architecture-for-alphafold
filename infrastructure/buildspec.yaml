@@ -9,8 +9,8 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the folding Docker image
-      - docker build -f docker/Dockerfile -t $IMAGE_REPO_NAME:$IMAGE_TAG .
-      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - docker build -f docker/Dockerfile -t $FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG .
+      - docker tag $FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
       - echo Building the download Docker image
       - docker build -f docker/download-Dockerfile -t $DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG .
       - docker tag $DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
@@ -18,6 +18,6 @@ phases:
     commands:
       - echo Build completed on `date`
       - echo Pushing the folding Docker image
-      - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
       - echo Pushing the download Docker image
       - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
