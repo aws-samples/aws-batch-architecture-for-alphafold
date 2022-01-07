@@ -1025,7 +1025,7 @@ Resources:
   # Batch Environment
   ##################################################
 
-  CPUComputeEnvironment:
+  PrivateCPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
       ComputeResources:
@@ -1052,7 +1052,7 @@ Resources:
             "-",
             [
               "AWS-Alphafold",
-              "ce-cpu",
+              "private-ce-cpu",
               !Select [
                 4,
                 !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
@@ -1060,7 +1060,42 @@ Resources:
             ],
           ]
 
-  GPUComputeEnvironment:
+  PublicCPUComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      ComputeResources:
+        AllocationStrategy: BEST_FIT_PROGRESSIVE
+        InstanceRole: !Ref InstanceProfile
+        InstanceTypes:
+          - optimal
+        LaunchTemplate:
+          LaunchTemplateId: !Ref InstanceLaunchTemplate
+          Version: $Latest
+        MaxvCpus: 256
+        MinvCpus: 0
+        SecurityGroupIds:
+          - !GetAtt VPC.DefaultSecurityGroup
+        Subnets:
+          - Ref: PublicSubnet0
+        Type: EC2
+      State: ENABLED
+      Type: MANAGED
+      Tags:
+        Application: AWS-Alphafold
+        Name:
+          !Join [
+            "-",
+            [
+              "AWS-Alphafold",
+              "public-ce-cpu",
+              !Select [
+                4,
+                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+              ],
+            ],
+          ]
+
+  PrivateGPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
       ComputeResources:
@@ -1087,7 +1122,7 @@ Resources:
             "-",
             [
               "AWS-Alphafold",
-              "ce-gpu",
+              "private-ce-gpu",
               !Select [
                 4,
                 !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
@@ -1095,11 +1130,11 @@ Resources:
             ],
           ]
 
-  CPUJobQueue:
+  PrivateCPUJobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
       ComputeEnvironmentOrder:
-        - ComputeEnvironment: !Ref CPUComputeEnvironment
+        - ComputeEnvironment: !Ref PrivateCPUComputeEnvironment
           Order: 1
       Priority: 10
       State: ENABLED
@@ -1110,7 +1145,7 @@ Resources:
             "-",
             [
               "AWS-Alphafold",
-              "queue-cpu",
+              "private-queue-cpu",
               !Select [
                 4,
                 !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
@@ -1118,11 +1153,11 @@ Resources:
             ],
           ]
 
-  GPUJobQueue:
+  PublicCPUJobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
       ComputeEnvironmentOrder:
-        - ComputeEnvironment: !Ref GPUComputeEnvironment
+        - ComputeEnvironment: !Ref PublicCPUComputeEnvironment
           Order: 1
       Priority: 10
       State: ENABLED
@@ -1133,7 +1168,30 @@ Resources:
             "-",
             [
               "AWS-Alphafold",
-              "queue-gpu",
+              "public-queue-cpu",
+              !Select [
+                4,
+                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+              ],
+            ],
+          ]          
+
+  PrivateGPUJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      ComputeEnvironmentOrder:
+        - ComputeEnvironment: !Ref PrivateGPUComputeEnvironment
+          Order: 1
+      Priority: 10
+      State: ENABLED
+      Tags:
+        Application: AWS-Alphafold
+        Name:
+          !Join [
+            "-",
+            [
+              "AWS-Alphafold",
+              "private-queue-gpu",
               !Select [
                 4,
                 !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
