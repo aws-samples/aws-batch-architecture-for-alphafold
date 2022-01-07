@@ -259,6 +259,7 @@ def predict_structure(
 
     # If we already have feature.pkl file, skip the MSA and template finding step
     if os.path.exists(features_output_path):
+        logging.info(f"{feature_file_name} found. Loading...")
         feature_dict = pickle.load(open(features_output_path, "rb"))
     else:
         if is_prokaryote is None:
