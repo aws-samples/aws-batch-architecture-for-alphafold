@@ -487,9 +487,10 @@ Resources:
           Name: !Ref InstanceProfile
         NetworkInterfaces:
           - AssociatePublicIpAddress: True
-            SubnetId: !Ref PublicSubnet0
+            DeviceIndex: 0
             Groups:
-            - !GetAtt VPC.DefaultSecurityGroup
+              - !GetAtt VPC.DefaultSecurityGroup
+            SubnetId: !Ref PublicSubnet0
         TagSpecifications:
           - ResourceType: "instance"
             Tags:
