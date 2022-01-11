@@ -35,6 +35,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   PublicSubnet0:
     Type: "AWS::EC2::Subnet"
@@ -63,6 +65,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   PrivateSubnet0:
     Type: "AWS::EC2::Subnet"
@@ -92,6 +96,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   InternetGateway:
     Type: "AWS::EC2::InternetGateway"
@@ -114,6 +120,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   GatewayToInternet:
     Type: "AWS::EC2::VPCGatewayAttachment"
@@ -146,6 +154,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   PublicRoute:
     Type: "AWS::EC2::Route"
@@ -185,6 +195,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   NATGateway0:
     Type: "AWS::EC2::NatGateway"
@@ -211,6 +223,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   PrivateRouteTable0:
     Type: "AWS::EC2::RouteTable"
@@ -233,6 +247,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   PrivateRouteToInternet0:
     Type: "AWS::EC2::Route"
@@ -278,6 +294,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
     DeletionPolicy: Retain
     UpdateReplacePolicy : Retain
 
@@ -324,6 +342,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   ##################################################
   # EC2 Launch Template
@@ -375,6 +395,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   InstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
@@ -441,6 +463,8 @@ Resources:
                       ],
                     ],
                   ]
+              - Key: StackId
+                Value: !Ref AWS::StackId
         UserData:
           Fn::Base64:
             Fn::Join:
@@ -512,6 +536,8 @@ Resources:
                       ],
                     ],
                   ]
+              - Key: StackId
+                Value: !Ref AWS::StackId
         UserData:
           Fn::Base64:
             Fn::Join:
@@ -583,6 +609,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   FoldingContainerRegistry:
     Type: AWS::ECR::Repository
@@ -607,6 +635,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
     DeletionPolicy: Retain
     UpdateReplacePolicy : Retain
 
@@ -633,6 +663,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
     DeletionPolicy: Retain
     UpdateReplacePolicy : Retain    
 
@@ -746,6 +778,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   CodeBuildEncryptionKey:
     Type: "AWS::KMS::Key"
@@ -790,6 +824,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
@@ -851,6 +887,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -1019,6 +1057,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -1091,6 +1131,8 @@ Resources:
                 ],
               ],
             ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
 
   ##################################################
   # Batch Environment
@@ -1118,18 +1160,7 @@ Resources:
       Type: MANAGED
       Tags:
         Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "private-ce-cpu",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]
+        StackId: !Ref AWS::StackId
 
   PublicCPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -1144,8 +1175,6 @@ Resources:
           Version: $Latest
         MaxvCpus: 256
         MinvCpus: 0
-        # SecurityGroupIds:
-        #   - !GetAtt VPC.DefaultSecurityGroup
         Subnets:
           - Ref: PublicSubnet0
         Type: EC2
@@ -1153,18 +1182,7 @@ Resources:
       Type: MANAGED
       Tags:
         Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "public-ce-cpu",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]
+        StackId: !Ref AWS::StackId
 
   PrivateGPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -1200,6 +1218,7 @@ Resources:
               ],
             ],
           ]
+        StackId: !Ref AWS::StackId
 
   PrivateCPUJobQueue:
     Type: AWS::Batch::JobQueue
@@ -1211,18 +1230,7 @@ Resources:
       State: ENABLED
       Tags:
         Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "private-queue-cpu",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]
+        StackId: !Ref AWS::StackId
 
   PublicCPUJobQueue:
     Type: AWS::Batch::JobQueue
@@ -1234,18 +1242,7 @@ Resources:
       State: ENABLED
       Tags:
         Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "public-queue-cpu",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]          
+        StackId: !Ref AWS::StackId       
 
   PrivateGPUJobQueue:
     Type: AWS::Batch::JobQueue
@@ -1257,42 +1254,70 @@ Resources:
       State: ENABLED
       Tags:
         Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "private-queue-gpu",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]
+        StackId: !Ref AWS::StackId
 
   CPUFoldingJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
       ContainerProperties:
         Command:
-          - "echo 'hello, world'"          
+          - "-c echo hello, world"    
         Image:
           !Join [":", [!GetAtt FoldingContainerRegistry.RepositoryUri, "latest"]]
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
-          - ContainerPath: /fsx
-            ReadOnly: False
-            SourceVolume: fsx
+          - ContainerPath: /mnt/uniref90_database_path
+            ReadOnly: True
+            SourceVolume: uniref90
+          - ContainerPath: /mnt/mgnify_database_path
+            ReadOnly: True
+            SourceVolume: mgnify
+          - ContainerPath: /mnt/data_dir
+            ReadOnly: True
+            SourceVolume: data
+          - ContainerPath: /mnt/template_mmcif_dir
+            ReadOnly: True
+            SourceVolume: pdb_mmcif
+          - ContainerPath: /mnt/obsolete_pdbs_path
+            ReadOnly: True
+            SourceVolume: pdb_mmcif
+          - ContainerPath: /mnt/pdb70_database_path
+            ReadOnly: True
+            SourceVolume: pdb70
+          - ContainerPath: /mnt/small_bfd_database_path
+            ReadOnly: True
+            SourceVolume: small_bfd
+          - ContainerPath: /mnt/output
+            ReadOnly: True
+            SourceVolume: output
         ResourceRequirements:
           - Type: VCPU
             Value: 2
           - Type: MEMORY
             Value: 8000
         Volumes:
-          - Name: fsx
+          - Name: uniref90
             Host:
-              SourcePath: /fsx
+              SourcePath: /fsx/uniref90
+          - Name: mgnify
+            Host:
+              SourcePath: /fsx/mgnify     
+          - Name: data
+            Host:
+              SourcePath: /
+          - Name: pdb_mmcif
+            Host:
+              SourcePath: /fsx/pdb_mmcif          
+          - Name: pdb70
+            Host:
+              SourcePath: /fsx/pdb70
+          - Name: small_bfd
+            Host:
+              SourcePath: /fsx/small_bfd
+          - Name: output
+            Host:
+              SourcePath: /tmp/alphafold
       PlatformCapabilities:
         - EC2
       PropagateTags: true
@@ -1300,18 +1325,7 @@ Resources:
         Attempts: 3
       Tags:
         Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "cpu-folding-job-def",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]
+        StackId: !Ref AWS::StackId
       Type: container       
 
   GPUFoldingobDefinition:
@@ -1325,9 +1339,30 @@ Resources:
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
-          - ContainerPath: /fsx
-            ReadOnly: False
-            SourceVolume: fsx
+          - ContainerPath: /mnt/uniref90_database_path
+            ReadOnly: True
+            SourceVolume: uniref90
+          - ContainerPath: /mnt/mgnify_database_path
+            ReadOnly: True
+            SourceVolume: mgnify
+          - ContainerPath: /mnt/data_dir
+            ReadOnly: True
+            SourceVolume: data
+          - ContainerPath: /mnt/template_mmcif_dir
+            ReadOnly: True
+            SourceVolume: pdb_mmcif
+          - ContainerPath: /mnt/obsolete_pdbs_path
+            ReadOnly: True
+            SourceVolume: pdb_mmcif
+          - ContainerPath: /mnt/pdb70_database_path
+            ReadOnly: True
+            SourceVolume: pdb70
+          - ContainerPath: /mnt/small_bfd_database_path
+            ReadOnly: True
+            SourceVolume: small_bfd
+          - ContainerPath: /mnt/output
+            ReadOnly: True
+            SourceVolume: output
         ResourceRequirements:
           - Type: VCPU
             Value: 4
@@ -1336,9 +1371,27 @@ Resources:
           - Type: GPU
             Value: 1
         Volumes:
-          - Name: fsx
+          - Name: uniref90
             Host:
-              SourcePath: /fsx
+              SourcePath: /fsx/uniref90
+          - Name: mgnify
+            Host:
+              SourcePath: /fsx/mgnify     
+          - Name: data
+            Host:
+              SourcePath: /
+          - Name: pdb_mmcif
+            Host:
+              SourcePath: /fsx/pdb_mmcif          
+          - Name: pdb70
+            Host:
+              SourcePath: /fsx/pdb70
+          - Name: small_bfd
+            Host:
+              SourcePath: /fsx/small_bfd
+          - Name: output
+            Host:
+              SourcePath: /tmp/alphafold
       PlatformCapabilities:
         - EC2
       PropagateTags: true
@@ -1346,18 +1399,7 @@ Resources:
         Attempts: 3
       Tags:
         Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "gpu-folding-job-def",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]
+        StackId: !Ref AWS::StackId
       Type: container
 
   CPUDownloadJobDefinition:
@@ -1365,24 +1407,63 @@ Resources:
       Properties:
         ContainerProperties:
           Command:
-            - "echo 'hello, world'"          
+            - "-c echo hello, world"
           Image:
             !Join [":", [!GetAtt DownloadContainerRegistry.RepositoryUri, "latest"]]
           LogConfiguration:
             LogDriver: awslogs
           MountPoints:
-            - ContainerPath: /fsx
-              ReadOnly: False
-              SourceVolume: fsx
+          - ContainerPath: /mnt/uniref90_database_path
+            ReadOnly: True
+            SourceVolume: uniref90
+          - ContainerPath: /mnt/mgnify_database_path
+            ReadOnly: True
+            SourceVolume: mgnify
+          - ContainerPath: /mnt/data_dir
+            ReadOnly: True
+            SourceVolume: data
+          - ContainerPath: /mnt/template_mmcif_dir
+            ReadOnly: True
+            SourceVolume: pdb_mmcif
+          - ContainerPath: /mnt/obsolete_pdbs_path
+            ReadOnly: True
+            SourceVolume: pdb_mmcif
+          - ContainerPath: /mnt/pdb70_database_path
+            ReadOnly: True
+            SourceVolume: pdb70
+          - ContainerPath: /mnt/small_bfd_database_path
+            ReadOnly: True
+            SourceVolume: small_bfd
+          - ContainerPath: /mnt/output
+            ReadOnly: True
+            SourceVolume: output
           ResourceRequirements:
             - Type: VCPU
               Value: 8
             - Type: MEMORY
               Value: 16000
           Volumes:
-            - Name: fsx
-              Host:
-                SourcePath: /fsx
+          - Name: uniref90
+            Host:
+              SourcePath: /fsx/uniref90
+          - Name: mgnify
+            Host:
+              SourcePath: /fsx/mgnify     
+          - Name: data
+            Host:
+              SourcePath: /
+          - Name: pdb_mmcif
+            Host:
+              SourcePath: /fsx/pdb_mmcif          
+          - Name: pdb70
+            Host:
+              SourcePath: /fsx/pdb70
+          - Name: small_bfd
+            Host:
+              SourcePath: /fsx/small_bfd
+          - Name: output
+            Host:
+              SourcePath: /tmp/alphafold
         PlatformCapabilities:
           - EC2
         PropagateTags: true
@@ -1390,16 +1471,5 @@ Resources:
           Attempts: 3
         Tags:
           Application: AWS-Alphafold
-          Name:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "cpu-download-job-def",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          StackId: !Ref AWS::StackId
         Type: container      
