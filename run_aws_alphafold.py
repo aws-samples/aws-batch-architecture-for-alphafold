@@ -66,6 +66,11 @@ flags.DEFINE_list(
     "Name of fasta files in S3 bucket.",
 )
 flags.DEFINE_list(
+    "job_name",
+    time.strftime("%Y%m%d%H%M%S", time.localtime()),
+    "Job name.",
+)
+flags.DEFINE_list(
     "is_prokaryote_list",
     None,
     "Optional for multimer system, not used by the "
@@ -74,7 +79,6 @@ flags.DEFINE_list(
     "where it is not, or where the origin is unknown. These values determine "
     "the pairing method for the MSA.",
 )
-
 flags.DEFINE_string("data_dir", None, "Path to directory of supporting data.")
 flags.DEFINE_string(
     "output_dir", None, "Path to a directory that will " "store the results."
@@ -220,6 +224,7 @@ def _check_flag(flag_name: str, other_flag_name: str, should_be_set: bool):
 def predict_structure(
     fasta_path: str,
     fasta_name: str,
+    job_name: str,
     output_dir_base: str,
     data_pipeline: Union[pipeline.DataPipeline, pipeline_multimer.DataPipeline],
     model_runners: Dict[str, model.RunModel],
@@ -250,7 +255,7 @@ def predict_structure(
     # If so, download it to features_output_path
 
     s3 = boto3.client("s3")
-    s3_object_name = os.path.join(fasta_name, feature_file_name)
+    s3_object_name = os.path.join(fasta_name, job_name, feature_file_name)
     try:
         logging.info(f"Checking for {s3_object_name} in s3://{FLAGS.s3_bucket}.")
         s3.download_file(FLAGS.s3_bucket, s3_object_name, features_output_path)
@@ -277,8 +282,6 @@ def predict_structure(
             pickle.dump(feature_dict, f, protocol=4)
 
         # Copy feature .pkl file to S3
-        s3 = boto3.client("s3")
-        s3_object_name = os.path.join(fasta_name, feature_file_name)
         logging.info(
             f"Uploading {features_output_path} to {FLAGS.s3_bucket}/{s3_object_name}"
         )
@@ -568,6 +571,7 @@ def main(argv):
         predict_structure(
             fasta_path=local_fasta_path,
             fasta_name=fasta_name,
+            job_name=FLAGS.job_name,
             output_dir_base=FLAGS.output_dir,
             data_pipeline=data_pipeline,
             model_runners=model_runners,
@@ -575,14 +579,13 @@ def main(argv):
             benchmark=FLAGS.benchmark,
             random_seed=random_seed,
             is_prokaryote=is_prokaryote,
-            # From Parallelfold
             run_features_only=FLAGS.run_features_only,
         )
 
-    # ---- Add code here to upload results back to s3 -----------------------
+    # ---- Upload results back to s3 -----------------------
     if FLAGS.s3_bucket is not None:
         logging.info(f"Uploading contents of {FLAGS.output_dir} to {FLAGS.s3_bucket}")
-        os.system(f"aws s3 cp {FLAGS.output_dir} s3://{FLAGS.s3_bucket} --recursive")
+        os.system(f"aws s3 cp {FLAGS.output_dir} s3://{FLAGS.s3_bucket}/{FLAGS.job_name} --recursive")
     # ----------------------------
 
 
