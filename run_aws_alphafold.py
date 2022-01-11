@@ -560,7 +560,7 @@ def main(argv):
         try:
             s3.download_file(FLAGS.s3_bucket, key, local_fasta_path)
         except:
-            next()
+            continue
         is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
         fasta_name = fasta_names[i]
         predict_structure(
