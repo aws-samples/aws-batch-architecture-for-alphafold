@@ -43,6 +43,8 @@ from alphafold.model import data
 # Internal import (7716).
 
 import boto3
+s3 = boto3.client("s3")
+
 
 logging.set_verbosity(logging.INFO)
 
@@ -223,7 +225,7 @@ def _check_flag(flag_name: str, other_flag_name: str, should_be_set: bool):
 
 def predict_structure(
     fasta_path: str,
-    fasta_name: str,
+    fasta_id: str,
     job_name: str,
     output_dir_base: str,
     data_pipeline: Union[pipeline.DataPipeline, pipeline_multimer.DataPipeline],
@@ -236,9 +238,9 @@ def predict_structure(
     is_prokaryote: Optional[bool] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
-    logging.info("Predicting %s", fasta_name)
+    logging.info("Predicting %s", fasta_id)
     timings = {}
-    output_dir = os.path.join(output_dir_base, fasta_name)
+    output_dir = os.path.join(output_dir_base, fasta_id)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     msa_output_dir = os.path.join(output_dir, "msas")
@@ -251,11 +253,10 @@ def predict_structure(
     # From ParallelFold
     features_output_path = os.path.join(output_dir, feature_file_name)
 
-    # Check and see if features.pkl exists in os.path.join(fasta_name, feature_file_name)
+    # Check and see if features.pkl exists in os.path.join(fasta_id, feature_file_name)
     # If so, download it to features_output_path
 
-    s3 = boto3.client("s3")
-    s3_object_name = os.path.join(fasta_name, job_name, feature_file_name)
+    s3_object_name = os.path.join(job_name, fasta_id, feature_file_name)
     try:
         logging.info(f"Checking for {s3_object_name} in s3://{FLAGS.s3_bucket}.")
         s3.download_file(FLAGS.s3_bucket, s3_object_name, features_output_path)
@@ -294,7 +295,7 @@ def predict_structure(
         logging.info(
             f"Ending early since run_features_only set to {run_features_only}."
         )
-        logging.info(f"Final timings for {fasta_name}: {timings}")
+        logging.info(f"Final timings for {fasta_id}: {timings}")
         timings_output_path = os.path.join(output_dir, "timings.json")
         with open(timings_output_path, "w") as f:
             f.write(json.dumps(timings, indent=4))
@@ -307,7 +308,7 @@ def predict_structure(
     # Run the models.
     num_models = len(model_runners)
     for model_index, (model_name, model_runner) in enumerate(model_runners.items()):
-        logging.info("Running model %s on %s", model_name, fasta_name)
+        logging.info("Running model %s on %s", model_name, fasta_id)
         t_0 = time.time()
         model_random_seed = model_index + random_seed * num_models
         processed_feature_dict = model_runner.process_features(
@@ -324,7 +325,7 @@ def predict_structure(
         logging.info(
             "Total JAX model %s on %s predict time (includes compilation time, see --benchmark): %.1fs",
             model_name,
-            fasta_name,
+            fasta_id,
             t_diff,
         )
 
@@ -336,7 +337,7 @@ def predict_structure(
             logging.info(
                 "Total JAX model %s on %s predict time (excludes compilation time): %.1fs",
                 model_name,
-                fasta_name,
+                fasta_id,
                 t_diff,
             )
 
@@ -398,7 +399,7 @@ def predict_structure(
             json.dumps({label: ranking_confidences, "order": ranked_order}, indent=4)
         )
 
-    logging.info("Final timings for %s: %s", fasta_name, timings)
+    logging.info("Final timings for %s: %s", fasta_id, timings)
 
     timings_output_path = os.path.join(output_dir, "timings.json")
     with open(timings_output_path, "w") as f:
@@ -448,7 +449,7 @@ def main(argv):
         num_ensemble = 1
 
     # Check for duplicate FASTA file names.
-    fasta_names = [pathlib.Path(p).stem for p in FLAGS.s3_keys]
+    fasta_ids = [pathlib.Path(p).stem for p in FLAGS.s3_keys]
     if len(FLAGS.s3_keys) != len(set(FLAGS.s3_keys)):
         raise ValueError("All FASTA paths must have a unique basename.")
 
@@ -470,7 +471,7 @@ def main(argv):
                     "true or false values."
                 )
     else:  # Default is_prokaryote to False.
-        is_prokaryote_list = [False] * len(fasta_names)
+        is_prokaryote_list = [False] * len(fasta_ids)
 
     if run_multimer_system:
         template_searcher = hmmsearch.Hmmsearch(
@@ -554,23 +555,23 @@ def main(argv):
     logging.info("Using random seed %d for the data pipeline", random_seed)
 
     # Predict structure for each of the sequences.
-    s3 = boto3.client("s3")
     logging.info(FLAGS.s3_bucket)
     logging.info(FLAGS.s3_keys)
     for i, key in enumerate(FLAGS.s3_keys):
         local_fasta_path = os.path.join(os.getcwd(), key)
-        logging.info(f"Downloading {key} from {FLAGS.s3_bucket} to {local_fasta_path}")
+        s3_object_name = os.path.join(FLAGS.job_name, key)
+        logging.info(f"Downloading {key} from {FLAGS.s3_bucket}/{s3_object_name} to {local_fasta_path}")
         try:
-            s3.download_file(FLAGS.s3_bucket, key, local_fasta_path)
+            s3.download_file(FLAGS.s3_bucket, s3_object_name, local_fasta_path)
         except BaseException as err:
-            logging.info(f"Unable to download {key} from {FLAGS.s3_bucket} to {local_fasta_path}")
+            logging.info(f"Unable to download {key} from {FLAGS.s3_bucket}/{s3_object_name} to {local_fasta_path}")
             print(err)
             continue
         is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
-        fasta_name = fasta_names[i]
+        fasta_id = fasta_ids[i]
         predict_structure(
             fasta_path=local_fasta_path,
-            fasta_name=fasta_name,
+            fasta_id=fasta_id,
             job_name=FLAGS.job_name,
             output_dir_base=FLAGS.output_dir,
             data_pipeline=data_pipeline,
