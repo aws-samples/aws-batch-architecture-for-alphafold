@@ -559,7 +559,9 @@ def main(argv):
         logging.info(f"Downloading {key} from {FLAGS.s3_bucket} to {local_fasta_path}")
         try:
             s3.download_file(FLAGS.s3_bucket, key, local_fasta_path)
-        except:
+        except BaseException as err:
+            logging.info(f"Unable to download {key} from {FLAGS.s3_bucket} to {local_fasta_path}")
+            print(err)
             continue
         is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
         fasta_name = fasta_names[i]
