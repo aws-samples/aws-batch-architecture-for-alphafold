@@ -457,7 +457,7 @@ def main(argv):
     # Check that features_paths has the same number of elements as fasta_paths,
     # (if it is not None)
     if FLAGS.features_paths is not None:
-        if len(FLAGS.features.paths) != len(FLAGS.fasta_paths):
+        if len(FLAGS.features_paths) != len(FLAGS.fasta_paths):
             raise ValueError(
                 "--features_paths must either be omitted or match "
                 "length of --fasta_paths."
