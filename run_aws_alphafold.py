@@ -251,7 +251,7 @@ def predict_structure(
     # Get features.
     t_0 = time.time()
     # If we already have feature.pkl file, skip the MSA and template finding step
-    if features_path is not None & os.path.exists(features_path):
+    if features_path is not None:
         logging.info(f"{features_path} found. Loading...")
         feature_dict = pickle.load(open(features_path, "rb"))
     else:
@@ -456,7 +456,7 @@ def main(argv):
 
     # Check that features_paths has the same number of elements as fasta_paths,
     # (if it is not None)
-    if FLAGS.features.paths is not None:
+    if FLAGS.features_paths is not None:
         if len(FLAGS.features.paths) != len(FLAGS.fasta_paths):
             raise ValueError(
                 "--features_paths must either be omitted or match "
