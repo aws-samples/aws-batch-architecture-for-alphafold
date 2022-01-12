@@ -550,19 +550,19 @@ def main(argv):
         fasta_name = fasta_names[i]
 
         # --------- Download files from S3 ---------------------------
+        local_download_path = os.path.join(FLAGS.output_dir, fasta_name)
         if FLAGS.s3_bucket is not None:
             s3_fasta_url = os.path.join(FLAGS.s3_bucket, fasta_path)
             logging.info(
-                f"Downloading {fasta_path} from {s3_fasta_url} to {fasta_path}"
+                f"Downloading {fasta_path} from {s3_fasta_url} to {local_download_path}"
             )
             try:
-                dirname = os.path.dirname(fasta_path)
-                if not os.path.exists(dirname):
-                    os.mkdir(dirname)
-                s3.download_file(FLAGS.s3_bucket, fasta_path, fasta_path)
+                if not os.path.exists(local_download_path):
+                    os.mkdir(local_download_path)
+                s3.download_file(FLAGS.s3_bucket, fasta_path, local_download_path)
             except BaseException as err:
                 logging.info(
-                    f"Unable to download {fasta_path} from {s3_fasta_url} to {fasta_path}"
+                    f"Unable to download {fasta_path} from {s3_fasta_url} to {local_download_path}"
                 )
                 print(err)
                 continue
@@ -571,17 +571,18 @@ def main(argv):
             features_path = FLAGS.features_paths[i]
             s3_features_url = os.path.join(FLAGS.s3_bucket, features_path)
             logging.info(
-                f"Downloading {features_path} from {s3_features_url} to {features_path}"
+                f"Downloading {features_path} from {s3_features_url} to {local_download_path}"
             )
             try:
-                s3.download_file(FLAGS.s3_bucket, features_path, features_path)
+                if not os.path.exists(local_download_path):
+                    os.mkdir(local_download_path)
+                s3.download_file(FLAGS.s3_bucket, features_path, local_download_path)
             except BaseException as err:
                 logging.info(
-                    f"Unable to download {features_path} from {s3_features_url} to {features_path}"
+                    f"Unable to download {features_path} from {s3_features_url} to {local_download_path}"
                 )
                 print(err)
                 continue
-
         else:
             features_path = None
         # --------------------------------------------------------------------
