@@ -556,6 +556,9 @@ def main(argv):
                 f"Downloading {fasta_path} from {s3_fasta_url} to {fasta_path}"
             )
             try:
+                dirname = os.path.dirname(fasta_path)
+                if not os.path.exists(dirname):
+                    os.mkdir(dirname)
                 s3.download_file(FLAGS.s3_bucket, fasta_path, fasta_path)
             except BaseException as err:
                 logging.info(
