@@ -1328,15 +1328,13 @@ Resources:
         StackId: !Ref AWS::StackId
       Type: container       
 
-  GPUFoldingobDefinition:
+  GPUFoldingJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
       ContainerProperties:
         Command:
           - "nvidia-smi"
         Environment:
-          - Name: NVIDIA_VISIBLE_DEVICES
-            Value: all
           - Name: TF_FORCE_UNIFIED_MEMORY
             Value: 1
           - Name: XLA_PYTHON_CLIENT_MEM_FRACTION
