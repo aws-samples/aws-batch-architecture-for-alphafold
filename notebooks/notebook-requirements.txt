@@ -5,3 +5,4 @@ boto3==1.20.32
 sagemaker==2.72.3
 biopython==1.79
 datetime==4.3
+py3Dmol==1.7.0
