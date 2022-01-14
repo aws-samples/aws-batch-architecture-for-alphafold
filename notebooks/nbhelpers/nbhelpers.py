@@ -490,13 +490,17 @@ def submit_batch_alphafold_job(
     is_prokaryote_list=None,
     data_dir="/mnt/data_dir/fsx",
     output_dir="alphafold",
-    uniref90_database_path="/mnt/uniref90_database_path/uniref90.fasta",
+    bfd_database_path="mnt/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
     mgnify_database_path="/mnt/mgnify_database_path/mgy_clusters_2018_12.fa",
-    small_bfd_database_path="/mnt/small_bfd_database_path/bfd-first_non_consensus_sequences.fasta",
     pdb70_database_path="/mnt/pdb70_database_path/pdb70",
-    template_mmcif_dir="/mnt/template_mmcif_dir/mmcif_files",
-    max_template_date=datetime.now().strftime("%Y-%m-%d"),
     obsolete_pdbs_path="/mnt/obsolete_pdbs_path/obsolete.dat",
+    template_mmcif_dir="/mnt/template_mmcif_dir/mmcif_files",
+    pdb_seqres_database_path="/mnt/pdb_seqres_database_path/pdb_seqres.txt",
+    small_bfd_database_path="/mnt/small_bfd_database_path/bfd-first_non_consensus_sequences.fasta",
+    uniclust30_database_path="/mnt/uniclust30_database_path/uniclust30_2018_08/uniclust30_2018_08",
+    uniprot_database_path="/mnt/uniprot_database_path/uniprot.fasta",
+    uniref90_database_path="/mnt/uniref90_database_path/uniref90.fasta",
+    max_template_date=datetime.now().strftime("%Y-%m-%d"),
     db_preset="reduced_dbs",
     model_preset="monomer",
     benchmark=False,
@@ -520,8 +524,6 @@ def submit_batch_alphafold_job(
             f"--fasta_paths={fasta_paths}",
             f"--uniref90_database_path={uniref90_database_path}",
             f"--mgnify_database_path={mgnify_database_path}",
-            f"--pdb70_database_path={pdb70_database_path}",
-            f"--small_bfd_database_path={small_bfd_database_path}",
             f"--data_dir={data_dir}",
             f"--template_mmcif_dir={template_mmcif_dir}",
             f"--obsolete_pdbs_path={obsolete_pdbs_path}",
@@ -537,6 +539,18 @@ def submit_batch_alphafold_job(
         ],
     }
 
+    if model_preset == "multimer":
+        container_overrides["command"].append(f"--uniprot_database_path={uniprot_database_path}")
+        container_overrides["command"].append(f"--pdb_seqres_database_path={pdb_seqres_database_path}")
+    else:
+        container_overrides["command"].append(f"--pdb70_database_path={pdb70_database_path}")
+        
+    if db_preset == "reduced_dbs":
+        container_overrides["command"].append(f"--small_bfd_database_path={small_bfd_database_path}")
+    else:
+        container_overrides["command"].append(f"--uniclust_db_path={uniclust30_database_path}")
+        container_overrides["command"].append(f"--bfd_database_path={bfd_database_path}")
+    
     if is_prokaryote_list is not None:
         container_overrides["command"].append(f"--is_prokaryote_list={is_prokaryote_list}")
 
@@ -551,7 +565,7 @@ def submit_batch_alphafold_job(
 
     if run_features_only:
         container_overrides["command"].append("--run_features_only")
-
+    
     if logtostderr:
         container_overrides["command"].append("--logtostderr")
 
@@ -584,40 +598,3 @@ def submit_batch_alphafold_job(
 
     return response
 
-def submit_download_data_job(
-    job_name="download_job",
-    script="scripts/download_all_data.sh",
-    cpu=4,
-    memory=16,
-    stack_name = None,
-    download_dir = "/fsx",
-    download_mode = "reduced_db"
-    ):
-    
-    if stack_name is None:
-        stack_name = list_alphafold_stacks()[0]["StackName"]
-    batch_resources = get_batch_resources(stack_name)
-
-    job_definition = batch_resources["download_job_definition"]
-    job_queue = batch_resources["download_job_queue"]
-
-    container_overrides = {
-        "command": [
-            script,
-            download_dir,
-            download_mode         
-        ],
-        "resourceRequirements": [
-            {"value": str(cpu), "type": "VCPU"},
-            {"value": str(memory * 1000), "type": "MEMORY"},
-        ],
-    }
-
-    response = batch.submit_job(
-        jobDefinition=job_definition,
-        jobName=job_name,
-        jobQueue=job_queue,
-        containerOverrides=container_overrides,
-    )
-
-    return response
