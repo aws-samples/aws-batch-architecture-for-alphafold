@@ -271,7 +271,7 @@ def predict_structure(
         features_output_path = os.path.join(output_dir, "features.pkl")
         with open(features_output_path, "wb") as f:
             pickle.dump(feature_dict, f, protocol=4)
-
+    
     # From Parallelfold
     if run_features_only:
         logging.info(
@@ -281,7 +281,7 @@ def predict_structure(
         timings_output_path = os.path.join(output_dir, "timings.json")
         with open(timings_output_path, "w") as f:
             f.write(json.dumps(timings, indent=4))
-        pass
+        return
 
     unrelaxed_pdbs = {}
     relaxed_pdbs = {}
