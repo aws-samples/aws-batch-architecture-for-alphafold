@@ -115,18 +115,21 @@ def upload_fasta_to_s3(
     return object_key
 
 
-def get_batch_resources():
-    """
-    Get the resource names of the Batch resources for running Alphafold jobs.
-    """
-
+def list_alphafold_stacks():
     af_stacks = []
     for stack in cfn.list_stacks(
         StackStatusFilter=["CREATE_COMPLETE", "UPDATE_COMPLETE"]
     )["StackSummaries"]:
         if "Alphafold on AWS Batch" in stack["TemplateDescription"]:
             af_stacks.append(stack)
-    stack_name = af_stacks[0]["StackName"]
+    return(af_stacks)
+
+def get_batch_resources(stack_name):
+    """
+    Get the resource names of the Batch resources for running Alphafold jobs.
+    """
+    
+    # stack_name = af_stacks[0]["StackName"]
     stack_resources = cfn.list_stack_resources(StackName=stack_name)
     for resource in stack_resources["StackResourceSummaries"]:
         if resource["LogicalResourceId"] == "GPUFoldingJobDefinition":
@@ -481,9 +484,7 @@ def plot_msa_info(msa):
 
 
 def submit_batch_alphafold_job(
-    job_definition,
     job_name,
-    job_queue,
     fasta_paths,
     s3_bucket,
     is_prokaryote_list=None,
@@ -507,7 +508,13 @@ def submit_batch_alphafold_job(
     memory=16,
     gpu=1,
     depends_on=None,
+    stack_name = None,
 ):
+
+    if stack_name is None:
+        stack_name = list_alphafold_stacks()[0]["StackName"]
+    batch_resources = get_batch_resources(stack_name)
+
     container_overrides = {
         "command": [
             f"--fasta_paths={fasta_paths}",
@@ -549,9 +556,14 @@ def submit_batch_alphafold_job(
         container_overrides["command"].append("--logtostderr")
 
     if gpu > 0:
+        job_definition = batch_resources["gpu_job_definition"]
+        job_queue = batch_resources["gpu_job_queue"]
         container_overrides["resourceRequirements"].append(
             {"value": str(gpu), "type": "GPU"}
         )
+    else:
+        job_definition = batch_resources["cpu_job_definition"]
+        job_queue = batch_resources["cpu_job_queue"]
 
     print(container_overrides)
     if depends_on is None:
@@ -569,5 +581,43 @@ def submit_batch_alphafold_job(
             containerOverrides=container_overrides,
             dependsOn=[{"jobId": depends_on, "type": "SEQUENTIAL"}],
         )
+
+    return response
+
+def submit_download_data_job(
+    job_name="download_job",
+    script="scripts/download_all_data.sh",
+    cpu=4,
+    memory=16,
+    stack_name = None,
+    download_dir = "/fsx",
+    download_mode = "reduced_db"
+    ):
+    
+    if stack_name is None:
+        stack_name = list_alphafold_stacks()[0]["StackName"]
+    batch_resources = get_batch_resources(stack_name)
+
+    job_definition = batch_resources["download_job_definition"]
+    job_queue = batch_resources["download_job_queue"]
+
+    container_overrides = {
+        "command": [
+            script,
+            download_dir,
+            download_mode         
+        ],
+        "resourceRequirements": [
+            {"value": str(cpu), "type": "VCPU"},
+            {"value": str(memory * 1000), "type": "MEMORY"},
+        ],
+    }
+
+    response = batch.submit_job(
+        jobDefinition=job_definition,
+        jobName=job_name,
+        jobQueue=job_queue,
+        containerOverrides=container_overrides,
+    )
 
     return response
