@@ -1267,54 +1267,78 @@ Resources:
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
-          - ContainerPath: /mnt/uniref90_database_path
+          - ContainerPath: /mnt/bfd_database_path
             ReadOnly: True
-            SourceVolume: uniref90
+            SourceVolume: bfd        
           - ContainerPath: /mnt/mgnify_database_path
             ReadOnly: True
-            SourceVolume: mgnify
-          - ContainerPath: /mnt/data_dir
+            SourceVolume: mgnify            
+          - ContainerPath: /mnt/pdb70_database_path
             ReadOnly: True
-            SourceVolume: data
+            SourceVolume: pdb70
           - ContainerPath: /mnt/template_mmcif_dir
             ReadOnly: True
             SourceVolume: pdb_mmcif
           - ContainerPath: /mnt/obsolete_pdbs_path
             ReadOnly: True
             SourceVolume: pdb_mmcif
-          - ContainerPath: /mnt/pdb70_database_path
+          - ContainerPath: /mnt/pdb_seqres_database_path
             ReadOnly: True
-            SourceVolume: pdb70
+            SourceVolume: pdb_seqres            
           - ContainerPath: /mnt/small_bfd_database_path
             ReadOnly: True
             SourceVolume: small_bfd
+          - ContainerPath: /mnt/uniclust30_database_path
+            ReadOnly: True
+            SourceVolume: uniclust30
+          - ContainerPath: /mnt/uniprot_database_path
+            ReadOnly: True
+            SourceVolume: uniprot     
+          - ContainerPath: /mnt/uniref90_database_path
+            ReadOnly: True
+            SourceVolume: uniref90                   
+          - ContainerPath: /mnt/data_dir
+            ReadOnly: True
+            SourceVolume: data
           - ContainerPath: /mnt/output
             ReadOnly: False
             SourceVolume: output
         ResourceRequirements:
           - Type: VCPU
-            Value: 2
+            Value: 8
           - Type: MEMORY
-            Value: 8000
+            Value: 16000
         Volumes:
-          - Name: uniref90
+          - Name: bfd
             Host:
-              SourcePath: /fsx/uniref90
+              SourcePath: /fsx/bfd
           - Name: mgnify
             Host:
-              SourcePath: /fsx/mgnify     
-          - Name: data
-            Host:
-              SourcePath: /
-          - Name: pdb_mmcif
-            Host:
-              SourcePath: /fsx/pdb_mmcif          
+              SourcePath: /fsx/mgnify    
           - Name: pdb70
             Host:
-              SourcePath: /fsx/pdb70
+              SourcePath: /fsx/pdb70   
+          - Name: pdb_mmcif
+            Host:
+              SourcePath: /fsx/pdb_mmcif  
+          - Name: pdb_seqres
+            Host:
+              SourcePath: /fsx/pdb_seqres  
           - Name: small_bfd
             Host:
               SourcePath: /fsx/small_bfd
+          - Name: uniclust30
+            Host:
+              SourcePath: /fsx/uniclust30
+          - Name: uniprot
+            Host:
+              SourcePath: /fsx/uniprot                                                                                               
+          - Name: uniref90
+            Host:
+              SourcePath: /fsx/uniref90   
+          - Name: data
+            Host:
+              SourcePath: /    
           - Name: output
             Host:
               SourcePath: /tmp/alphafold
@@ -1344,56 +1368,80 @@ Resources:
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
-          - ContainerPath: /mnt/uniref90_database_path
+          - ContainerPath: /mnt/bfd_database_path
             ReadOnly: True
-            SourceVolume: uniref90
+            SourceVolume: bfd        
           - ContainerPath: /mnt/mgnify_database_path
             ReadOnly: True
-            SourceVolume: mgnify
-          - ContainerPath: /mnt/data_dir
+            SourceVolume: mgnify            
+          - ContainerPath: /mnt/pdb70_database_path
             ReadOnly: True
-            SourceVolume: data
+            SourceVolume: pdb70
           - ContainerPath: /mnt/template_mmcif_dir
             ReadOnly: True
             SourceVolume: pdb_mmcif
           - ContainerPath: /mnt/obsolete_pdbs_path
             ReadOnly: True
             SourceVolume: pdb_mmcif
-          - ContainerPath: /mnt/pdb70_database_path
+          - ContainerPath: /mnt/pdb_seqres_database_path
             ReadOnly: True
-            SourceVolume: pdb70
+            SourceVolume: pdb_seqres            
           - ContainerPath: /mnt/small_bfd_database_path
             ReadOnly: True
             SourceVolume: small_bfd
+          - ContainerPath: /mnt/uniclust30_database_path
+            ReadOnly: True
+            SourceVolume: uniclust30
+          - ContainerPath: /mnt/uniprot_database_path
+            ReadOnly: True
+            SourceVolume: uniprot     
+          - ContainerPath: /mnt/uniref90_database_path
+            ReadOnly: True
+            SourceVolume: uniref90                   
+          - ContainerPath: /mnt/data_dir
+            ReadOnly: True
+            SourceVolume: data
           - ContainerPath: /mnt/output
             ReadOnly: False
             SourceVolume: output
         ResourceRequirements:
           - Type: VCPU
-            Value: 4
+            Value: 8
           - Type: MEMORY
             Value: 16000
           - Type: GPU
             Value: 1
         Volumes:
-          - Name: uniref90
+          - Name: bfd
             Host:
-              SourcePath: /fsx/uniref90
+              SourcePath: /fsx/bfd
           - Name: mgnify
             Host:
-              SourcePath: /fsx/mgnify     
-          - Name: data
-            Host:
-              SourcePath: /
-          - Name: pdb_mmcif
-            Host:
-              SourcePath: /fsx/pdb_mmcif          
+              SourcePath: /fsx/mgnify    
           - Name: pdb70
             Host:
-              SourcePath: /fsx/pdb70
+              SourcePath: /fsx/pdb70   
+          - Name: pdb_mmcif
+            Host:
+              SourcePath: /fsx/pdb_mmcif  
+          - Name: pdb_seqres
+            Host:
+              SourcePath: /fsx/pdb_seqres  
           - Name: small_bfd
             Host:
               SourcePath: /fsx/small_bfd
+          - Name: uniclust30
+            Host:
+              SourcePath: /fsx/uniclust30
+          - Name: uniprot
+            Host:
+              SourcePath: /fsx/uniprot                                                                                               
+          - Name: uniref90
+            Host:
+              SourcePath: /fsx/uniref90   
+          - Name: data
+            Host:
+              SourcePath: /    
           - Name: output
             Host:
               SourcePath: /tmp/alphafold
@@ -1418,57 +1466,18 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
           MountPoints:
-          - ContainerPath: /mnt/uniref90_database_path
-            ReadOnly: True
-            SourceVolume: uniref90
-          - ContainerPath: /mnt/mgnify_database_path
-            ReadOnly: True
-            SourceVolume: mgnify
-          - ContainerPath: /mnt/data_dir
-            ReadOnly: True
-            SourceVolume: data
-          - ContainerPath: /mnt/template_mmcif_dir
-            ReadOnly: True
-            SourceVolume: pdb_mmcif
-          - ContainerPath: /mnt/obsolete_pdbs_path
-            ReadOnly: True
-            SourceVolume: pdb_mmcif
-          - ContainerPath: /mnt/pdb70_database_path
-            ReadOnly: True
-            SourceVolume: pdb70
-          - ContainerPath: /mnt/small_bfd_database_path
-            ReadOnly: True
-            SourceVolume: small_bfd
-          - ContainerPath: /mnt/output
-            ReadOnly: False
-            SourceVolume: output
+            - ContainerPath: /fsx
+              ReadOnly: False
+              SourceVolume: fsx
           ResourceRequirements:
             - Type: VCPU
-              Value: 8
+              Value: 4
             - Type: MEMORY
               Value: 16000
           Volumes:
-          - Name: uniref90
-            Host:
-              SourcePath: /fsx/uniref90
-          - Name: mgnify
-            Host:
-              SourcePath: /fsx/mgnify     
-          - Name: data
-            Host:
-              SourcePath: /
-          - Name: pdb_mmcif
-            Host:
-              SourcePath: /fsx/pdb_mmcif          
-          - Name: pdb70
-            Host:
-              SourcePath: /fsx/pdb70
-          - Name: small_bfd
-            Host:
-              SourcePath: /fsx/small_bfd
-          - Name: output
-            Host:
-              SourcePath: /tmp/alphafold
+            - Name: fsx
+              Host:
+                SourcePath: /fsx
         PlatformCapabilities:
           - EC2
         PropagateTags: true
