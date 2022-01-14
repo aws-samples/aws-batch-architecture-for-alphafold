@@ -73,6 +73,7 @@ pymol_color_list = [
 
 alphabet_list = list(ascii_uppercase + ascii_lowercase)
 
+
 def create_job_name(suffix=None):
 
     """
@@ -87,8 +88,13 @@ def create_job_name(suffix=None):
         suffix = sub("\W", "_", suffix)
         return datetime.now().strftime("%Y%m%dT%H%M%S") + "_" + suffix
 
+
 def upload_fasta_to_s3(
-    sequences, ids, bucket=sm_session.default_bucket(), job_name=uuid.uuid4(), region="us-east-1"
+    sequences,
+    ids,
+    bucket=sm_session.default_bucket(),
+    job_name=uuid.uuid4(),
+    region="us-east-1",
 ):
 
     """
@@ -98,10 +104,7 @@ def upload_fasta_to_s3(
     file_out = "_tmp.fasta"
     with open(file_out, "a") as f_out:
         for i, seq in enumerate(sequences):
-            seq_record = SeqRecord(
-                Seq(seq),
-                id=ids[i]
-            )
+            seq_record = SeqRecord(Seq(seq), id=ids[i])
             SeqIO.write(seq_record, f_out, "fasta")
 
     object_key = f"{job_name}/{job_name}.fasta"
@@ -109,7 +112,8 @@ def upload_fasta_to_s3(
     os.remove(file_out)
     s3_uri = f"s3://{bucket}/{object_key}"
     print(f"Sequence file uploaded to {s3_uri}")
-    return object_key 
+    return object_key
+
 
 def get_batch_resources():
     """
@@ -117,10 +121,12 @@ def get_batch_resources():
     """
 
     af_stacks = []
-    for stack in cfn.list_stacks(StackStatusFilter=["CREATE_COMPLETE", "UPDATE_COMPLETE"])["StackSummaries"]:
+    for stack in cfn.list_stacks(
+        StackStatusFilter=["CREATE_COMPLETE", "UPDATE_COMPLETE"]
+    )["StackSummaries"]:
         if "Alphafold on AWS Batch" in stack["TemplateDescription"]:
             af_stacks.append(stack)
-    stack_name = (af_stacks[0]["StackName"])
+    stack_name = af_stacks[0]["StackName"]
     stack_resources = cfn.list_stack_resources(StackName=stack_name)
     for resource in stack_resources["StackResourceSummaries"]:
         if resource["LogicalResourceId"] == "GPUFoldingJobDefinition":
@@ -134,15 +140,16 @@ def get_batch_resources():
         if resource["LogicalResourceId"] == "CPUDownloadJobDefinition":
             download_job_definition = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "PublicCPUJobQueue":
-            download_job_queue = resource["PhysicalResourceId"]            
-    return({
+            download_job_queue = resource["PhysicalResourceId"]
+    return {
         "gpu_job_definition": gpu_job_definition,
         "gpu_job_queue": gpu_job_queue,
         "cpu_job_definition": cpu_job_definition,
         "cpu_job_queue": cpu_job_queue,
         "download_job_definition": download_job_definition,
-        "download_job_queue": download_job_queue
-    })
+        "download_job_queue": download_job_queue,
+    }
+
 
 def get_batch_job_info(jobId):
 
@@ -150,7 +157,6 @@ def get_batch_job_info(jobId):
     Retrieve and format information about a batch job.
     """
 
-    
     job_description = batch.describe_jobs(jobs=[jobId])
 
     output = {
@@ -170,6 +176,7 @@ def get_batch_job_info(jobId):
             "logStreamName"
         ]
     return output
+
 
 def get_batch_logs(logStreamName):
 
@@ -191,16 +198,30 @@ def get_batch_logs(logStreamName):
     logs.drop("ingestionTime", axis=1, inplace=True)
     return logs
 
+
 def plot_msa(bucket, job_name):
 
-    s3.download_file(bucket, f"{job_name}/{job_name}/msas/mgnify_hits.sto", "data/mgnify_hits.sto")
-    s3.download_file(bucket, f"{job_name}/{job_name}/msas/small_bfd_hits.sto", "data/small_bfd_hits.sto")
-    s3.download_file(bucket, f"{job_name}/{job_name}/msas/uniref90_hits.sto", "data/uniref90_hits.sto")
+    if not os.path.exists("data"):
+        os.makedirs("data")
+
+    s3.download_file(
+        bucket, f"{job_name}/msas/mgnify_hits.sto", "data/mgnify_hits.sto"
+    )
+    s3.download_file(
+        bucket,
+        f"{job_name}/msas/small_bfd_hits.sto",
+        "data/small_bfd_hits.sto",
+    )
+    s3.download_file(
+        bucket,
+        f"{job_name}/msas/uniref90_hits.sto",
+        "data/uniref90_hits.sto",
+    )
 
     msas = [
         AlignIO.read("data/mgnify_hits.sto", "stockholm"),
         AlignIO.read("data/small_bfd_hits.sto", "stockholm"),
-        AlignIO.read("data/uniref90_hits.sto", "stockholm")
+        AlignIO.read("data/uniref90_hits.sto", "stockholm"),
     ]
     full_single_chain_msa = []
     for msa in msas:
@@ -209,20 +230,22 @@ def plot_msa(bucket, job_name):
 
     deduped_full_single_chain_msa = list(dict.fromkeys(full_single_chain_msa))
     total_msa_size = len(deduped_full_single_chain_msa)
-    aa_map = {res: i for i, res in enumerate('ABCDEFGHIJKLMNOPQRSTUVWXYZ-')}
+    aa_map = {res: i for i, res in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ-")}
     msa_arr = np.array(
-        [[aa_map[aa] for aa in seq] for seq in deduped_full_single_chain_msa])
+        [[aa_map[aa] for aa in seq] for seq in deduped_full_single_chain_msa]
+    )
     plt.figure(figsize=(12, 3))
-    plt.title(f'Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence')
-    plt.plot(np.sum(msa_arr != aa_map['-'], axis=0), color='black')
-    plt.ylabel('Non-Gap Count')
+    plt.title(f"Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence")
+    plt.plot(np.sum(msa_arr != aa_map["-"], axis=0), color="black")
+    plt.ylabel("Non-Gap Count")
     plt.yticks(range(0, total_msa_size + 1, max(1, int(total_msa_size / 3))))
     plt.show()
     pass
 
+
 def display_structure(
     bucket,
-    job_name,    
+    job_name,
     color="lDDT",
     show_sidechains=False,
     show_mainchains=False,
@@ -236,14 +259,8 @@ def display_structure(
     if color not in ["chain", "lDDT", "rainbow"]:
         raise ValueError("Color must be 'LDDT' (default), 'chain', or 'rainbow'")
 
-    
-    
-    print(
-        f"Downloading PDB file from s3://{bucket}/{job_name}/{job_name}/ranked_0.pdb"
-    )
-    s3.download_file(
-        bucket, f"{job_name}/{job_name}/ranked_0.pdb", "data/ranked_0.pdb"
-    )
+    print(f"Downloading PDB file from s3://{bucket}/{job_name}/ranked_0.pdb")
+    s3.download_file(bucket, f"{job_name}/ranked_0.pdb", "data/ranked_0.pdb")
     plot_pdb(
         "data/ranked_0.pdb",
         show_sidechains=show_sidechains,
@@ -461,3 +478,96 @@ def plot_msa_info(msa):
         plt.show()
     else:
         print("Unable to display MSA of length 1")
+
+
+def submit_batch_alphafold_job(
+    job_definition,
+    job_name,
+    job_queue,
+    fasta_paths,
+    s3_bucket,
+    is_prokaryote_list=None,
+    data_dir="/mnt/data_dir/fsx",
+    output_dir="alphafold",
+    uniref90_database_path="/mnt/uniref90_database_path/uniref90.fasta",
+    mgnify_database_path="/mnt/mgnify_database_path/mgy_clusters_2018_12.fa",
+    small_bfd_database_path="/mnt/small_bfd_database_path/bfd-first_non_consensus_sequences.fasta",
+    pdb70_database_path="/mnt/pdb70_database_path/pdb70",
+    template_mmcif_dir="/mnt/template_mmcif_dir/mmcif_files",
+    max_template_date=datetime.now().strftime("%Y-%m-%d"),
+    obsolete_pdbs_path="/mnt/obsolete_pdbs_path/obsolete.dat",
+    db_preset="reduced_dbs",
+    model_preset="monomer",
+    benchmark=False,
+    use_precomputed_msas=False,
+    features_paths=None,
+    run_features_only=False,
+    logtostderr=True,
+    cpu=4,
+    memory=16,
+    gpu=1,
+    depends_on=None,
+):
+    container_overrides = {
+        "command": [
+            f"--fasta_paths={fasta_paths}",
+            f"--uniref90_database_path={uniref90_database_path}",
+            f"--mgnify_database_path={mgnify_database_path}",
+            f"--pdb70_database_path={pdb70_database_path}",
+            f"--small_bfd_database_path={small_bfd_database_path}",
+            f"--data_dir={data_dir}",
+            f"--template_mmcif_dir={template_mmcif_dir}",
+            f"--obsolete_pdbs_path={obsolete_pdbs_path}",
+            f"--output_dir={output_dir}",
+            f"--max_template_date={max_template_date}",
+            f"--db_preset={db_preset}",
+            f"--model_preset={model_preset}",
+            f"--s3_bucket={s3_bucket}",
+        ],
+        "resourceRequirements": [
+            {"value": str(cpu), "type": "VCPU"},
+            {"value": str(memory * 1000), "type": "MEMORY"},
+        ],
+    }
+
+    if is_prokaryote_list is not None:
+        container_overrides["command"].append(f"--is_prokaryote_list={is_prokaryote_list}")
+
+    if benchmark:
+        container_overrides["command"].append("--benchmark")
+
+    if use_precomputed_msas:
+        container_overrides["command"].append("--use_precomputed_msas")
+
+    if features_paths is not None:
+        container_overrides["command"].append(f"--features_paths={features_paths}")
+
+    if run_features_only:
+        container_overrides["command"].append("--run_features_only")
+
+    if logtostderr:
+        container_overrides["command"].append("--logtostderr")
+
+    if gpu > 0:
+        container_overrides["resourceRequirements"].append(
+            {"value": str(gpu), "type": "GPU"}
+        )
+
+    print(container_overrides)
+    if depends_on is None:
+        response = batch.submit_job(
+            jobDefinition=job_definition,
+            jobName=job_name,
+            jobQueue=job_queue,
+            containerOverrides=container_overrides,
+        )
+    else:
+        response = batch.submit_job(
+            jobDefinition=job_definition,
+            jobName=job_name,
+            jobQueue=job_queue,
+            containerOverrides=container_overrides,
+            dependsOn=[{"jobId": depends_on, "type": "SEQUENTIAL"}],
+        )
+
+    return response
