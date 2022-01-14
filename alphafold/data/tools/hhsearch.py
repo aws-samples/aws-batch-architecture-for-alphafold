@@ -79,7 +79,8 @@ class HHSearch:
       cmd = [self.binary_path,
              '-i', input_path,
              '-o', hhr_path,
-             '-maxseq', str(self.maxseq)
+             '-maxseq', str(self.maxseq),
+             '-v 2',
              ] + db_cmd
 
       logging.info('Launching subprocess "%s"', ' '.join(cmd))
