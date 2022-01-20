@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG CUDA=11.2
+ARG CUDA=11.2.2
 FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
 #FROM public.ecr.aws/ubuntu/ubuntu:18.04
 # FROM directive resets ARGS, so we specify again (the value is retained if
