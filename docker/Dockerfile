@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG CUDA=11.1
-#ARG CUDA=11.1.1
-# FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
-FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu20.04
+ARG CUDA=11.5.1
+FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
@@ -26,7 +24,8 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       build-essential \
       cmake \
-      cuda-command-line-tools-${CUDA/./-} \
+      # cuda-command-line-tools-${CUDA/./-} \
+      cuda-command-line-tools-11.5 \
       git \
       hmmer \
       kalign \
