@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG CUDA=11.4.1
+ARG CUDA=11.4.2
 FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
@@ -54,7 +54,7 @@ RUN wget -q -P /tmp \
 # Install conda packages.
 ENV PATH="/opt/conda/bin:$PATH"
 RUN conda update -qy conda \
-    && conda install -y -c nvidia -c conda-forge \
+    && conda install -y -c conda-forge \
       openmm=7.5.1 \
       cudatoolkit==${CUDA_VERSION} \
       pdbfixer \
