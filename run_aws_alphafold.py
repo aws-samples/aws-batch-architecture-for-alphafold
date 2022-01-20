@@ -612,6 +612,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    logging.info(f"FLAGS values are {FLAGS}")
     flags.mark_flags_as_required(
         [
             "fasta_paths",

@@ -492,7 +492,7 @@ def submit_batch_alphafold_job(
     output_dir="alphafold",
     bfd_database_path="mnt/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
     mgnify_database_path="/mnt/mgnify_database_path/mgy_clusters_2018_12.fa",
-    pdb70_database_path="/mnt/pdb70_database_path/pdb70",
+    pdb70_database_path="/mnt/pdb70_database_path",
     obsolete_pdbs_path="/mnt/obsolete_pdbs_path/obsolete.dat",
     template_mmcif_dir="/mnt/template_mmcif_dir/mmcif_files",
     pdb_seqres_database_path="/mnt/pdb_seqres_database_path/pdb_seqres.txt",
