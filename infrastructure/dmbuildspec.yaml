@@ -14,5 +14,3 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-      - echo Pushing the folding Docker image
-      - docker push 032243382548.dkr.ecr.us-east-2.amazonaws.com/dmalphafold:latest
