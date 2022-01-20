@@ -9,7 +9,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the folding Docker image
-      - docker build -f docker/dm-docker -t dmalphafold:latest .
+      - docker build -f docker/test-dockerfile -t dmalphafold:latest .
       - docker tag dmalphafold:latest 032243382548.dkr.ecr.us-east-2.amazonaws.com/dmalphafold:latest
   post_build:
     commands:
