@@ -52,7 +52,6 @@ class HHSearch:
     self.maxseq = maxseq
 
     for database_path in self.databases:
-      logging.info(f"Checking database_path {database_path}")
       if not glob.glob(database_path + '_*'):
         logging.error('Could not find HHsearch database %s', database_path)
         raise ValueError(f'Could not find HHsearch database {database_path}')
@@ -80,11 +79,9 @@ class HHSearch:
       cmd = [self.binary_path,
              '-i', input_path,
              '-o', hhr_path,
-             '-maxseq', str(self.maxseq),
-             '-v 2',
+             '-maxseq', str(self.maxseq)
              ] + db_cmd
 
-      logging.info('Launching subprocess "%s"', ' '.join(cmd))
       process = subprocess.Popen(
           cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       with utils.timing('HHsearch query'):
