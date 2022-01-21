@@ -12,7 +12,7 @@ Parameters:
   CodeRepoKey:
     Description: S3 object key (without the bucket name) to the aws-alphafold.zip file in S3 used to populate CodeCommit.
     Type: String
-    Default: blog_post_support_materials/aws-alphafold/aws-alphafold-template.zip    
+    Default: blog_post_support_materials/aws-alphafold/aws-alphafold.zip    
 
 Resources:
   ##################################################
