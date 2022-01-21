@@ -122,13 +122,14 @@ def list_alphafold_stacks():
     )["StackSummaries"]:
         if "Alphafold on AWS Batch" in stack["TemplateDescription"]:
             af_stacks.append(stack)
-    return(af_stacks)
+    return af_stacks
+
 
 def get_batch_resources(stack_name):
     """
     Get the resource names of the Batch resources for running Alphafold jobs.
     """
-    
+
     # stack_name = af_stacks[0]["StackName"]
     stack_resources = cfn.list_stack_resources(StackName=stack_name)
     for resource in stack_resources["StackResourceSummaries"]:
@@ -202,53 +203,114 @@ def get_batch_logs(logStreamName):
     return logs
 
 
-def plot_msa(bucket, job_name):
+def download_dir(client, bucket, local="data", prefix=""):
+    """Recursively download files from S3."""
 
-    if not os.path.exists("data"):
-        os.makedirs("data")
+    paginator = client.get_paginator("list_objects_v2")
+    file_count = 0
+    for result in paginator.paginate(Bucket=bucket, Delimiter="/", Prefix=prefix):
+        if result.get("CommonPrefixes") is not None:
+            for subdir in result.get("CommonPrefixes"):
+                download_dir(client, bucket, local, subdir.get("Prefix"))
+        for file in result.get("Contents", []):
+            dest_pathname = os.path.join(local, file.get("Key"))
+            if not os.path.exists(os.path.dirname(dest_pathname)):
+                os.makedirs(os.path.dirname(dest_pathname))
+            client.download_file(bucket, file.get("Key"), dest_pathname)
+            file_count += 1
+    print(f"{file_count} files downloaded from s3.")
+    return local
 
-    s3.download_file(
-        bucket, f"{job_name}/msas/mgnify_hits.sto", "data/mgnify_hits.sto"
-    )
-    s3.download_file(
-        bucket,
-        f"{job_name}/msas/small_bfd_hits.sto",
-        "data/small_bfd_hits.sto",
-    )
-    s3.download_file(
-        bucket,
-        f"{job_name}/msas/uniref90_hits.sto",
-        "data/uniref90_hits.sto",
-    )
 
-    msas = [
-        AlignIO.read("data/mgnify_hits.sto", "stockholm"),
-        AlignIO.read("data/small_bfd_hits.sto", "stockholm"),
-        AlignIO.read("data/uniref90_hits.sto", "stockholm"),
-    ]
-    full_single_chain_msa = []
-    for msa in msas:
-        for single_chain_msa in msa:
-            full_single_chain_msa.append(single_chain_msa.seq)
+def download_results(bucket, job_name, local="data"):
+    """Download MSA information from S3"""
+    return download_dir(s3, bucket, local, job_name)
 
-    deduped_full_single_chain_msa = list(dict.fromkeys(full_single_chain_msa))
-    total_msa_size = len(deduped_full_single_chain_msa)
-    aa_map = {res: i for i, res in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ-")}
-    msa_arr = np.array(
-        [[aa_map[aa] for aa in seq] for seq in deduped_full_single_chain_msa]
-    )
-    plt.figure(figsize=(12, 3))
-    plt.title(f"Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence")
-    plt.plot(np.sum(msa_arr != aa_map["-"], axis=0), color="black")
-    plt.ylabel("Non-Gap Count")
-    plt.yticks(range(0, total_msa_size + 1, max(1, int(total_msa_size / 3))))
-    plt.show()
-    pass
+
+def plot_msa(msa_folder):
+
+    local_path = os.path.abspath(msa_folder)
+
+    is_monomer = True
+    with os.scandir(local_path) as it:
+        for obj in it:
+            if obj.is_dir():
+                is_monomer = False
+                raise NotImplementedError(
+                    "Multimer MSA plotting is not supported at this time."
+                )
+
+    if is_monomer:
+        msas = []
+        with os.scandir(local_path) as it:
+            for obj in it:
+                if os.path.splitext(obj.path)[1] == ".sto":
+                    msas.append(AlignIO.read(obj.path, "stockholm"))
+        print(msas)
+        full_single_chain_msa = []
+        for msa in msas:
+            for single_chain_msa in msa:
+                full_single_chain_msa.append(single_chain_msa.seq)
+        deduped_full_single_chain_msa = list(dict.fromkeys(full_single_chain_msa))
+        total_msa_size = len(deduped_full_single_chain_msa)
+        aa_map = {res: i for i, res in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ-")}
+        print(type(deduped_full_single_chain_msa))
+        msa_arr = np.array(
+            [[aa_map[aa] for aa in seq] for seq in deduped_full_single_chain_msa]
+        )
+        print(msa_arr.shape)
+
+        plt.figure(figsize=(12, 3))
+        plt.title(f"Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence")
+        plt.plot(np.sum(msa_arr != aa_map["-"], axis=0), color="black")
+        plt.ylabel("Non-Gap Count")
+        plt.yticks(range(0, total_msa_size + 1, max(1, int(total_msa_size / 3))))
+        plt.show()
+
+    # else:
+    #     chains = []
+    #     with os.scandir(local_path) as it:
+    #         for obj in it:
+    #             if obj.is_dir():
+    #                 new_msas = []
+    #                 with os.scandir(obj.path) as it2:
+    #                     for obj2 in it2:
+    #                         if os.path.splitext(obj2.path)[1] == ".sto":
+    #                             new_msas.append(AlignIO.read(obj2.path, "stockholm"))
+    #                 chains.append(new_msas)
+    #     print(chains)
+    #     print(chains[0])
+    #     chain_count = len(chains)
+    #     print(f"{chain_count} chains detected")
+    #     for i, msas in enumerate(chains):
+    #         print(msas)
+    #         full_single_chain_msa = []
+    #         for msa in msas:
+    #             for single_chain_msa in msa:
+    #                 full_single_chain_msa.append(single_chain_msa.seq)
+    #         deduped_full_single_chain_msa = list(dict.fromkeys(full_single_chain_msa))
+    #         total_msa_size = len(deduped_full_single_chain_msa)
+    #         aa_map = {res: i for i, res in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ-")}
+    #         msa_arr = []
+    #         for i,seq in enumerate(deduped_full_single_chain_msa):
+    #             msa_arr.append([aa_map[aa.upper()] for aa in seq])
+    #         msa_arr = np.array(msa_arr)
+
+    #         print(msa_arr.shape)
+    #         print(msa_arr[0])
+    #         print(msa_arr[1])
+
+    #         plt.figure(figsize=(12, 3))
+    #         plt.title(f"Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence")
+    #         plt.plot(np.sum(msa_arr != aa_map["-"], axis=0), color="black")
+    #         plt.ylabel("Non-Gap Count")
+    #         plt.yticks(range(0, total_msa_size + 1, max(1, int(total_msa_size / 3))))
+    #         plt.show()
+    return None
 
 
 def display_structure(
-    bucket,
-    job_name,
+    pdb_path,
     color="lDDT",
     show_sidechains=False,
     show_mainchains=False,
@@ -262,10 +324,10 @@ def display_structure(
     if color not in ["chain", "lDDT", "rainbow"]:
         raise ValueError("Color must be 'LDDT' (default), 'chain', or 'rainbow'")
 
-    print(f"Downloading PDB file from s3://{bucket}/{job_name}/ranked_0.pdb")
-    s3.download_file(bucket, f"{job_name}/ranked_0.pdb", "data/ranked_0.pdb")
+    # print(f"Downloading PDB file from s3://{bucket}/{job_name}/ranked_0.pdb")
+    # s3.download_file(bucket, f"{job_name}/ranked_0.pdb", "data/ranked_0.pdb")
     plot_pdb(
-        "data/ranked_0.pdb",
+        pdb_path,
         show_sidechains=show_sidechains,
         show_mainchains=show_mainchains,
         color=color,
@@ -512,7 +574,7 @@ def submit_batch_alphafold_job(
     memory=16,
     gpu=1,
     depends_on=None,
-    stack_name = None,
+    stack_name=None,
 ):
 
     if stack_name is None:
@@ -540,19 +602,33 @@ def submit_batch_alphafold_job(
     }
 
     if model_preset == "multimer":
-        container_overrides["command"].append(f"--uniprot_database_path={uniprot_database_path}")
-        container_overrides["command"].append(f"--pdb_seqres_database_path={pdb_seqres_database_path}")
+        container_overrides["command"].append(
+            f"--uniprot_database_path={uniprot_database_path}"
+        )
+        container_overrides["command"].append(
+            f"--pdb_seqres_database_path={pdb_seqres_database_path}"
+        )
     else:
-        container_overrides["command"].append(f"--pdb70_database_path={pdb70_database_path}")
-        
+        container_overrides["command"].append(
+            f"--pdb70_database_path={pdb70_database_path}"
+        )
+
     if db_preset == "reduced_dbs":
-        container_overrides["command"].append(f"--small_bfd_database_path={small_bfd_database_path}")
+        container_overrides["command"].append(
+            f"--small_bfd_database_path={small_bfd_database_path}"
+        )
     else:
-        container_overrides["command"].append(f"--uniclust_db_path={uniclust30_database_path}")
-        container_overrides["command"].append(f"--bfd_database_path={bfd_database_path}")
-    
+        container_overrides["command"].append(
+            f"--uniclust_db_path={uniclust30_database_path}"
+        )
+        container_overrides["command"].append(
+            f"--bfd_database_path={bfd_database_path}"
+        )
+
     if is_prokaryote_list is not None:
-        container_overrides["command"].append(f"--is_prokaryote_list={is_prokaryote_list}")
+        container_overrides["command"].append(
+            f"--is_prokaryote_list={is_prokaryote_list}"
+        )
 
     if benchmark:
         container_overrides["command"].append("--benchmark")
@@ -565,7 +641,7 @@ def submit_batch_alphafold_job(
 
     if run_features_only:
         container_overrides["command"].append("--run_features_only")
-    
+
     if logtostderr:
         container_overrides["command"].append("--logtostderr")
 
@@ -597,4 +673,3 @@ def submit_batch_alphafold_job(
         )
 
     return response
-
