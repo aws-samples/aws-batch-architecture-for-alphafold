@@ -5,11 +5,14 @@ Parameters:
   StackAvailabilityZone:
     Description: Availability zone to deploy stack resources
     Type: "AWS::EC2::AvailabilityZone::Name"
-  CodeBucket:
-    Description: S3 Bucket name (without the s3://) holding the aws-alphafold.zip file for populating CodeCommit.
+  CodeRepoBucket:
+    Description: S3 bucket name (without the s3://) containing the aws-alphafold.zip file in S3 used to populate CodeCommit.
     Type: String
-    Default: aws-alphafold-template
-
+    Default: aws-hcls-ml
+  CodeRepoKey:
+    Description: S3 object key (without the bucket name) to the aws-alphafold.zip file in S3 used to populate CodeCommit.
+    Type: String
+    Default: blog_post_support_materials/aws-alphafold-template.zip    
 
 Resources:
   ##################################################
@@ -582,8 +585,8 @@ Resources:
       Code:
         BranchName: "main"
         S3:
-          Bucket: !Ref CodeBucket
-          Key: "aws-alphafold.zip"
+          Bucket: !Ref CodeRepoBucket
+          Key: !Ref CodeRepoKey
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [
