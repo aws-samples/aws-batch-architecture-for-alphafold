@@ -1,11 +1,15 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Creates a stack for running Alphafold on AWS Batch.
-
 Parameters:
   StackAvailabilityZone:
     Description: Availability zone to deploy stack resources
     Type: "AWS::EC2::AvailabilityZone::Name"
+  CodeBucket:
+    Description: S3 Bucket name (without the s3://) holding the aws-alphafold.zip file for populating CodeCommit.
+    Type: String
+    Default: aws-alphafold-template
+
 
 Resources:
   ##################################################
@@ -578,8 +582,8 @@ Resources:
       Code:
         BranchName: "main"
         S3:
-          Bucket: "aws-af-testing"
-          Key: "code/aws-alphafold.zip"
+          Bucket: !Ref CodeBucket
+          Key: "aws-alphafold.zip"
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [
