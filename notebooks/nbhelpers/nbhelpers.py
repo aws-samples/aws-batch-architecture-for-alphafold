@@ -227,85 +227,67 @@ def download_results(bucket, job_name, local="data"):
     return download_dir(s3, bucket, local, job_name)
 
 
-def plot_msa(msa_folder):
+def reduce_stockholm_file(sto_file):
+    """Read in a .sto file and parse format it into a numpy array of the
+    same length as the first (target) sequence
+    """
+    msa = AlignIO.read(sto_file, "stockholm")
+    msa_arr = np.array([list(rec) for rec in msa])
+    return msa_arr[:, msa_arr[0, :] != "-"]
 
-    local_path = os.path.abspath(msa_folder)
 
-    is_monomer = True
-    with os.scandir(local_path) as it:
-        for obj in it:
-            if obj.is_dir():
-                is_monomer = False
-                raise NotImplementedError(
-                    "Multimer MSA plotting is not supported at this time."
-                )
+def plot_msa_array(msa_arr, id=None):
 
-    if is_monomer:
-        msas = []
-        with os.scandir(local_path) as it:
-            for obj in it:
-                if os.path.splitext(obj.path)[1] == ".sto":
-                    msas.append(AlignIO.read(obj.path, "stockholm"))
-        print(msas)
-        full_single_chain_msa = []
-        for msa in msas:
-            for single_chain_msa in msa:
-                full_single_chain_msa.append(single_chain_msa.seq)
-        deduped_full_single_chain_msa = list(dict.fromkeys(full_single_chain_msa))
-        total_msa_size = len(deduped_full_single_chain_msa)
+    total_msa_size = len(msa_arr)
+
+    if total_msa_size > 1:
         aa_map = {res: i for i, res in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ-")}
-        print(type(deduped_full_single_chain_msa))
-        msa_arr = np.array(
-            [[aa_map[aa] for aa in seq] for seq in deduped_full_single_chain_msa]
-        )
-        print(msa_arr.shape)
-
+        msa_arr = np.array([[aa_map[aa] for aa in seq] for seq in msa_arr])
         plt.figure(figsize=(12, 3))
-        plt.title(f"Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence")
+        plt.title(
+            f"Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence {id}"
+        )
         plt.plot(np.sum(msa_arr != aa_map["-"], axis=0), color="black")
         plt.ylabel("Non-Gap Count")
         plt.yticks(range(0, total_msa_size + 1, max(1, int(total_msa_size / 3))))
-        plt.show()
 
-    # else:
-    #     chains = []
-    #     with os.scandir(local_path) as it:
-    #         for obj in it:
-    #             if obj.is_dir():
-    #                 new_msas = []
-    #                 with os.scandir(obj.path) as it2:
-    #                     for obj2 in it2:
-    #                         if os.path.splitext(obj2.path)[1] == ".sto":
-    #                             new_msas.append(AlignIO.read(obj2.path, "stockholm"))
-    #                 chains.append(new_msas)
-    #     print(chains)
-    #     print(chains[0])
-    #     chain_count = len(chains)
-    #     print(f"{chain_count} chains detected")
-    #     for i, msas in enumerate(chains):
-    #         print(msas)
-    #         full_single_chain_msa = []
-    #         for msa in msas:
-    #             for single_chain_msa in msa:
-    #                 full_single_chain_msa.append(single_chain_msa.seq)
-    #         deduped_full_single_chain_msa = list(dict.fromkeys(full_single_chain_msa))
-    #         total_msa_size = len(deduped_full_single_chain_msa)
-    #         aa_map = {res: i for i, res in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ-")}
-    #         msa_arr = []
-    #         for i,seq in enumerate(deduped_full_single_chain_msa):
-    #             msa_arr.append([aa_map[aa.upper()] for aa in seq])
-    #         msa_arr = np.array(msa_arr)
+        return plt
 
-    #         print(msa_arr.shape)
-    #         print(msa_arr[0])
-    #         print(msa_arr[1])
+    else:
+        print("Unable to display MSA of length 1")
+        return None
 
-    #         plt.figure(figsize=(12, 3))
-    #         plt.title(f"Per-Residue Count of Non-Gap Amino Acids in the MSA for Sequence")
-    #         plt.plot(np.sum(msa_arr != aa_map["-"], axis=0), color="black")
-    #         plt.ylabel("Non-Gap Count")
-    #         plt.yticks(range(0, total_msa_size + 1, max(1, int(total_msa_size / 3))))
-    #         plt.show()
+
+def plot_msa_folder(msa_folder, id=None):
+    combined_msa = None
+    with os.scandir(msa_folder) as it:
+        for obj in it:
+            obj_path = os.path.splitext(obj.path)
+            if "pdb_hits" not in obj_path[0] and obj_path[1] == ".sto":
+                msa_arr = reduce_stockholm_file(obj.path)
+                if combined_msa is None:
+                    combined_msa = msa_arr
+                else:
+                    combined_msa = np.concatenate((combined_msa, msa_arr), axis=0)
+    if combined_msa is not None:
+        print(f"Total number of aligned sequences is {len(combined_msa)}")
+        plot_msa_array(combined_msa, id).show()
+        return None
+    else:
+        return None
+
+
+def plot_msa_output_folder(path, id=None):
+    """Plot MSAs in a folder that may have multiple chain folders"""
+    plots = []
+    monomer = True
+    with os.scandir(path) as it:
+        for obj in it:
+            if obj.is_dir():
+                monomer = False
+                plot_msa_folder(obj.path, id + " " + obj.name)
+        if monomer:
+            plot_msa_folder(path, id)
     return None
 
 
