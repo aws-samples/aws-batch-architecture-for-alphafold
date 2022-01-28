@@ -24,7 +24,6 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       build-essential \
       cmake \
-      # cuda-command-line-tools-${CUDA/./-} \
       cuda-command-line-tools-11.4 \
       git \
       hmmer \
