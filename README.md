@@ -10,10 +10,11 @@
     [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-hcls-ml.s3.amazonaws.com/blog_post_support_materials/aws-alphafold/cfn.yaml)
 
 2. For *Stack Name*, enter a value unique to your account and region.
-3. For *StackAvailabilityZone* choose an availability zone.
-4. Select *I acknowledge that AWS CloudFormation might create IAM resources with custom names*.
-5. Choose *Create stack*.
-6. Wait approximately 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-RoseTTAFold container to Amazon Elastic Container Registry (Amazon ECR).
+3. For *FSxForLustreThroughput*, enter how much throughput to provision on the FSx for Lustre file system. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
+4. For *StackAvailabilityZone* choose an availability zone.
+5. Select *I acknowledge that AWS CloudFormation might create IAM resources with custom names*.
+6. Choose *Create stack*.
+7. Wait approximately 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-RoseTTAFold container to Amazon Elastic Container Registry (Amazon ECR).
 
 ### Clone Notebook Repository
 1. Navigate to [CodeCommit](https://console.aws.amazon.com/codesuite/codecommit).
@@ -25,14 +26,9 @@
 
 `python notebooks/download_ref_data.py <STACK NAME>`
 
-Replacing "<STACK NAME>" with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
+Replacing <STACK NAME> with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
 
 2. It will take several hours to populate the file system. You can track its progress by navigating to the file system in the FSx for Lustre console.
-
-:ledger: **Note: The total download size for the full databases is around 415 GB
-and the total size when unzipped is 2.2 TB. Please make sure you have a large
-enough hard drive space, bandwidth and time to download. We recommend using an
-SSD for better genetic search performance.**
 
 The `download_all_data.sh` script will also download the model parameter files.
 Once the script has finished, you should have the following directory structure:
@@ -72,19 +68,18 @@ $DOWNLOAD_DIR/                             # Total: ~ 2.2 TB (download: 438 GB)
 is only downloaded if you download the reduced databases.
 
 ## Usage
-Use the provided `AWS-ALphaFold.ipynb` notebook to submit sequences for analysis and download the results.
+Use the provided `AWS-AlphaFold.ipynb` notebook to submit sequences for analysis and download the results.
 
 ## Additional Information
 
 ### Model parameters
 
 While the AlphaFold code is licensed under the Apache 2.0 License, the AlphaFold
-parameters are made available for non-commercial use only under the terms of the
-CC BY-NC 4.0 license. Please see the [Disclaimer](#license-and-disclaimer) below
-for more detail.
+parameters are made available under the terms of the CC BY 4.0 license. Please
+see the [Disclaimer](#license-and-disclaimer) below for more detail.
 
 The AlphaFold parameters are available from
-https://storage.googleapis.com/alphafold/alphafold_params_2021-10-27.tar, and
+https://storage.googleapis.com/alphafold/alphafold_params_2022-01-19.tar, and
 are downloaded as part of the `scripts/download_all_data.sh` script. This script
 will download parameters for:
 
@@ -98,11 +93,118 @@ will download parameters for:
     structure predictions.
 
 
+### AlphaFold output
+
+The outputs will be saved S3 bucket directory provided. The
+outputs include the computed MSAs, unrelaxed structures, relaxed structures,
+ranked structures, raw model outputs, prediction metadata, and section timings.
+The output directory will have the following structure:
+
+```
+<job_name>/
+    features.pkl
+    ranked_{0,1,2,3,4}.pdb
+    ranking_debug.json
+    relaxed_model_{1,2,3,4,5}.pdb
+    result_model_{1,2,3,4,5}.pkl
+    timings.json
+    unrelaxed_model_{1,2,3,4,5}.pdb
+    msas/
+        bfd_uniclust_hits.a3m
+        mgnify_hits.sto
+        uniref90_hits.sto
+```
+
+The contents of each output file are as follows:
+
+*   `features.pkl` – A `pickle` file containing the input feature NumPy arrays
+    used by the models to produce the structures.
+*   `unrelaxed_model_*.pdb` – A PDB format text file containing the predicted
+    structure, exactly as outputted by the model.
+*   `relaxed_model_*.pdb` – A PDB format text file containing the predicted
+    structure, after performing an Amber relaxation procedure on the unrelaxed
+    structure prediction (see Jumper et al. 2021, Suppl. Methods 1.8.6 for
+    details).
+*   `ranked_*.pdb` – A PDB format text file containing the relaxed predicted
+    structures, after reordering by model confidence. Here `ranked_0.pdb` should
+    contain the prediction with the highest confidence, and `ranked_4.pdb` the
+    prediction with the lowest confidence. To rank model confidence, we use
+    predicted LDDT (pLDDT) scores (see Jumper et al. 2021, Suppl. Methods 1.9.6
+    for details).
+*   `ranking_debug.json` – A JSON format text file containing the pLDDT values
+    used to perform the model ranking, and a mapping back to the original model
+    names.
+*   `timings.json` – A JSON format text file containing the times taken to run
+    each section of the AlphaFold pipeline.
+*   `msas/` - A directory containing the files describing the various genetic
+    tool hits that were used to construct the input MSA.
+*   `result_model_*.pkl` – A `pickle` file containing a nested dictionary of the
+    various NumPy arrays directly produced by the model. In addition to the
+    output of the structure module, this includes auxiliary outputs such as:
+
+    *   Distograms (`distogram/logits` contains a NumPy array of shape [N_res,
+        N_res, N_bins] and `distogram/bin_edges` contains the definition of the
+        bins).
+    *   Per-residue pLDDT scores (`plddt` contains a NumPy array of shape
+        [N_res] with the range of possible values from `0` to `100`, where `100`
+        means most confident). This can serve to identify sequence regions
+        predicted with high confidence or as an overall per-target confidence
+        score when averaged across residues.
+    *   Present only if using pTM models: predicted TM-score (`ptm` field
+        contains a scalar). As a predictor of a global superposition metric,
+        this score is designed to also assess whether the model is confident in
+        the overall domain packing.
+    *   Present only if using pTM models: predicted pairwise aligned errors
+        (`predicted_aligned_error` contains a NumPy array of shape [N_res,
+        N_res] with the range of possible values from `0` to
+        `max_predicted_aligned_error`, where `0` means most confident). This can
+        serve for a visualisation of domain packing confidence within the
+        structure.
+
+The pLDDT confidence measure is stored in the B-factor field of the output PDB
+files (although unlike a B-factor, higher pLDDT is better, so care must be taken
+when using for tasks such as molecular replacement).
+
+This code has been tested to match mean top-1 accuracy on a CASP14 test set with
+pLDDT ranking over 5 model predictions (some CASP targets were run with earlier
+versions of AlphaFold and some had manual interventions; see our forthcoming
+publication for details). Some targets such as T1064 may also have high
+individual run variance over random seeds.
+
+## Acknowledgements
+
+AlphaFold communicates with and/or references the following separate libraries
+and packages:
+
+*   [Abseil](https://github.com/abseil/abseil-py)
+*   [Biopython](https://biopython.org)
+*   [Chex](https://github.com/deepmind/chex)
+*   [Colab](https://research.google.com/colaboratory/)
+*   [Docker](https://www.docker.com)
+*   [HH Suite](https://github.com/soedinglab/hh-suite)
+*   [HMMER Suite](http://eddylab.org/software/hmmer)
+*   [Haiku](https://github.com/deepmind/dm-haiku)
+*   [Immutabledict](https://github.com/corenting/immutabledict)
+*   [JAX](https://github.com/google/jax/)
+*   [Kalign](https://msa.sbc.su.se/cgi-bin/msa.cgi)
+*   [matplotlib](https://matplotlib.org/)
+*   [ML Collections](https://github.com/google/ml_collections)
+*   [NumPy](https://numpy.org)
+*   [OpenMM](https://github.com/openmm/openmm)
+*   [OpenStructure](https://openstructure.org)
+*   [pandas](https://pandas.pydata.org/)
+*   [pymol3d](https://github.com/avirshup/py3dmol)
+*   [SciPy](https://scipy.org)
+*   [Sonnet](https://github.com/deepmind/sonnet)
+*   [TensorFlow](https://github.com/tensorflow/tensorflow)
+*   [Tree](https://github.com/deepmind/tree)
+*   [tqdm](https://github.com/tqdm/tqdm)
+
+We thank all their contributors and maintainers!
+
 ## License and Disclaimer
 
-This is not an officially supported Google product.
-
-Copyright 2021 DeepMind Technologies Limited.
+AlphaFold is not an officially supported Google product.
 
 ### AlphaFold Code License
 
@@ -117,10 +219,9 @@ specific language governing permissions and limitations under the License.
 
 ### Model Parameters License
 
-The AlphaFold parameters are made available for non-commercial use only, under
-the terms of the Creative Commons Attribution-NonCommercial 4.0 International
-(CC BY-NC 4.0) license. You can find details at:
-https://creativecommons.org/licenses/by-nc/4.0/legalcode
+The AlphaFold parameters are made available under the terms of the Creative
+Commons Attribution 4.0 International (CC BY 4.0) license. You can find details
+at: https://creativecommons.org/licenses/by/4.0/legalcode
 
 ### Third-party software
 
