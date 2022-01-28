@@ -2,6 +2,15 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Creates a stack for running Alphafold on AWS Batch.
 Parameters:
+  FSxForLustreThroughput:
+    Description: Throughput for unit storage (MB/s/TB) to provision for FSx for Lustre file system.
+    Type: Number
+    AllowedValues:
+      - 125
+      - 250
+      - 500
+      - 1000
+    Default: 500
   StackAvailabilityZone:
     Description: Availability zone to deploy stack resources
     Type: "AWS::EC2::AvailabilityZone::Name"
@@ -326,7 +335,7 @@ Resources:
       LustreConfiguration:
         DataCompressionType: "LZ4"
         DeploymentType: "PERSISTENT_2"
-        PerUnitStorageThroughput: 500
+        PerUnitStorageThroughput: !Ref FSxForLustreThroughput
       SecurityGroupIds:
         - !GetAtt VPC.DefaultSecurityGroup
       StorageCapacity: 1200
