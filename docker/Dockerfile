@@ -13,10 +13,12 @@
 # limitations under the License.
 
 ARG CUDA=11.4.2
+ARG AF_VERSION=v2.1.2
 FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
+ARG AF_VERSION
 
 # Use bash to support string substitution.
 SHELL ["/bin/bash", "-c"]
@@ -55,13 +57,15 @@ ENV PATH="/opt/conda/bin:$PATH"
 RUN conda update -qy conda \
     && conda install -y -c conda-forge \
       openmm=7.5.1 \
-      cudatoolkit==${CUDA_VERSION} \
+      cudatoolkit==${CUDA} \
       pdbfixer \
       pip \
       python=3.7 \
       awscli
 
-COPY . /app/alphafold
+RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alphafold.git /app/alphafold
+COPY run_aws_alphafold.py /app/alphafold
+
 RUN wget -q -P /app/alphafold/alphafold/common/ \
   https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
 
@@ -75,6 +79,8 @@ RUN pip3 install --upgrade pip \
 # Apply OpenMM patch.
 WORKDIR /opt/conda/lib/python3.7/site-packages
 RUN patch -p0 < /app/alphafold/docker/openmm.patch
+
+RUN rm -rf /app/alphafold/docker /app/alphafold/imgs /app/alphafold/notebooks /app/alphafold/scripts
 
 # We need to run `ldconfig` first to ensure GPUs are visible, due to some quirk
 # with Debian. See https://github.com/NVIDIA/nvidia-docker/issues/1399 for

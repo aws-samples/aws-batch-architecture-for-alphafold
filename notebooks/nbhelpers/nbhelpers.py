@@ -20,12 +20,12 @@ from string import ascii_uppercase, ascii_lowercase
 import py3Dmol
 
 boto_session = boto3.session.Session()
-sm_session = sagemaker.session.Session()
+sm_session = sagemaker.session.Session(boto_session)
 region = boto_session.region_name
-s3 = boto3.client("s3", region_name=region)
-batch = boto3.client("batch", region_name=region)
-cfn = boto3.client("cloudformation", region_name=region)
-logs_client = boto3.client("logs")
+s3 = boto_session.client("s3", region_name=region)
+batch = boto_session.client("batch", region_name=region)
+cfn = boto_session.client("cloudformation", region_name=region)
+logs_client = boto_session.client("logs")
 
 
 pymol_color_list = [
