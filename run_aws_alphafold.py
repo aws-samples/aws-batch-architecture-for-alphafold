@@ -183,7 +183,7 @@ flags.DEFINE_boolean(
     "have been written to disk. WARNING: This will not check "
     "if the sequence, database or configuration have changed.",
 )
-flags.DEFINE_boolean('use_gpu_relax', None, 'Whether to relax on GPU. '
+flags.DEFINE_boolean('use_gpu_relax', True, 'Whether to relax on GPU. '
                      'Relax on GPU can be much faster than CPU, so it is '
                      'recommended to enable if possible. GPUs must be available'
                      ' if this setting is enabled.')
