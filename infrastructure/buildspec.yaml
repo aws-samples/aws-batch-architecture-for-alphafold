@@ -9,7 +9,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the folding Docker image
-      - docker build -f docker/Dockerfile -t $FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG .
+      - docker build -f docker/Dockerfile -t $FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG --build-arg CUDA=11.4.2 --build-arg AF_VERSION=$AF_VERSION .
       - docker tag $FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
       - echo Building the download Docker image
       - docker build -f docker/download-Dockerfile -t $DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG .

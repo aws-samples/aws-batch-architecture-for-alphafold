@@ -14,6 +14,12 @@ Parameters:
   StackAvailabilityZone:
     Description: Availability zone to deploy stack resources
     Type: "AWS::EC2::AvailabilityZone::Name"
+  AlphaFoldVersion:
+    Description: AlphaFold release to include as part of the job container
+    Type: String
+    Default: v2.1.2
+    AllowedValues:
+      - v2.1.2
   CodeRepoBucket:
     Description: S3 bucket name (without the s3://) containing the aws-alphafold.zip file in S3 used to populate CodeCommit.
     Type: String
@@ -857,6 +863,8 @@ Resources:
             Value: latest
           - Name: FOLDING_IMAGE_REPO_NAME
             Value: !Ref FoldingContainerRegistry
+          - Name: AF_VERSION
+            Value: !Ref AlphaFoldVersion
           - Name: DOWNLOAD_IMAGE_TAG
             Value: latest
           - Name: DOWNLOAD_IMAGE_REPO_NAME
