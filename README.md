@@ -10,11 +10,13 @@
     [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-hcls-ml.s3.amazonaws.com/blog_post_support_materials/aws-alphafold/cfn.yaml)
 
 2. For *Stack Name*, enter a value unique to your account and region.
-3. For *FSxForLustreThroughput*, enter how much throughput to provision on the FSx for Lustre file system. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
-4. For *StackAvailabilityZone* choose an availability zone.
-5. Select *I acknowledge that AWS CloudFormation might create IAM resources with custom names*.
-6. Choose *Create stack*.
-7. Wait approximately 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-RoseTTAFold container to Amazon Elastic Container Registry (Amazon ECR).
+3. For *FSXForLustreStorageCapacity*, enter how much storage to provision on the FSx for Lustre file system. The default is 1200 GB. Select a higher value if you plan to work with both full and reduced dataset.
+4. For *FSxForLustreThroughput*, enter how much throughput to provision on the FSx for Lustre file system. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
+5. For *LaunchSageMakerNotebook*, enter Y if you want to launch a sagemaker notebook along with the stack. The default is N.
+6. For *StackAvailabilityZone* choose an availability zone.
+7. Select *I acknowledge that AWS CloudFormation might create IAM resources with custom names*.
+8. Choose *Create stack*.
+9. Wait approximately 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
 
 ### Clone Notebook Repository
 1. Navigate to [CodeCommit](https://console.aws.amazon.com/codesuite/codecommit).
