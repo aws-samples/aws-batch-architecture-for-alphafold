@@ -34,11 +34,10 @@ from alphafold.data import templates
 from alphafold.data.tools import hhsearch
 from alphafold.data.tools import hmmsearch
 from alphafold.model import config
+from alphafold.model import data
 from alphafold.model import model
 from alphafold.relax import relax
 import numpy as np
-
-from alphafold.model import data
 
 import boto3
 
@@ -184,7 +183,11 @@ flags.DEFINE_boolean(
     "have been written to disk. WARNING: This will not check "
     "if the sequence, database or configuration have changed.",
 )
-## ---------------------- New --------------------------
+flags.DEFINE_boolean('use_gpu_relax', None, 'Whether to relax on GPU. '
+                     'Relax on GPU can be much faster than CPU, so it is '
+                     'recommended to enable if possible. GPUs must be available'
+                     ' if this setting is enabled.')
+## ---------------------- AWS-specific --------------------------
 flags.DEFINE_string(
     "s3_bucket",
     None,
@@ -531,13 +534,16 @@ def main(argv):
 
     logging.info("Have %d models: %s", len(model_runners), list(model_runners.keys()))
 
-    amber_relaxer = relax.AmberRelaxation(
-        max_iterations=RELAX_MAX_ITERATIONS,
-        tolerance=RELAX_ENERGY_TOLERANCE,
-        stiffness=RELAX_STIFFNESS,
-        exclude_residues=RELAX_EXCLUDE_RESIDUES,
-        max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS,
-    )
+    if FLAGS.run_relax:
+        amber_relaxer = relax.AmberRelaxation(
+            max_iterations=RELAX_MAX_ITERATIONS,
+            tolerance=RELAX_ENERGY_TOLERANCE,
+            stiffness=RELAX_STIFFNESS,
+            exclude_residues=RELAX_EXCLUDE_RESIDUES,
+            max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS,
+            use_gpu=FLAGS.use_gpu_relax)
+    else:
+        amber_relaxer = None
 
     random_seed = FLAGS.random_seed
     if random_seed is None:
@@ -623,6 +629,7 @@ if __name__ == "__main__":
             "template_mmcif_dir",
             "max_template_date",
             "obsolete_pdbs_path",
+            "use_gpu_relax",
         ]
     )
 
