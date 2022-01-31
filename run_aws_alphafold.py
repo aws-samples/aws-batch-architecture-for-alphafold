@@ -180,9 +180,18 @@ flags.DEFINE_boolean(
     "use_precomputed_msas",
     False,
     "Whether to read MSAs that "
-    "have been written to disk. WARNING: This will not check "
-    "if the sequence, database or configuration have changed.",
+    'have been written to disk instead of running the MSA '
+    'tools. The MSA files are looked up in the output '
+    'directory, so it must stay the same between multiple '
+    'runs that are to reuse the MSAs. WARNING: This will not '
+    'check if the sequence, database or configuration have '
+    'changed.',
 )
+flags.DEFINE_boolean('run_relax', True, 'Whether to run the final relaxation '
+                     'step on the predicted models. Turning relax off might '
+                     'result in predictions with distracting stereochemical '
+                     'violations but might help in case you are having issues '
+                     'with the relaxation stage.')
 flags.DEFINE_boolean('use_gpu_relax', True, 'Whether to relax on GPU. '
                      'Relax on GPU can be much faster than CPU, so it is '
                      'recommended to enable if possible. GPUs must be available'
