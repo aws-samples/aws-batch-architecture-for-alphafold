@@ -1,6 +1,15 @@
-![header](imgs/header.jpg)
-
 # AWS-AlphaFold
+## Overview
+Proteins are large biomolecules that play an important role in the body. Knowing the physical structure of proteins is key to understanding their function. However, it can be difficult and expensive to determine the structure of many proteins experimentally. One alternative is to predict these structures using machine learning algorithms. Several high-profile research teams have released such algorithms, including AlphaFold 2,  RoseTTAFold, and others. Their work was important enough for Science magazine to name it the "2021 Breakthrough of the Year".
+
+Both AlphaFold 2 and RoseTTAFold use a multi-track transformer architecture trained on known protein templates to predict the structure of unknown peptide sequences. These predictions are heavily GPU-dependent and take anywhere from minutes to days to complete. The input features for these predictions include multiple sequence alignment (MSA) data. MSA algorithms are CPU-dependent and can themselves require several hours of processing time.
+
+Running both the MSA and structure prediction steps in the same computing environment can be cost inefficient, because the expensive GPU resources required for the prediction sit unused while the MSA step runs. Instead, using a high-performance computing (HPC) service like AWS Batch allows us to run each step as a containerized job with the best fit of CPU, memory, and GPU resources.
+
+This repository includes the CloudFormation template, Jupyter Notebook, and supporting code to run the Alphafold 2 algorithm on AWS. 
+
+## Architecture Diagram
+![AWS-Alphafold Architecture](imgs/aws-alphafold-arch.png)
 
 ## First time setup
 ### Deploy the infrastructure stack
