@@ -1,16 +1,19 @@
 # AWS-AlphaFold
+-----
 ## Overview
-Proteins are large biomolecules that play an important role in the body. Knowing the physical structure of proteins is key to understanding their function. However, it can be difficult and expensive to determine the structure of many proteins experimentally. One alternative is to predict these structures using machine learning algorithms. Several high-profile research teams have released such algorithms, including AlphaFold 2,  RoseTTAFold, and others. Their work was important enough for Science magazine to name it the "2021 Breakthrough of the Year".
+Proteins are large biomolecules that play an important role in the body. Knowing the physical structure of proteins is key to understanding their function. However, it can be difficult and expensive to determine the structure of many proteins experimentally. One alternative is to predict these structures using machine learning algorithms. Several high-profile research teams have released such algorithms, including [AlphaFold 2](https://deepmind.com/blog/article/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology),  [RoseTTAFold](https://www.ipd.uw.edu/2021/07/rosettafold-accurate-protein-structure-prediction-accessible-to-all/), and others. Their work was important enough for Science magazine to name it the ["2021 Breakthrough of the Year"](https://www.science.org/content/article/breakthrough-2021).
 
 Both AlphaFold 2 and RoseTTAFold use a multi-track transformer architecture trained on known protein templates to predict the structure of unknown peptide sequences. These predictions are heavily GPU-dependent and take anywhere from minutes to days to complete. The input features for these predictions include multiple sequence alignment (MSA) data. MSA algorithms are CPU-dependent and can themselves require several hours of processing time.
 
-Running both the MSA and structure prediction steps in the same computing environment can be cost inefficient, because the expensive GPU resources required for the prediction sit unused while the MSA step runs. Instead, using a high-performance computing (HPC) service like AWS Batch allows us to run each step as a containerized job with the best fit of CPU, memory, and GPU resources.
+Running both the MSA and structure prediction steps in the same computing environment can be cost inefficient, because the expensive GPU resources required for the prediction sit unused while the MSA step runs. Instead, using a high-performance computing (HPC) service like [AWS Batch](https://aws.amazon.com/batch/) allows us to run each step as a containerized job with the best fit of CPU, memory, and GPU resources.
 
-This repository includes the CloudFormation template, Jupyter Notebook, and supporting code to run the Alphafold 2 algorithm on AWS. 
+This repository includes the CloudFormation template, Jupyter Notebook, and supporting code to run the Alphafold 2 algorithm on AWS Batch. 
 
+-----
 ## Architecture Diagram
 ![AWS-Alphafold Architecture](imgs/aws-alphafold-arch.png)
 
+-----
 ## First time setup
 ### Deploy the infrastructure stack
 
@@ -18,16 +21,30 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 
     [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-hcls-ml.s3.amazonaws.com/blog_post_support_materials/aws-alphafold/cfn.yaml)
 
-2. For *Stack Name*, enter a value unique to your account and region.
-3. For *FSXForLustreStorageCapacity*, enter how much storage to provision on the FSx for Lustre file system. The default is 1200 GB. Select a higher value if you plan to work with both full and reduced dataset.
-4. For *FSxForLustreThroughput*, enter how much throughput to provision on the FSx for Lustre file system. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
-5. For *LaunchSageMakerNotebook*, enter Y if you want to launch a sagemaker notebook along with the stack. The default is N.
-6. For *StackAvailabilityZone* choose an availability zone.
-7. Select *I acknowledge that AWS CloudFormation might create IAM resources with custom names*.
-8. Choose *Create stack*.
-9. Wait approximately 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
+2. Specify the following required parameters:
+  - For *Stack Name*, enter a value unique to your account and region.
+  - For *StackAvailabilityZone* choose an availability zone.
+3. If needed, specify the following optional parameters:
+  - Select a different value for *AlphaFoldVersion* if you want to include another version of the public Alphafold repo in your Batch job container.
+  - Specify a different value for *CodeRepoBucket* and *CodeRepoKey* if you want to populate your AWS-Alphafold CodeCommit repository with custom code stored in another S3 bucket.
+  - Select a different value for *FSXForLustreStorageCapacity* if you want to provision a larger file system. The default value of 1200 GB is sufficient to store compressed instances of the Alphafold parameters, BFD (small and reduced), Mgnify, PDB70, PDB mmCIF, Uniclust30, Uniref90, UniProt, and PDB SeqRes datasets.
+  - Select a different value for for *FSxForLustreThroughput* if you have unique performance needs. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
+  - Select Y for *LaunchSageMakerNotebook* if you want to launch a managed sagemaker notebook instance to quickly run the provided Jupyter notebook.
+
+4. Select *I acknowledge that AWS CloudFormation might create IAM resources with custom names*.
+5. Choose *Create stack*.
+6. Wait 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
+
+### Launch SageMaker Notebook
+(If *LaunchSageMakerNotebook* set to Y)
+1. Navigate to [SageMaker](https://console.aws.amazon.com/codesuite/sagemaker)
+2. Select *Notebook* > *Notebook instances*.
+3. Select the *AWS-Alphafold-Notebook* instance and then *Actions* > *Open Jupyter* or *Open JupyterLab*.
+
+![Sagemaker Notebook Instances](imgs/notebook-nav.png)
 
 ### Clone Notebook Repository
+(If *LaunchSageMakerNotebook* set to F)
 1. Navigate to [CodeCommit](https://console.aws.amazon.com/codesuite/codecommit).
 2. Select the aws-alphafold repository that was just created and copy the clone URL.
 3. Use the URL to clone the repository into your Jupyter notebook environment of choice, such as SageMaker Studio.
@@ -37,12 +54,11 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 
 `python notebooks/download_ref_data.py <STACK NAME>`
 
-Replacing <STACK NAME> with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
+Replacing `<STACK NAME>` with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
 
 2. It will take several hours to populate the file system. You can track its progress by navigating to the file system in the FSx for Lustre console.
 
-The `download_all_data.sh` script will also download the model parameter files.
-Once the script has finished, you should have the following directory structure:
+The `download_all_data.sh` script will also download the model parameter files. Once the script has finished, you should have the following directory structure:
 
 ```
 $DOWNLOAD_DIR/                             # Total: ~ 2.2 TB (download: 438 GB)
@@ -75,40 +91,28 @@ $DOWNLOAD_DIR/                             # Total: ~ 2.2 TB (download: 438 GB)
         uniref90.fasta
 ```
 
-`bfd/` is only downloaded if you download the full databases, and `small_bfd/`
-is only downloaded if you download the reduced databases.
+`bfd/` is only downloaded if you download the full databases, and `small_bfd/` is only downloaded if you download the reduced databases.
 
+-----
 ## Usage
 Use the provided `AWS-AlphaFold.ipynb` notebook to submit sequences for analysis and download the results.
 
-## Additional Information
+-----
+## Model parameters
 
-### Model parameters
+While the AlphaFold code is licensed under the Apache 2.0 License, the AlphaFold parameters are made available under the terms of the CC BY 4.0 license. Please see the [Disclaimer](#license-and-disclaimer) below for more detail.
 
-While the AlphaFold code is licensed under the Apache 2.0 License, the AlphaFold
-parameters are made available under the terms of the CC BY 4.0 license. Please
-see the [Disclaimer](#license-and-disclaimer) below for more detail.
+The AlphaFold parameters are available from https://storage.googleapis.com/alphafold/alphafold_params_2022-01-19.tar, and
+are downloaded as part of the `scripts/download_all_data.sh` script. This script will download parameters for:
 
-The AlphaFold parameters are available from
-https://storage.googleapis.com/alphafold/alphafold_params_2022-01-19.tar, and
-are downloaded as part of the `scripts/download_all_data.sh` script. This script
-will download parameters for:
+- Five models which were used during CASP14, and were extensively validated for structure prediction quality (see Jumper et al. 2021, Suppl. Methods 1.12 for details).
+- Five pTM models, which were fine-tuned to produce pTM (predicted TM-score) and (PAE) predicted aligned error values alongside their structure predictions (see Jumper et al. 2021, Suppl. Methods 1.9.7 for details).
+- Five AlphaFold-Multimer models that produce pTM and PAE values alongside their structure predictions.
 
-*   5 models which were used during CASP14, and were extensively validated for
-    structure prediction quality (see Jumper et al. 2021, Suppl. Methods 1.12
-    for details).
-*   5 pTM models, which were fine-tuned to produce pTM (predicted TM-score) and
-    (PAE) predicted aligned error values alongside their structure predictions
-    (see Jumper et al. 2021, Suppl. Methods 1.9.7 for details).
-*   5 AlphaFold-Multimer models that produce pTM and PAE values alongside their
-    structure predictions.
+-----
+## AlphaFold output
 
-
-### AlphaFold output
-
-The outputs will be saved S3 bucket directory provided. The
-outputs include the computed MSAs, unrelaxed structures, relaxed structures,
-ranked structures, raw model outputs, prediction metadata, and section timings.
+AWS Batch will save all job outputs to the S3 bucket specified in the task definition. This includes the computed MSAs, unrelaxed structures, relaxed structures, ranked structures, raw model outputs, prediction metadata, and section timings.
 The output directory will have the following structure:
 
 ```
@@ -128,60 +132,23 @@ The output directory will have the following structure:
 
 The contents of each output file are as follows:
 
-*   `features.pkl` – A `pickle` file containing the input feature NumPy arrays
-    used by the models to produce the structures.
-*   `unrelaxed_model_*.pdb` – A PDB format text file containing the predicted
-    structure, exactly as outputted by the model.
-*   `relaxed_model_*.pdb` – A PDB format text file containing the predicted
-    structure, after performing an Amber relaxation procedure on the unrelaxed
-    structure prediction (see Jumper et al. 2021, Suppl. Methods 1.8.6 for
-    details).
-*   `ranked_*.pdb` – A PDB format text file containing the relaxed predicted
-    structures, after reordering by model confidence. Here `ranked_0.pdb` should
-    contain the prediction with the highest confidence, and `ranked_4.pdb` the
-    prediction with the lowest confidence. To rank model confidence, we use
-    predicted LDDT (pLDDT) scores (see Jumper et al. 2021, Suppl. Methods 1.9.6
-    for details).
-*   `ranking_debug.json` – A JSON format text file containing the pLDDT values
-    used to perform the model ranking, and a mapping back to the original model
-    names.
-*   `timings.json` – A JSON format text file containing the times taken to run
-    each section of the AlphaFold pipeline.
-*   `msas/` - A directory containing the files describing the various genetic
-    tool hits that were used to construct the input MSA.
-*   `result_model_*.pkl` – A `pickle` file containing a nested dictionary of the
-    various NumPy arrays directly produced by the model. In addition to the
-    output of the structure module, this includes auxiliary outputs such as:
+- `features.pkl` – A `pickle` file containing the input feature NumPy arrays used by the models to produce the structures.
+- `unrelaxed_model_*.pdb` – A PDB format text file containing the predicted structure, exactly as outputted by the model.
+- `relaxed_model_*.pdb` – A PDB format text file containing the predicted structure, after performing an Amber relaxation procedure on the unrelaxed structure prediction (see Jumper et al. 2021, Suppl. Methods 1.8.6 for details).
+- `ranked_*.pdb` – A PDB format text file containing the relaxed predicted structures, after reordering by model confidence. Here `ranked_0.pdb` should contain the prediction with the highest confidence, and `ranked_4.pdb` the prediction with the lowest confidence. To rank model confidence, we use predicted LDDT (pLDDT) scores (see Jumper et al. 2021, Suppl. Methods 1.9.6 for details).
+- `ranking_debug.json` – A JSON format text file containing the pLDDT values used to perform the model ranking, and a mapping back to the original model names.
+- `timings.json` – A JSON format text file containing the times taken to run each section of the AlphaFold pipeline.
+- `msas/` - A directory containing the files describing the various genetic tool hits that were used to construct the input MSA.
+- `result_model_*.pkl` – A `pickle` file containing a nested dictionary of the various NumPy arrays directly produced by the model. In addition to the output of the structure module, this includes auxiliary outputs such as:
 
-    *   Distograms (`distogram/logits` contains a NumPy array of shape [N_res,
-        N_res, N_bins] and `distogram/bin_edges` contains the definition of the
-        bins).
-    *   Per-residue pLDDT scores (`plddt` contains a NumPy array of shape
-        [N_res] with the range of possible values from `0` to `100`, where `100`
-        means most confident). This can serve to identify sequence regions
-        predicted with high confidence or as an overall per-target confidence
-        score when averaged across residues.
-    *   Present only if using pTM models: predicted TM-score (`ptm` field
-        contains a scalar). As a predictor of a global superposition metric,
-        this score is designed to also assess whether the model is confident in
-        the overall domain packing.
-    *   Present only if using pTM models: predicted pairwise aligned errors
-        (`predicted_aligned_error` contains a NumPy array of shape [N_res,
-        N_res] with the range of possible values from `0` to
-        `max_predicted_aligned_error`, where `0` means most confident). This can
-        serve for a visualisation of domain packing confidence within the
-        structure.
+  - Distograms (`distogram/logits` contains a NumPy array of shape [N_res, N_res, N_bins] and `distogram/bin_edges` contains the definition of the bins).
+  - Per-residue pLDDT scores (`plddt` contains a NumPy array of shape [N_res] with the range of possible values from `0` to `100`, where `100` means most confident). This can serve to identify sequence regions predicted with high confidence or as an overall per-target confidence score when averaged across residues.
+  - Present only if using pTM models: predicted TM-score (`ptm` field contains a scalar). As a predictor of a global superposition metric, this score is designed to also assess whether the model is confident in the overall domain packing.
+  - Present only if using pTM models: predicted pairwise aligned errors (`predicted_aligned_error` contains a NumPy array of shape [N_res, N_res] with the range of possible values from `0` to `max_predicted_aligned_error`, where `0` means most confident). This can serve for a visualisation of domain packing confidence withi the structure.
 
-The pLDDT confidence measure is stored in the B-factor field of the output PDB
-files (although unlike a B-factor, higher pLDDT is better, so care must be taken
-when using for tasks such as molecular replacement).
+The pLDDT confidence measure is stored in the B-factor field of the output PDB files (although unlike a B-factor, higher pLDDT is better, so care must be taken when using for tasks such as molecular replacement).
 
-This code has been tested to match mean top-1 accuracy on a CASP14 test set with
-pLDDT ranking over 5 model predictions (some CASP targets were run with earlier
-versions of AlphaFold and some had manual interventions; see our forthcoming
-publication for details). Some targets such as T1064 may also have high
-individual run variance over random seeds.
-
+-----
 ## Acknowledgements
 
 AlphaFold communicates with and/or references the following separate libraries
@@ -214,8 +181,6 @@ and packages:
 We thank all their contributors and maintainers!
 
 ## License and Disclaimer
-
-AlphaFold is not an officially supported Google product.
 
 ### AlphaFold Code License
 
