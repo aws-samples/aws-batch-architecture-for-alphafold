@@ -362,7 +362,7 @@ Resources:
         PerUnitStorageThroughput: !Ref FSxForLustreThroughput
       SecurityGroupIds:
         - !GetAtt VPC.DefaultSecurityGroup
-      StorageCapacity: 1200
+      StorageCapacity: !Ref FSXForLustreStorageCapacity
       StorageType: "SSD"
       SubnetIds:
         - !Ref PrivateSubnet0      
