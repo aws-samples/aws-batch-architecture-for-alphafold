@@ -1,6 +1,9 @@
 default:
   image: python:latest
 
+stages:
+  - test
+
 before_script:
   - python --version  # For debugging
   - pip install virtualenv
@@ -10,8 +13,9 @@ before_script:
   - pip freeze
 
 cfn-lint:
+  stage: test
   script:
-    - cfn-lint -I infrastructure/cfn.yaml
+  - cfn-lint -I infrastructure/cfn.yaml
 
 include:
   - template: Secret-Detection.gitlab-ci.yml
