@@ -1,6 +1,9 @@
 default:
   image: python:latest
 
+include:
+  - template: Secret-Detection.gitlab-ci.yml
+
 stages:
   - test
 
@@ -17,5 +20,6 @@ cfn-lint:
   script:
   - cfn-lint -I infrastructure/cfn.yaml
 
-include:
-  - template: Secret-Detection.gitlab-ci.yml
+secret_detection:
+  variables:
+    GIT_DEPTH: 100
