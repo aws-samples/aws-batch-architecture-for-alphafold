@@ -21,5 +21,7 @@ cfn-lint:
   - cfn-lint -I infrastructure/cfn.yaml
 
 secret_detection:
+  stage: test
   variables:
     GIT_DEPTH: 100
+    CI_DEBUG_TRACE: "true"
