@@ -321,6 +321,22 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy : Retain
 
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties: 
+      Bucket: !Ref AlphaFoldS3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              - 's3:PutObject'
+            Effect: Allow
+            Resource: !GetAtt AlphaFoldS3.Arn
+            Principal: !GetAtt CodePipelineRole.Arn
+
+
   S3Endpoint:
     Type: "AWS::EC2::VPCEndpoint"
     Properties:
