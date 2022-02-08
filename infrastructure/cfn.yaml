@@ -460,21 +460,9 @@ Resources:
   # EC2 Launch Template
   ##################################################
 
-  InstanceRole:
+  EC2InstanceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "instance-role",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       Description: "Required service policies to support running Alphafold on AWS Batch"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -524,7 +512,7 @@ Resources:
           ],
         ]
       Roles:
-        - !Ref InstanceRole
+        - !Ref EC2InstanceRole
 
   InstanceLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -780,18 +768,6 @@ Resources:
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "codebuild-role",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       Description: "Required service policies to support building AWS-Alphafold container"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -1004,18 +980,6 @@ Resources:
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "codepipeline-role",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       Description: "Required service policies to support running AWS-Alphafold build pipeline"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
