@@ -60,7 +60,7 @@ Resources:
         - Key: StackId
           Value: !Ref AWS::StackId
 
-  FlowLogRole:
+  VPCFlowLogRole:
     Type: "AWS::IAM::Role"
     Properties:
       Description: "Required service policies to support running Alphafold on AWS Batch"
@@ -108,7 +108,7 @@ Resources:
   VPCFlowLog:
     Type: "AWS::EC2::FlowLog"
     Properties: 
-      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
       LogGroupName: FlowLogsGroup    
       ResourceId: !Ref VPC
       ResourceType: VPC
@@ -1018,7 +1018,7 @@ Resources:
                   - codecommit:GetRepository
                   - codecommit:GetUploadArchiveStatus
                   - codecommit:UploadArchive
-                Resource: "*"
+                Resource: !GetAtt CodeRepository.Arn
                 Effect: Allow
               - Action:
                   - s3:PutObject
@@ -1036,18 +1036,12 @@ Resources:
                   - codebuild:StartBuild
                   - codebuild:BatchGetBuildBatches
                   - codebuild:StartBuildBatch
-                Resource: "*"
+                Resource: !GetAtt CodeBuildProject.Arn
                 Effect: Allow
               - Effect: Allow
                 Action:
                   - ecr:DescribeImages
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - appconfig:StartDeployment
-                  - appconfig:StopDeployment
-                  - appconfig:GetDeployment
-                Resource: "*"
+                Resource: !GetAtt FoldingContainerRegistry.Arn
       Tags:
         - Key: Application
           Value: AWS-Alphafold
