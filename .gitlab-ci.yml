@@ -10,7 +10,7 @@ before_script:
 
 cfn-lint:
   script:
-    - cfn-lint -I *
+    - cfn-lint -I infrastructure/cfn.yaml
 
 include:
   - template: Secret-Detection.gitlab-ci.yml
