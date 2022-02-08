@@ -402,14 +402,21 @@ Resources:
         Version: "2012-10-17"
         Statement:
           - Action:
-              - 's3:GetObject'
-              - 's3:ListBucket'
-              - 's3:PutObject'
+              - s3:GetObject
+              - s3:PutObject
             Effect: Allow
-            Resource: !GetAtt CodePipelineS3Bucket.Arn
-            Principal: !GetAtt CodePipelineRole.Arn
-
-
+            Resource: 
+              - !Sub arn:aws:s3:::${CodePipelineS3Bucket}/*
+            Principal: 
+              AWS: !Ref AWS::AccountId
+          - Action:
+              - s3:*       
+            Effect: Allow
+            Resource: 
+              - !GetAtt CodePipelineS3Bucket.Arn
+            Principal: 
+              AWS: !Ref AWS::AccountId
+          
   S3Endpoint:
     Type: "AWS::EC2::VPCEndpoint"
     Properties:
@@ -991,7 +998,7 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Policies:
-        - PolicyName: codePipelineDefault
+        - PolicyName: codePipelinePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
