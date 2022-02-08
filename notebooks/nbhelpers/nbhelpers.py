@@ -18,6 +18,7 @@ import numpy as np
 import string
 from string import ascii_uppercase, ascii_lowercase
 import py3Dmol
+import json
 
 boto_session = boto3.session.Session()
 sm_session = sagemaker.session.Session(boto_session)
@@ -534,7 +535,7 @@ def submit_batch_alphafold_job(
     is_prokaryote_list=None,
     data_dir="/mnt/data_dir/fsx",
     output_dir="alphafold",
-    bfd_database_path="mnt/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
+    bfd_database_path="/mnt/bfd_database_path/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
     mgnify_database_path="/mnt/mgnify_database_path/mgy_clusters_2018_12.fa",
     pdb70_database_path="/mnt/pdb70_database_path/pdb70",
     obsolete_pdbs_path="/mnt/obsolete_pdbs_path/obsolete.dat",
@@ -601,7 +602,7 @@ def submit_batch_alphafold_job(
         )
     else:
         container_overrides["command"].append(
-            f"--uniclust_db_path={uniclust30_database_path}"
+            f"--uniclust30_database_path={uniclust30_database_path}"
         )
         container_overrides["command"].append(
             f"--bfd_database_path={bfd_database_path}"
@@ -655,3 +656,16 @@ def submit_batch_alphafold_job(
         )
 
     return response
+
+def get_run_metrics(bucket, job_name):
+    timings_uri =  sagemaker.s3.s3_path_join(bucket, job_name, "timings.json")
+    ranking_uri =  sagemaker.s3.s3_path_join(bucket, job_name, "ranking_debug.json")
+    downloader = sagemaker.s3.S3Downloader()
+    timing_dict = json.loads(downloader.read_file(f"s3://{timings_uri}"))
+    ranking_dict = json.loads(downloader.read_file(f"s3://{ranking_uri}"))
+
+    timing_df = pd.DataFrame.from_dict(timing_dict, orient="index", columns=["duration_sec"])
+    ranking_plddts_df = pd.DataFrame.from_dict(ranking_dict["plddts"], orient="index", columns=["plddts"])
+    order_df = pd.DataFrame.from_dict(ranking_dict["order"])
+    return(timing_df, ranking_plddts_df, order_df)
+
