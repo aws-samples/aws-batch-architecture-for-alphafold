@@ -14,6 +14,12 @@ cfn-lint:
   script:
     - cfn-lint -I infrastructure/cfn.yaml
 
+cfn-nag:
+  image: stelligent/cfn_nag
+  stage: test
+  script:
+    - cfn_nag_scan --input-path infrastructure/cfn.yaml
+
 secret_detection:
   stage: test
   variables:
