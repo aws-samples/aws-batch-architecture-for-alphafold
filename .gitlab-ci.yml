@@ -2,7 +2,7 @@ default:
   image: python:latest
 
 include:
-  - template: Secret-Detection.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
 
 stages:
   - test
@@ -23,5 +23,4 @@ cfn-lint:
 secret_detection:
   stage: test
   variables:
-    GIT_DEPTH: 100
     CI_DEBUG_TRACE: "true"
