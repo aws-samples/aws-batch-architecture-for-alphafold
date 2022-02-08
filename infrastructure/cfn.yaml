@@ -293,13 +293,17 @@ Resources:
   # S3
   ##################################################
 
-  AlphaFoldS3:
+  CodePipelineS3Bucket:
     Type: "AWS::S3::Bucket"
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      AccessControl: Private
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: code-pipeline-logs
       Tags:
         - Key: Application
           Value: AWS-Alphafold
@@ -320,11 +324,16 @@ Resources:
           Value: !Ref AWS::StackId
     DeletionPolicy: Retain
     UpdateReplacePolicy : Retain
+  
+  LoggingBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: LogDeliveryWrite
 
   S3BucketPolicy:
     Type: "AWS::S3::BucketPolicy"
     Properties: 
-      Bucket: !Ref AlphaFoldS3
+      Bucket: !Ref CodePipelineS3Bucket
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -333,7 +342,7 @@ Resources:
               - 's3:ListBucket'
               - 's3:PutObject'
             Effect: Allow
-            Resource: !GetAtt AlphaFoldS3.Arn
+            Resource: !GetAtt CodePipelineS3Bucket.Arn
             Principal: !GetAtt CodePipelineRole.Arn
 
 
@@ -767,7 +776,7 @@ Resources:
                       "-",
                       ["arn:aws:s3:::codepipeline", !Ref AWS::Region, "*"],
                     ]
-                  - !Join ["", [!GetAtt AlphaFoldS3.Arn, "*"]]
+                  - !Join ["", [!GetAtt CodePipelineS3Bucket.Arn, "*"]]
               - Effect: Allow
                 Action:
                   - codecommit:GitPull
@@ -1029,7 +1038,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       ArtifactStore:
-        Location: !Ref AlphaFoldS3
+        Location: !Ref CodePipelineS3Bucket
         Type: S3
       Name:
         !Join [
