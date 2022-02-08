@@ -4,18 +4,16 @@ include:
 stages:
   - test
 
-before_script:
+cfn-lint:
+  image: python:latest
+  stage: test
+  script:
   - python --version  # For debugging
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
   - pip install cfn-lint
-  - pip freeze
-
-cfn-lint:
-  image: python:latest
-  stage: test
-  script:
+  - pip freeze    
   - cfn-lint -I infrastructure/cfn.yaml
 
 secret_detection:
