@@ -60,6 +60,76 @@ Resources:
         - Key: StackId
           Value: !Ref AWS::StackId
 
+  FlowLogRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Description: "Required service policies to support running Alphafold on AWS Batch"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource: "*"
+      Tags:
+        - Key: Application
+          Value: AWS-Alphafold
+        - Key: Name
+          Value:
+            !Join [
+              "-",
+              [
+                "AWS-Alphafold",
+                "flow-log-role",
+                !Select [
+                  4,
+                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+                ],
+              ],
+            ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
+
+  VPCFlowLog:
+    Type: "AWS::EC2::FlowLog"
+    Properties: 
+      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
+      LogGroupName: FlowLogsGroup    
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      Tags: 
+        - Key: Name
+          Value:
+            !Join [
+              "-",
+              [
+                "AWS-Alphafold",
+                "VPCFlowLog",
+                !Select [
+                  4,
+                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+                ],
+              ],
+            ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
+      TrafficType: ALL
+
   PublicSubnet0:
     Type: "AWS::EC2::Subnet"
     Properties:
@@ -419,7 +489,6 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-      Path: /
       Tags:
         - Key: Application
           Value: AWS-Alphafold
@@ -454,7 +523,6 @@ Resources:
             ],
           ],
         ]
-      Path: /
       Roles:
         - !Ref InstanceRole
 
@@ -736,7 +804,6 @@ Resources:
               - "sts:AssumeRole"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
-      Path: /
       Policies:
         - PolicyName: CodeBuildPolicy
           PolicyDocument:
@@ -959,7 +1026,6 @@ Resources:
                 - codepipeline.amazonaws.com
             Action:
               - "sts:AssumeRole"
-      Path: /
       Policies:
         - PolicyName: codePipelineDefault
           PolicyDocument:
