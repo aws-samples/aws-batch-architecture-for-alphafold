@@ -1,0 +1,16 @@
+image: python:latest
+before_script:
+  - python --version  # For debugging
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - pip install cfn-lint
+  - pip freeze
+
+
+cfn-lint:
+  script:
+    - cfn-lint -I *
+
+include:
+  - template: Secret-Detection.gitlab-ci.yml
