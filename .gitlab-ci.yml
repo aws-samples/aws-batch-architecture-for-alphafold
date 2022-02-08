@@ -1,6 +1,3 @@
-default:
-  image: python:latest
-
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
 
@@ -16,6 +13,7 @@ before_script:
   - pip freeze
 
 cfn-lint:
+  image: python:latest
   stage: test
   script:
   - cfn-lint -I infrastructure/cfn.yaml
