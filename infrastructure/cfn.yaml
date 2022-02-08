@@ -404,18 +404,27 @@ Resources:
           - Action:
               - s3:GetObject
               - s3:PutObject
+              - s3:GetObjectVersion
             Effect: Allow
             Resource: 
               - !Sub arn:aws:s3:::${CodePipelineS3Bucket}/*
             Principal: 
               AWS: !Ref AWS::AccountId
           - Action:
-              - s3:*       
+              - s3:GetBucketAcl
+              - s3:GetBucketLocation  
             Effect: Allow
             Resource: 
               - !GetAtt CodePipelineS3Bucket.Arn
             Principal: 
               AWS: !Ref AWS::AccountId
+          - Action:
+              - s3:PutBucketPolicy
+            Effect: Allow
+            Resource: 
+              - !GetAtt CodePipelineS3Bucket.Arn
+            Principal: 
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:role/Admin                      
           
   S3Endpoint:
     Type: "AWS::EC2::VPCEndpoint"
@@ -1012,14 +1021,15 @@ Resources:
                 Resource: "*"
                 Effect: Allow
               - Action:
-                  - ec2:*
-                  - elasticloadbalancing:*
-                  - cloudwatch:*
-                  - s3:*
-                  - sns:*
-                  - cloudformation:*
-                  - sqs:*
-                Resource: "*"
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub arn:aws:s3:::${CodePipelineS3Bucket}/*
+                Effect: Allow
+              - Action:
+                  - s3:GetBucketAcl
+                  - s3:GetBucketLocation
+                Resource: !GetAtt CodePipelineS3Bucket.Arn
                 Effect: Allow
               - Action:
                   - codebuild:BatchGetBuilds
