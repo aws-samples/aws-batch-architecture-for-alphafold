@@ -996,14 +996,6 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Action:
-                  - iam:PassRole
-                Resource: "*"
-                Effect: Allow
-                Condition:
-                  StringEqualsIfExists:
-                    iam:PassedToService:
-                      - ec2.amazonaws.com
-              - Action:
                   - codecommit:CancelUploadArchive
                   - codecommit:GetBranch
                   - codecommit:GetCommit
