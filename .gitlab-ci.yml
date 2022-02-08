@@ -1,4 +1,6 @@
-image: python:latest
+default:
+  image: python:latest
+
 before_script:
   - python --version  # For debugging
   - pip install virtualenv
@@ -6,7 +8,6 @@ before_script:
   - source venv/bin/activate
   - pip install cfn-lint
   - pip freeze
-
 
 cfn-lint:
   script:
