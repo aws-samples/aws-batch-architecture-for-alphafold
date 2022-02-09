@@ -1,0 +1,26 @@
+include:
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+cfn-lint:
+  image: python:latest
+  stage: test
+  before_script:
+    - python --version  # For debugging
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install cfn-lint
+    - pip freeze    
+  script:
+    - cfn-lint -I infrastructure/cfn.yaml
+
+cfn-nag:
+  image: stelligent/cfn_nag
+  stage: test
+  script:
+    - cfn_nag_scan --input-path infrastructure/cfn.yaml
+
+secret_detection:
+  stage: test
+  variables:
+    CI_DEBUG_TRACE: "true"
