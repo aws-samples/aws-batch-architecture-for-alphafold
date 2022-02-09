@@ -40,6 +40,7 @@ from alphafold.relax import relax
 import numpy as np
 
 import boto3
+from sagemaker.s3 import S3Uploader
 
 s3 = boto3.client("s3")
 # Internal import (7716).
@@ -622,7 +623,7 @@ def main(argv):
     # ---- Upload results back to s3 -----------------------
     if FLAGS.s3_bucket is not None:
         logging.info(f"Uploading {FLAGS.output_dir} to {FLAGS.s3_bucket}")
-        os.system(f"aws s3 cp {FLAGS.output_dir} s3://{FLAGS.s3_bucket} --recursive")
+        S3Uploader.upload({FLAGS.output_dir}, f"s3://{FLAGS.s3_bucket}")
     # ----------------------------
 
 
