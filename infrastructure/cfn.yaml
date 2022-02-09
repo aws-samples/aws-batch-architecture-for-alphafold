@@ -100,7 +100,7 @@ Resources:
                   - logs:PutLogEvents
                   - logs:DescribeLogGroups
                   - logs:DescribeLogStreams
-                Resource: "*"
+                Resource: !GetAtt VPCFlowLogsGroup.Arn
       Tags:
         - Key: Application
           Value: AWS-Alphafold
@@ -120,11 +120,33 @@ Resources:
         - Key: StackId
           Value: !Ref AWS::StackId
 
+  VPCFlowLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      KmsKeyId: !GetAtt CodeBuildEncryptionKey.Arn
+      RetentionInDays: 120
+      Tags: 
+        - Key: Name
+          Value:
+            !Join [
+              "-",
+              [
+                "AWS-Alphafold",
+                "flow-log-group",
+                !Select [
+                  4,
+                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+                ],
+              ],
+            ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
+
   VPCFlowLog:
     Type: "AWS::EC2::FlowLog"
     Properties: 
       DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
-      LogGroupName: FlowLogsGroup    
+      LogGroupName: !Ref VPCFlowLogsGroup    
       ResourceId: !Ref VPC
       ResourceType: VPC
       Tags: 
@@ -1490,7 +1512,7 @@ Resources:
             - ContainerPath: /fsx
               ReadOnly: False
               SourceVolume: fsx
-          Privileged: true
+          Privileged: False
           ResourceRequirements:
             - Type: VCPU
               Value: 4
@@ -1521,6 +1543,7 @@ Resources:
       DirectInternetAccess: Enabled
       InstanceType: ml.c4.2xlarge
       DefaultCodeRepository:  !GetAtt CodeRepository.CloneUrlHttp
+      KmsKeyId: !GetAtt CodeBuildEncryptionKey.Arn
       NotebookInstanceName: AWS-Alphafold-Notebook
       RoleArn: !GetAtt SageMakerNotebookExecutionRole.Arn
       SubnetId: !Ref PrivateSubnet0
@@ -1550,5 +1573,3 @@ Resources:
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/AWSCodeCommitReadOnly"
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/AWSCloudFormationReadOnlyAccess"
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/AWSBatchFullAccess"
-
-
