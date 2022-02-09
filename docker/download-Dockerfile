@@ -1,17 +1,15 @@
 ARG AF_VERSION=v2.1.2
-FROM public.ecr.aws/amazonlinux/amazonlinux:latest AS stage1
+FROM public.ecr.aws/amazonlinux/amazonlinux:latest
 ARG AF_VERSION
 RUN yum update -y \
   && yum install git -y
 RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alphafold.git /app/alphafold
-
-FROM stage1
+RUN cp -R /app/alphafold/scripts/* /
+RUN rm -rf /app
+RUN echo "chmod -R 755" >> download_all_data.sh
 RUN amazon-linux-extras install epel -y \
   && yum update -y \
   && yum install aria2 tar rsync -y
 VOLUME /fsx
-COPY --from=stage1 /app/alphafold/scripts/* .
-RUN rm -rf /app
-RUN echo "chmod -R 755" >> download_all_data.sh
 
 ENTRYPOINT ["usr/bin/bash"]

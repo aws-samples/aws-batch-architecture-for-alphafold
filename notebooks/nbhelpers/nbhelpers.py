@@ -19,6 +19,7 @@ import string
 from string import ascii_uppercase, ascii_lowercase
 import py3Dmol
 import json
+import re
 
 boto_session = boto3.session.Session()
 sm_session = sagemaker.session.Session(boto_session)
@@ -669,3 +670,39 @@ def get_run_metrics(bucket, job_name):
     order_df = pd.DataFrame.from_dict(ranking_dict["order"])
     return(timing_df, ranking_plddts_df, order_df)
 
+def validate_input(input_sequences):
+    output =[]
+    for sequence in input_sequences:
+        sequence = sequence.upper().strip()
+        if re.search("[^ARNDCQEGHILKMFPSTWYV]", sequence):
+            raise ValueError(
+            f"Input sequence contains invalid amino acid symbols."
+            f"{sequence}"
+        )
+        output.append(sequence)
+    
+    if len(output) == 1:
+        print("Using the monomer models.")
+        model_preset = "monomer"
+        # model_names = (
+        #     "model_1",
+        #     "model_2",
+        #     "model_3",
+        #     "model_4",
+        #     "model_5",
+        #     "model_2_ptm",
+        # )
+        return output, model_preset
+    elif len(output) > 1:
+        print("Using the multimer models.")
+        model_preset = "multimer"
+        # model_names = (
+        #     "model_1_multimer",
+        #     "model_2_multimer",
+        #     "model_3_multimer",
+        #     "model_4_multimer",
+        #     "model_5_multimer",
+        # )
+        return output, model_preset
+    else:
+        raise ValueError("Please provide at least one input sequence.")

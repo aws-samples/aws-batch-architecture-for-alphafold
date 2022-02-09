@@ -2,4 +2,4 @@
 .vscode/
 .mypy_cache/
 random_commands.sh
-alphafold.zip
+aws-alphafold.zip
