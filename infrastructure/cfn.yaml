@@ -2,6 +2,23 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Creates a stack for running Alphafold on AWS Batch.
 Parameters:
+  StackAvailabilityZone:
+    Description: Availability zone to deploy stack resources
+    Type: "AWS::EC2::AvailabilityZone::Name"
+  LaunchSageMakerNotebook:
+    Type: String 
+    Default: N
+    Description: Create a SageMaker Notebook Instance.
+    AllowedValues: [Y, N]
+  FSXForLustreStorageCapacity:
+    Description: Storage capacity in GB, 1200 or increments of 2400.
+    Type: String
+    AllowedValues:
+      - 1200
+      - 2400
+      - 4800
+      - 7200
+    Default: 1200
   FSxForLustreThroughput:
     Description: Throughput for unit storage (MB/s/TB) to provision for FSx for Lustre file system.
     Type: Number
@@ -10,10 +27,7 @@ Parameters:
       - 250
       - 500
       - 1000
-    Default: 500
-  StackAvailabilityZone:
-    Description: Availability zone to deploy stack resources
-    Type: "AWS::EC2::AvailabilityZone::Name"
+    Default: 500    
   AlphaFoldVersion:
     Description: AlphaFold release to include as part of the job container
     Type: String
@@ -28,7 +42,8 @@ Parameters:
     Description: S3 object key (without the bucket name) to the aws-alphafold.zip file in S3 used to populate CodeCommit.
     Type: String
     Default: blog_post_support_materials/aws-alphafold/aws-alphafold.zip    
-
+Conditions:
+  createSageMakerNotebook: !Equals [ !Ref 'LaunchSageMakerNotebook', 'Y' ]
 Resources:
   ##################################################
   # Network Configuration
@@ -59,6 +74,76 @@ Resources:
             ]
         - Key: StackId
           Value: !Ref AWS::StackId
+
+  VPCFlowLogRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Description: "Required service policies to support running Alphafold on AWS Batch"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource: "*"
+      Tags:
+        - Key: Application
+          Value: AWS-Alphafold
+        - Key: Name
+          Value:
+            !Join [
+              "-",
+              [
+                "AWS-Alphafold",
+                "flow-log-role",
+                !Select [
+                  4,
+                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+                ],
+              ],
+            ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
+
+  VPCFlowLog:
+    Type: "AWS::EC2::FlowLog"
+    Properties: 
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      LogGroupName: FlowLogsGroup    
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      Tags: 
+        - Key: Name
+          Value:
+            !Join [
+              "-",
+              [
+                "AWS-Alphafold",
+                "VPCFlowLog",
+                !Select [
+                  4,
+                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+                ],
+              ],
+            ]
+        - Key: StackId
+          Value: !Ref AWS::StackId
+      TrafficType: ALL
 
   PublicSubnet0:
     Type: "AWS::EC2::Subnet"
@@ -96,6 +181,7 @@ Resources:
       VpcId:
         Ref: VPC
       AvailabilityZone: !Ref StackAvailabilityZone
+      MapPublicIpOnLaunch: false
       CidrBlock:
         Fn::Select:
           - 3
@@ -293,13 +379,16 @@ Resources:
   # S3
   ##################################################
 
-  AlphaFoldS3:
+  CodePipelineS3Bucket:
     Type: "AWS::S3::Bucket"
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      AccessControl: Private
+      LoggingConfiguration:
+        LogFilePrefix: code-pipeline-logs
       Tags:
         - Key: Application
           Value: AWS-Alphafold
@@ -321,6 +410,38 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy : Retain
 
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties: 
+      Bucket: !Ref CodePipelineS3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:GetObjectVersion
+            Effect: Allow
+            Resource: 
+              - !Sub arn:aws:s3:::${CodePipelineS3Bucket}/*
+            Principal: 
+              AWS: !Ref AWS::AccountId
+          - Action:
+              - s3:GetBucketAcl
+              - s3:GetBucketLocation  
+            Effect: Allow
+            Resource: 
+              - !GetAtt CodePipelineS3Bucket.Arn
+            Principal: 
+              AWS: !Ref AWS::AccountId
+          - Action:
+              - s3:PutBucketPolicy
+            Effect: Allow
+            Resource: 
+              - !GetAtt CodePipelineS3Bucket.Arn
+            Principal: 
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:role/Admin                      
+          
   S3Endpoint:
     Type: "AWS::EC2::VPCEndpoint"
     Properties:
@@ -344,7 +465,7 @@ Resources:
         PerUnitStorageThroughput: !Ref FSxForLustreThroughput
       SecurityGroupIds:
         - !GetAtt VPC.DefaultSecurityGroup
-      StorageCapacity: 1200
+      StorageCapacity: !Ref FSXForLustreStorageCapacity
       StorageType: "SSD"
       SubnetIds:
         - !Ref PrivateSubnet0      
@@ -371,21 +492,9 @@ Resources:
   # EC2 Launch Template
   ##################################################
 
-  InstanceRole:
+  EC2InstanceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "instance-role",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       Description: "Required service policies to support running Alphafold on AWS Batch"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -400,7 +509,6 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-      Path: /
       Tags:
         - Key: Application
           Value: AWS-Alphafold
@@ -435,9 +543,8 @@ Resources:
             ],
           ],
         ]
-      Path: /
       Roles:
-        - !Ref InstanceRole
+        - !Ref EC2InstanceRole
 
   InstanceLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -693,18 +800,6 @@ Resources:
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "codebuild-role",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       Description: "Required service policies to support building AWS-Alphafold container"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -717,7 +812,6 @@ Resources:
               - "sts:AssumeRole"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
-      Path: /
       Policies:
         - PolicyName: CodeBuildPolicy
           PolicyDocument:
@@ -751,7 +845,7 @@ Resources:
                       "-",
                       ["arn:aws:s3:::codepipeline", !Ref AWS::Region, "*"],
                     ]
-                  - !Join ["", [!GetAtt AlphaFoldS3.Arn, "*"]]
+                  - !Join ["", [!GetAtt CodePipelineS3Bucket.Arn, "*"]]
               - Effect: Allow
                 Action:
                   - codecommit:GitPull
@@ -806,6 +900,7 @@ Resources:
   CodeBuildEncryptionKey:
     Type: "AWS::KMS::Key"
     Properties:
+      EnableKeyRotation: true
       KeyPolicy:
         Version: 2012-10-17
         Id: key-default-1
@@ -917,18 +1012,6 @@ Resources:
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "codepipeline-role",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       Description: "Required service policies to support running AWS-Alphafold build pipeline"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -939,23 +1022,11 @@ Resources:
                 - codepipeline.amazonaws.com
             Action:
               - "sts:AssumeRole"
-      Path: /
       Policies:
-        - PolicyName: codePipelineDefault
+        - PolicyName: codePipelinePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Action:
-                  - iam:PassRole
-                Resource: "*"
-                Effect: Allow
-                Condition:
-                  StringEqualsIfExists:
-                    iam:PassedToService:
-                      - cloudformation.amazonaws.com
-                      - elasticbeanstalk.amazonaws.com
-                      - ec2.amazonaws.com
-                      - ecs-tasks.amazonaws.com
               - Action:
                   - codecommit:CancelUploadArchive
                   - codecommit:GetBranch
@@ -963,108 +1034,30 @@ Resources:
                   - codecommit:GetRepository
                   - codecommit:GetUploadArchiveStatus
                   - codecommit:UploadArchive
-                Resource: "*"
+                Resource: !GetAtt CodeRepository.Arn
                 Effect: Allow
               - Action:
-                  - codedeploy:CreateDeployment
-                  - codedeploy:GetApplication
-                  - codedeploy:GetApplicationRevision
-                  - codedeploy:GetDeployment
-                  - codedeploy:GetDeploymentConfig
-                  - codedeploy:RegisterApplicationRevision
-                Resource: "*"
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub arn:aws:s3:::${CodePipelineS3Bucket}/*
                 Effect: Allow
               - Action:
-                  - codestar-connections:UseConnection
-                Resource: "*"
-                Effect: Allow
-              - Action:
-                  - elasticbeanstalk:*
-                  - ec2:*
-                  - elasticloadbalancing:*
-                  - autoscaling:*
-                  - cloudwatch:*
-                  - s3:*
-                  - sns:*
-                  - cloudformation:*
-                  - rds:*
-                  - sqs:*
-                  - ecs:*
-                Resource: "*"
-                Effect: Allow
-              - Action:
-                  - lambda:InvokeFunction
-                  - lambda:ListFunctions
-                Resource: "*"
-                Effect: Allow
-              - Action:
-                  - opsworks:CreateDeployment
-                  - opsworks:DescribeApps
-                  - opsworks:DescribeCommands
-                  - opsworks:DescribeDeployments
-                  - opsworks:DescribeInstances
-                  - opsworks:DescribeStacks
-                  - opsworks:UpdateApp
-                  - opsworks:UpdateStack
-                Resource: "*"
-                Effect: Allow
-              - Action:
-                  - cloudformation:CreateStack
-                  - cloudformation:DeleteStack
-                  - cloudformation:DescribeStacks
-                  - cloudformation:UpdateStack
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:DeleteChangeSet
-                  - cloudformation:DescribeChangeSet
-                  - cloudformation:ExecuteChangeSet
-                  - cloudformation:SetStackPolicy
-                  - cloudformation:ValidateTemplate
-                Resource: "*"
+                  - s3:GetBucketAcl
+                  - s3:GetBucketLocation
+                Resource: !GetAtt CodePipelineS3Bucket.Arn
                 Effect: Allow
               - Action:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
                   - codebuild:BatchGetBuildBatches
                   - codebuild:StartBuildBatch
-                Resource: "*"
+                Resource: !GetAtt CodeBuildProject.Arn
                 Effect: Allow
               - Effect: Allow
                 Action:
-                  - devicefarm:ListProjects
-                  - devicefarm:ListDevicePools
-                  - devicefarm:GetRun
-                  - devicefarm:GetUpload
-                  - devicefarm:CreateUpload
-                  - devicefarm:ScheduleRun
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - servicecatalog:ListProvisioningArtifacts
-                  - servicecatalog:CreateProvisioningArtifact
-                  - servicecatalog:DescribeProvisioningArtifact
-                  - servicecatalog:DeleteProvisioningArtifact
-                  - servicecatalog:UpdateProduct
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - cloudformation:ValidateTemplate
-                Resource: "*"
-              - Effect: Allow
-                Action:
                   - ecr:DescribeImages
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - states:DescribeExecution
-                  - states:DescribeStateMachine
-                  - states:StartExecution
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - appconfig:StartDeployment
-                  - appconfig:StopDeployment
-                  - appconfig:GetDeployment
-                Resource: "*"
+                Resource: !GetAtt FoldingContainerRegistry.Arn
       Tags:
         - Key: Application
           Value: AWS-Alphafold
@@ -1088,7 +1081,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       ArtifactStore:
-        Location: !Ref AlphaFoldS3
+        Location: !Ref CodePipelineS3Bucket
         Type: S3
       Name:
         !Join [
@@ -1516,3 +1509,46 @@ Resources:
           Application: AWS-Alphafold
           StackId: !Ref AWS::StackId
         Type: container      
+
+  ##################################################
+  # SageMaker Notebook Instance
+  ##################################################
+
+  SagemakerNotebookInstance:
+    Type: "AWS::SageMaker::NotebookInstance"
+    Condition: createSageMakerNotebook
+    Properties:
+      DirectInternetAccess: Enabled
+      InstanceType: ml.c4.2xlarge
+      DefaultCodeRepository:  !GetAtt CodeRepository.CloneUrlHttp
+      NotebookInstanceName: AWS-Alphafold-Notebook
+      RoleArn: !GetAtt SageMakerNotebookExecutionRole.Arn
+      SubnetId: !Ref PrivateSubnet0
+      SecurityGroupIds:
+        - !GetAtt VPC.DefaultSecurityGroup
+      Tags:
+        - Key:  "Application"
+          Value:  "AWS-Alphafold"
+        - Key:  "StackId"
+          Value:  !Ref AWS::StackId
+  SageMakerNotebookExecutionRole: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "sagemaker.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSageMakerFullAccess"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AWSCodeCommitReadOnly"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AWSCloudFormationReadOnlyAccess"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AWSBatchFullAccess"
+
+
