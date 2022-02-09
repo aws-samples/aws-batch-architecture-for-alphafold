@@ -33,7 +33,7 @@ secret_detection:
 push-to-s3:
   stage: deploy
   variables:
-    - AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
-    - AWS_DEFAULT_REGION: us-east-1
+    AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
+    AWS_DEFAULT_REGION: us-east-1
   script:
     - aws s3 ls
