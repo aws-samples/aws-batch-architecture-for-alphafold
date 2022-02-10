@@ -1,5 +1,3 @@
-# Copyright 2021 DeepMind Technologies Limited
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -37,12 +35,14 @@ from alphafold.model import config
 from alphafold.model import data
 from alphafold.model import model
 from alphafold.relax import relax
+
+from urllib.parse import urlparse
+
 import numpy as np
 
 import boto3
 
 s3 = boto3.client("s3")
-# Internal import (7716).
 
 logging.set_verbosity(logging.INFO)
 
@@ -180,22 +180,30 @@ flags.DEFINE_boolean(
     "use_precomputed_msas",
     False,
     "Whether to read MSAs that "
-    'have been written to disk instead of running the MSA '
-    'tools. The MSA files are looked up in the output '
-    'directory, so it must stay the same between multiple '
-    'runs that are to reuse the MSAs. WARNING: This will not '
-    'check if the sequence, database or configuration have '
-    'changed.',
+    "have been written to disk instead of running the MSA "
+    "tools. The MSA files are looked up in the output "
+    "directory, so it must stay the same between multiple "
+    "runs that are to reuse the MSAs. WARNING: This will not "
+    "check if the sequence, database or configuration have "
+    "changed.",
 )
-flags.DEFINE_boolean('run_relax', True, 'Whether to run the final relaxation '
-                     'step on the predicted models. Turning relax off might '
-                     'result in predictions with distracting stereochemical '
-                     'violations but might help in case you are having issues '
-                     'with the relaxation stage.')
-flags.DEFINE_boolean('use_gpu_relax', True, 'Whether to relax on GPU. '
-                     'Relax on GPU can be much faster than CPU, so it is '
-                     'recommended to enable if possible. GPUs must be available'
-                     ' if this setting is enabled.')
+flags.DEFINE_boolean(
+    "run_relax",
+    True,
+    "Whether to run the final relaxation "
+    "step on the predicted models. Turning relax off might "
+    "result in predictions with distracting stereochemical "
+    "violations but might help in case you are having issues "
+    "with the relaxation stage.",
+)
+flags.DEFINE_boolean(
+    "use_gpu_relax",
+    True,
+    "Whether to relax on GPU. "
+    "Relax on GPU can be much faster than CPU, so it is "
+    "recommended to enable if possible. GPUs must be available"
+    " if this setting is enabled.",
+)
 ## ---------------------- AWS-specific --------------------------
 flags.DEFINE_string(
     "s3_bucket",
@@ -283,7 +291,7 @@ def predict_structure(
         features_output_path = os.path.join(output_dir, "features.pkl")
         with open(features_output_path, "wb") as f:
             pickle.dump(feature_dict, f, protocol=4)
-    
+
     # From Parallelfold
     if run_features_only:
         logging.info(
@@ -550,7 +558,8 @@ def main(argv):
             stiffness=RELAX_STIFFNESS,
             exclude_residues=RELAX_EXCLUDE_RESIDUES,
             max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS,
-            use_gpu=FLAGS.use_gpu_relax)
+            use_gpu=FLAGS.use_gpu_relax,
+        )
     else:
         amber_relaxer = None
 
@@ -565,8 +574,6 @@ def main(argv):
         fasta_name = fasta_names[i]
 
         # --------- Download files from S3 ---------------------------
-        # local_download_dir = os.path.join(FLAGS.output_dir, fasta_name)
-        #local_download_dir = FLAGS.output_dir
         if FLAGS.s3_bucket is not None:
             s3_fasta_url = os.path.join(FLAGS.s3_bucket, fasta_path)
             logging.info(
@@ -622,8 +629,80 @@ def main(argv):
     # ---- Upload results back to s3 -----------------------
     if FLAGS.s3_bucket is not None:
         logging.info(f"Uploading {FLAGS.output_dir} to {FLAGS.s3_bucket}")
-        os.system(f"aws s3 cp {FLAGS.output_dir} s3://{FLAGS.s3_bucket} --recursive")
+        upload_data(FLAGS.output_dir, f"s3://{FLAGS.s3_bucket}/{FLAGS.output_dir}")
     # ----------------------------
+
+
+def parse_s3_url(url):
+    """Returns an (s3 bucket, key name/prefix) tuple from a url with an s3 scheme. (From SageMaker s3 utils)
+    Args:
+        url (str):
+    Returns:
+        tuple: A tuple containing:
+            - str: S3 bucket name
+            - str: S3 key
+    """
+    parsed_url = urlparse(url)
+    if parsed_url.scheme != "s3":
+        raise ValueError(
+            "Expecting 's3' scheme, got: {} in {}.".format(parsed_url.scheme, url)
+        )
+    return parsed_url.netloc, parsed_url.path.lstrip("/")
+
+
+def upload_data(path, desired_s3_uri, s3=boto3.client("s3"), extra_args=None):
+    """Upload local file or directory to S3. (From SageMaker Session)
+    If a single file is specified for upload, the resulting S3 object key is
+    ``{key_prefix}/{filename}`` (filename does not include the local path, if any specified).
+    If a directory is specified for upload, the API uploads all content, recursively,
+    preserving relative structure of subdirectories. The resulting object key names are:
+    ``{key_prefix}/{relative_subdirectory_path}/filename``.
+    Args:
+        path (str): Path (absolute or relative) of local file or directory to upload.
+        desired_s3_uri (str): Name of the S3 Bucket to upload to, plus the object key.
+        s3 (boto3 object): S3 client.
+        extra_args (dict): Optional extra arguments that may be passed to the upload operation.
+            Similar to ExtraArgs parameter in S3 upload_file function. Please refer to the
+            ExtraArgs parameter documentation here:
+            https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter
+    Returns:
+        str: The S3 URI of the uploaded file(s). If a file is specified in the path argument,
+            the URI format is: ``s3://{bucket name}/{key_prefix}/{original_file_name}``.
+            If a directory is specified in the path argument, the URI format is
+            ``s3://{bucket name}/{key_prefix}``.
+    """
+    # Generate a tuple for each file that we want to upload of the form (local_path, s3_key).
+    bucket, key_prefix = parse_s3_url(url=desired_s3_uri)
+
+    files = []
+    key_suffix = None
+    if os.path.isdir(path):
+        for dirpath, _, filenames in os.walk(path):
+            for name in filenames:
+                local_path = os.path.join(dirpath, name)
+                s3_relative_prefix = (
+                    ""
+                    if path == dirpath
+                    else os.path.relpath(dirpath, start=path) + "/"
+                )
+                s3_key = "{}/{}{}".format(key_prefix, s3_relative_prefix, name)
+                files.append((local_path, s3_key))
+    else:
+        _, name = os.path.split(path)
+        s3_key = "{}/{}".format(key_prefix, name)
+        files.append((path, s3_key))
+        key_suffix = name
+
+    for local_path, s3_key in files:
+        s3.upload_file(local_path, bucket, s3_key, ExtraArgs=extra_args)
+
+    s3_uri = "s3://{}/{}".format(bucket, key_prefix)
+    # If a specific file was used as input (instead of a directory), we return the full S3 key
+    # of the uploaded object. This prevents unintentionally using other files under the same
+    # prefix during training.
+    if key_suffix:
+        s3_uri = "{}/{}".format(s3_uri, key_suffix)
+    return
 
 
 if __name__ == "__main__":

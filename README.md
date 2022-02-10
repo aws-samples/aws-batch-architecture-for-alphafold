@@ -50,9 +50,12 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 3. Use the URL to clone the repository into your Jupyter notebook environment of choice, such as SageMaker Studio.
 
 ### Populate FSx for Lustre File System
-1. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, run the following command at the terminal of your notebook environment:
+1. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, run the following commands at the terminal of your notebook environment:
 
-`python notebooks/download_ref_data.py <STACK NAME>`
+```
+pip install -r notebooks/notebook-requirements.txt
+python notebooks/download_ref_data.py <STACK NAME>
+```
 
 Replacing `<STACK NAME>` with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
 
