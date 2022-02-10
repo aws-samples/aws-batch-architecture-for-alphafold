@@ -658,29 +658,34 @@ def submit_batch_alphafold_job(
 
     return response
 
+
 def get_run_metrics(bucket, job_name):
-    timings_uri =  sagemaker.s3.s3_path_join(bucket, job_name, "timings.json")
-    ranking_uri =  sagemaker.s3.s3_path_join(bucket, job_name, "ranking_debug.json")
+    timings_uri = sagemaker.s3.s3_path_join(bucket, job_name, "timings.json")
+    ranking_uri = sagemaker.s3.s3_path_join(bucket, job_name, "ranking_debug.json")
     downloader = sagemaker.s3.S3Downloader()
     timing_dict = json.loads(downloader.read_file(f"s3://{timings_uri}"))
     ranking_dict = json.loads(downloader.read_file(f"s3://{ranking_uri}"))
 
-    timing_df = pd.DataFrame.from_dict(timing_dict, orient="index", columns=["duration_sec"])
-    ranking_plddts_df = pd.DataFrame.from_dict(ranking_dict["plddts"], orient="index", columns=["plddts"])
+    timing_df = pd.DataFrame.from_dict(
+        timing_dict, orient="index", columns=["duration_sec"]
+    )
+    ranking_plddts_df = pd.DataFrame.from_dict(
+        ranking_dict["plddts"], orient="index", columns=["plddts"]
+    )
     order_df = pd.DataFrame.from_dict(ranking_dict["order"])
-    return(timing_df, ranking_plddts_df, order_df)
+    return (timing_df, ranking_plddts_df, order_df)
+
 
 def validate_input(input_sequences):
-    output =[]
+    output = []
     for sequence in input_sequences:
         sequence = sequence.upper().strip()
         if re.search("[^ARNDCQEGHILKMFPSTWYV]", sequence):
             raise ValueError(
-            f"Input sequence contains invalid amino acid symbols."
-            f"{sequence}"
-        )
+                f"Input sequence contains invalid amino acid symbols." f"{sequence}"
+            )
         output.append(sequence)
-    
+
     if len(output) == 1:
         print("Using the monomer models.")
         model_preset = "monomer"
