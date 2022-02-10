@@ -566,8 +566,6 @@ def main(argv):
         fasta_name = fasta_names[i]
 
         # --------- Download files from S3 ---------------------------
-        # local_download_dir = os.path.join(FLAGS.output_dir, fasta_name)
-        #local_download_dir = FLAGS.output_dir
         if FLAGS.s3_bucket is not None:
             s3_fasta_url = os.path.join(FLAGS.s3_bucket, fasta_path)
             logging.info(
@@ -623,7 +621,6 @@ def main(argv):
     # ---- Upload results back to s3 -----------------------
     if FLAGS.s3_bucket is not None:
         logging.info(f"Uploading {FLAGS.output_dir} to {FLAGS.s3_bucket}")
-        # S3Uploader.upload({FLAGS.output_dir}, f"s3://{FLAGS.s3_bucket}")
         upload_data(FLAGS.output_dir, f"s3://{FLAGS.s3_bucket}/{FLAGS.output_dir}")
     # ----------------------------
 
@@ -641,7 +638,7 @@ def parse_s3_url(url):
         raise ValueError("Expecting 's3' scheme, got: {} in {}.".format(parsed_url.scheme, url))
     return parsed_url.netloc, parsed_url.path.lstrip("/")
 
-def upload_data(path, desired_s3_uri, extra_args=None):
+def upload_data(path, desired_s3_uri, s3 = boto3.client("s3"), extra_args=None):
     """Upload local file or directory to S3. (From SageMaker Session)
     If a single file is specified for upload, the resulting S3 object key is
     ``{key_prefix}/{filename}`` (filename does not include the local path, if any specified).
@@ -650,10 +647,8 @@ def upload_data(path, desired_s3_uri, extra_args=None):
     ``{key_prefix}/{relative_subdirectory_path}/filename``.
     Args:
         path (str): Path (absolute or relative) of local file or directory to upload.
-        bucket (str): Name of the S3 Bucket to upload to.
-        key_prefix (str): Optional S3 object key name prefix (default: 'data'). S3 uses the
-            prefix to create a directory structure for the bucket content that it display in
-            the S3 console.
+        desired_s3_uri (str): Name of the S3 Bucket to upload to, plus the object key.
+        s3 (boto3 object): S3 client.
         extra_args (dict): Optional extra arguments that may be passed to the upload operation.
             Similar to ExtraArgs parameter in S3 upload_file function. Please refer to the
             ExtraArgs parameter documentation here:
@@ -665,7 +660,6 @@ def upload_data(path, desired_s3_uri, extra_args=None):
             ``s3://{bucket name}/{key_prefix}``.
     """
     # Generate a tuple for each file that we want to upload of the form (local_path, s3_key).
-
     bucket, key_prefix = parse_s3_url(url=desired_s3_uri)
 
     files = []
@@ -685,17 +679,8 @@ def upload_data(path, desired_s3_uri, extra_args=None):
         files.append((path, s3_key))
         key_suffix = name
 
-    # bucket = bucket or self.default_bucket()
-    # if self.s3_resource is None:
-    #     s3 = self.boto_session.resource("s3", region_name=self.boto_region_name)
-    # else:
-    #     s3 = self.s3_resource
-    s3 = boto3.client("s3")
-
-    # s3 = boto_session.resource("s3", region_name=self.boto_region_name)
-
     for local_path, s3_key in files:
-        s3.Object(bucket, s3_key).upload_file(local_path, ExtraArgs=extra_args)
+        s3.upload_file(local_path, bucket, s3_key, ExtraArgs=extra_args)
 
     s3_uri = "s3://{}/{}".format(bucket, key_prefix)
     # If a specific file was used as input (instead of a directory), we return the full S3 key
