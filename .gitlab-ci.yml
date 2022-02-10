@@ -37,6 +37,6 @@ push-to-s3:
     AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
     AWS_DEFAULT_REGION: us-east-1
   before_script:
-    - yum update && yum install -y awscli
+    - yum update -y && yum install -y awscli
   script:
     - aws s3 ls
