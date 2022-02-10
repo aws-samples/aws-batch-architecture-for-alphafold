@@ -40,7 +40,6 @@ from alphafold.relax import relax
 import numpy as np
 
 import boto3
-from sagemaker.s3 import S3Uploader
 
 s3 = boto3.client("s3")
 # Internal import (7716).
@@ -623,9 +622,87 @@ def main(argv):
     # ---- Upload results back to s3 -----------------------
     if FLAGS.s3_bucket is not None:
         logging.info(f"Uploading {FLAGS.output_dir} to {FLAGS.s3_bucket}")
-        S3Uploader.upload({FLAGS.output_dir}, f"s3://{FLAGS.s3_bucket}")
+        # S3Uploader.upload({FLAGS.output_dir}, f"s3://{FLAGS.s3_bucket}")
+        upload_data({FLAGS.output_dir}, f"s3://{FLAGS.s3_bucket}/{FLAGS.output_dir}")
     # ----------------------------
 
+def parse_s3_url(url):
+    """Returns an (s3 bucket, key name/prefix) tuple from a url with an s3 scheme. (From SageMaker s3 utils)
+    Args:
+        url (str):
+    Returns:
+        tuple: A tuple containing:
+            - str: S3 bucket name
+            - str: S3 key
+    """
+    parsed_url = urlparse(url)
+    if parsed_url.scheme != "s3":
+        raise ValueError("Expecting 's3' scheme, got: {} in {}.".format(parsed_url.scheme, url))
+    return parsed_url.netloc, parsed_url.path.lstrip("/")
+
+def upload_data(path, desired_s3_uri, extra_args=None):
+    """Upload local file or directory to S3. (From SageMaker Session)
+    If a single file is specified for upload, the resulting S3 object key is
+    ``{key_prefix}/{filename}`` (filename does not include the local path, if any specified).
+    If a directory is specified for upload, the API uploads all content, recursively,
+    preserving relative structure of subdirectories. The resulting object key names are:
+    ``{key_prefix}/{relative_subdirectory_path}/filename``.
+    Args:
+        path (str): Path (absolute or relative) of local file or directory to upload.
+        bucket (str): Name of the S3 Bucket to upload to.
+        key_prefix (str): Optional S3 object key name prefix (default: 'data'). S3 uses the
+            prefix to create a directory structure for the bucket content that it display in
+            the S3 console.
+        extra_args (dict): Optional extra arguments that may be passed to the upload operation.
+            Similar to ExtraArgs parameter in S3 upload_file function. Please refer to the
+            ExtraArgs parameter documentation here:
+            https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter
+    Returns:
+        str: The S3 URI of the uploaded file(s). If a file is specified in the path argument,
+            the URI format is: ``s3://{bucket name}/{key_prefix}/{original_file_name}``.
+            If a directory is specified in the path argument, the URI format is
+            ``s3://{bucket name}/{key_prefix}``.
+    """
+    # Generate a tuple for each file that we want to upload of the form (local_path, s3_key).
+
+    bucket, key_prefix = parse_s3_url(url=desired_s3_uri)
+
+    files = []
+    key_suffix = None
+    if os.path.isdir(path):
+        for dirpath, _, filenames in os.walk(path):
+            for name in filenames:
+                local_path = os.path.join(dirpath, name)
+                s3_relative_prefix = (
+                    "" if path == dirpath else os.path.relpath(dirpath, start=path) + "/"
+                )
+                s3_key = "{}/{}{}".format(key_prefix, s3_relative_prefix, name)
+                files.append((local_path, s3_key))
+    else:
+        _, name = os.path.split(path)
+        s3_key = "{}/{}".format(key_prefix, name)
+        files.append((path, s3_key))
+        key_suffix = name
+
+    # bucket = bucket or self.default_bucket()
+    # if self.s3_resource is None:
+    #     s3 = self.boto_session.resource("s3", region_name=self.boto_region_name)
+    # else:
+    #     s3 = self.s3_resource
+    s3 = boto3.client("s3")
+
+    # s3 = boto_session.resource("s3", region_name=self.boto_region_name)
+
+    for local_path, s3_key in files:
+        s3.Object(bucket, s3_key).upload_file(local_path, ExtraArgs=extra_args)
+
+    s3_uri = "s3://{}/{}".format(bucket, key_prefix)
+    # If a specific file was used as input (instead of a directory), we return the full S3 key
+    # of the uploaded object. This prevents unintentionally using other files under the same
+    # prefix during training.
+    if key_suffix:
+        s3_uri = "{}/{}".format(s3_uri, key_suffix)
+    return 
 
 if __name__ == "__main__":
     logging.info(f"FLAGS values are {FLAGS}")
