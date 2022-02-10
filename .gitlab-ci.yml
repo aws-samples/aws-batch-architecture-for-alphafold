@@ -39,4 +39,6 @@ push-to-s3:
   before_script:
     - yum update -y && yum install -y awscli
   script:
-    - aws s3 ls
+    - zip -r aws-alphafold.zip . -x .\*/|*
+    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/aws-alphafold.zip
+    - aws s3 cp infastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/cfn.yaml
