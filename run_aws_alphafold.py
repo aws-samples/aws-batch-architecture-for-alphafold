@@ -37,6 +37,9 @@ from alphafold.model import config
 from alphafold.model import data
 from alphafold.model import model
 from alphafold.relax import relax
+
+from urllib.parse import urlparse
+
 import numpy as np
 
 import boto3
