@@ -41,4 +41,4 @@ push-to-s3:
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
     - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/aws-alphafold.zip
-    - aws s3 cp infastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/cfn.yaml
+    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/cfn.yaml
