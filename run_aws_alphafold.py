@@ -43,7 +43,6 @@ import numpy as np
 import boto3
 
 s3 = boto3.client("s3")
-# Internal import (7716).
 
 logging.set_verbosity(logging.INFO)
 
@@ -181,22 +180,30 @@ flags.DEFINE_boolean(
     "use_precomputed_msas",
     False,
     "Whether to read MSAs that "
-    'have been written to disk instead of running the MSA '
-    'tools. The MSA files are looked up in the output '
-    'directory, so it must stay the same between multiple '
-    'runs that are to reuse the MSAs. WARNING: This will not '
-    'check if the sequence, database or configuration have '
-    'changed.',
+    "have been written to disk instead of running the MSA "
+    "tools. The MSA files are looked up in the output "
+    "directory, so it must stay the same between multiple "
+    "runs that are to reuse the MSAs. WARNING: This will not "
+    "check if the sequence, database or configuration have "
+    "changed.",
 )
-flags.DEFINE_boolean('run_relax', True, 'Whether to run the final relaxation '
-                     'step on the predicted models. Turning relax off might '
-                     'result in predictions with distracting stereochemical '
-                     'violations but might help in case you are having issues '
-                     'with the relaxation stage.')
-flags.DEFINE_boolean('use_gpu_relax', True, 'Whether to relax on GPU. '
-                     'Relax on GPU can be much faster than CPU, so it is '
-                     'recommended to enable if possible. GPUs must be available'
-                     ' if this setting is enabled.')
+flags.DEFINE_boolean(
+    "run_relax",
+    True,
+    "Whether to run the final relaxation "
+    "step on the predicted models. Turning relax off might "
+    "result in predictions with distracting stereochemical "
+    "violations but might help in case you are having issues "
+    "with the relaxation stage.",
+)
+flags.DEFINE_boolean(
+    "use_gpu_relax",
+    True,
+    "Whether to relax on GPU. "
+    "Relax on GPU can be much faster than CPU, so it is "
+    "recommended to enable if possible. GPUs must be available"
+    " if this setting is enabled.",
+)
 ## ---------------------- AWS-specific --------------------------
 flags.DEFINE_string(
     "s3_bucket",
@@ -284,7 +291,7 @@ def predict_structure(
         features_output_path = os.path.join(output_dir, "features.pkl")
         with open(features_output_path, "wb") as f:
             pickle.dump(feature_dict, f, protocol=4)
-    
+
     # From Parallelfold
     if run_features_only:
         logging.info(
@@ -551,7 +558,8 @@ def main(argv):
             stiffness=RELAX_STIFFNESS,
             exclude_residues=RELAX_EXCLUDE_RESIDUES,
             max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS,
-            use_gpu=FLAGS.use_gpu_relax)
+            use_gpu=FLAGS.use_gpu_relax,
+        )
     else:
         amber_relaxer = None
 
@@ -624,6 +632,7 @@ def main(argv):
         upload_data(FLAGS.output_dir, f"s3://{FLAGS.s3_bucket}/{FLAGS.output_dir}")
     # ----------------------------
 
+
 def parse_s3_url(url):
     """Returns an (s3 bucket, key name/prefix) tuple from a url with an s3 scheme. (From SageMaker s3 utils)
     Args:
@@ -635,10 +644,13 @@ def parse_s3_url(url):
     """
     parsed_url = urlparse(url)
     if parsed_url.scheme != "s3":
-        raise ValueError("Expecting 's3' scheme, got: {} in {}.".format(parsed_url.scheme, url))
+        raise ValueError(
+            "Expecting 's3' scheme, got: {} in {}.".format(parsed_url.scheme, url)
+        )
     return parsed_url.netloc, parsed_url.path.lstrip("/")
 
-def upload_data(path, desired_s3_uri, s3 = boto3.client("s3"), extra_args=None):
+
+def upload_data(path, desired_s3_uri, s3=boto3.client("s3"), extra_args=None):
     """Upload local file or directory to S3. (From SageMaker Session)
     If a single file is specified for upload, the resulting S3 object key is
     ``{key_prefix}/{filename}`` (filename does not include the local path, if any specified).
@@ -669,7 +681,9 @@ def upload_data(path, desired_s3_uri, s3 = boto3.client("s3"), extra_args=None):
             for name in filenames:
                 local_path = os.path.join(dirpath, name)
                 s3_relative_prefix = (
-                    "" if path == dirpath else os.path.relpath(dirpath, start=path) + "/"
+                    ""
+                    if path == dirpath
+                    else os.path.relpath(dirpath, start=path) + "/"
                 )
                 s3_key = "{}/{}{}".format(key_prefix, s3_relative_prefix, name)
                 files.append((local_path, s3_key))
@@ -688,7 +702,8 @@ def upload_data(path, desired_s3_uri, s3 = boto3.client("s3"), extra_args=None):
     # prefix during training.
     if key_suffix:
         s3_uri = "{}/{}".format(s3_uri, key_suffix)
-    return 
+    return
+
 
 if __name__ == "__main__":
     logging.info(f"FLAGS values are {FLAGS}")
