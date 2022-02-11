@@ -308,8 +308,6 @@ def display_structure(
     if color not in ["chain", "lDDT", "rainbow"]:
         raise ValueError("Color must be 'LDDT' (default), 'chain', or 'rainbow'")
 
-    # print(f"Downloading PDB file from s3://{bucket}/{job_name}/ranked_0.pdb")
-    # s3.download_file(bucket, f"{job_name}/ranked_0.pdb", "data/ranked_0.pdb")
     plot_pdb(
         pdb_path,
         show_sidechains=show_sidechains,
@@ -322,7 +320,6 @@ def display_structure(
     if color == "lDDT":
         plot_plddt_legend().show()
 
-
 def plot_pdb(
     pred_output_path,
     show_sidechains=False,
@@ -330,8 +327,8 @@ def plot_pdb(
     color="lDDT",
     chains=None,
     Ls=None,
-    vmin=0.5,
-    vmax=0.9,
+    vmin=50,
+    vmax=90,
     color_HP=False,
     size=(800, 480),
 ):
@@ -347,7 +344,7 @@ def plot_pdb(
     view = py3Dmol.view(
         js="https://3dmol.org/build/3Dmol.js", width=size[0], height=size[1]
     )
-    view.addModel(read_pdb_renum(pred_output_path, Ls), "pdb")
+    view.addModel(open(pred_output_path,'r').read(),'pdb')
     if color == "lDDT":
         view.setStyle(
             {
@@ -455,38 +452,6 @@ def plot_plddt_legend(dpi=100):
     )
     plt.axis(False)
     return plt
-
-
-def read_pdb_renum(pdb_filename, Ls=None):
-
-    """
-    Process pdb file.
-    Copied from https://github.com/sokrypton/ColabFold/blob/main/beta/colabfold.py
-    """
-
-    if Ls is not None:
-        L_init = 0
-        new_chain = {}
-        for L, c in zip(Ls, alphabet_list):
-            new_chain.update({i: c for i in range(L_init, L_init + L)})
-            L_init += L
-    n, pdb_out = 1, []
-    resnum_, chain_ = 1, "A"
-    for line in open(pdb_filename, "r"):
-        if line[:4] == "ATOM":
-            chain = line[21:22]
-            resnum = int(line[22 : 22 + 5])
-            if resnum != resnum_ or chain != chain_:
-                resnum_, chain_ = resnum, chain
-                n += 1
-            if Ls is None:
-                pdb_out.append("%s%4i%s" % (line[:22], n, line[26:]))
-            else:
-                pdb_out.append(
-                    "%s%s%4i%s" % (line[:21], new_chain[n - 1], n, line[26:])
-                )
-    return "".join(pdb_out)
-
 
 def plot_msa_info(msa):
 
@@ -689,25 +654,10 @@ def validate_input(input_sequences):
     if len(output) == 1:
         print("Using the monomer models.")
         model_preset = "monomer"
-        # model_names = (
-        #     "model_1",
-        #     "model_2",
-        #     "model_3",
-        #     "model_4",
-        #     "model_5",
-        #     "model_2_ptm",
-        # )
         return output, model_preset
     elif len(output) > 1:
         print("Using the multimer models.")
         model_preset = "multimer"
-        # model_names = (
-        #     "model_1_multimer",
-        #     "model_2_multimer",
-        #     "model_3_multimer",
-        #     "model_4_multimer",
-        #     "model_5_multimer",
-        # )
         return output, model_preset
     else:
         raise ValueError("Please provide at least one input sequence.")
