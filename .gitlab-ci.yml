@@ -37,6 +37,8 @@ push-to-s3:
     AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
     AWS_DEFAULT_REGION: us-east-1
   before_script:
-    - yum update -y && yum install -y awscli
+    - yum update -y && yum install -y awscli zip
   script:
-    - aws s3 ls
+    - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
+    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/aws-alphafold.zip
+    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/cfn.yaml
