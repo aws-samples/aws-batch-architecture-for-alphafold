@@ -3,3 +3,5 @@
 .mypy_cache/
 random_commands.sh
 aws-alphafold.zip
+notebooks/data/*
+notebooks/nbhelpers/__pycache__*
