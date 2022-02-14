@@ -30,52 +30,6 @@ cfn = boto_session.client("cloudformation", region_name=region)
 logs_client = boto_session.client("logs")
 
 
-pymol_color_list = [
-    "#33ff33",
-    "#00ffff",
-    "#ff33cc",
-    "#ffff00",
-    "#ff9999",
-    "#e5e5e5",
-    "#7f7fff",
-    "#ff7f00",
-    "#7fff7f",
-    "#199999",
-    "#ff007f",
-    "#ffdd5e",
-    "#8c3f99",
-    "#b2b2b2",
-    "#007fff",
-    "#c4b200",
-    "#8cb266",
-    "#00bfbf",
-    "#b27f7f",
-    "#fcd1a5",
-    "#ff7f7f",
-    "#ffbfdd",
-    "#7fffff",
-    "#ffff7f",
-    "#00ff7f",
-    "#337fcc",
-    "#d8337f",
-    "#bfff3f",
-    "#ff7fff",
-    "#d8d8ff",
-    "#3fffbf",
-    "#b78c4c",
-    "#339933",
-    "#66b2b2",
-    "#ba8c84",
-    "#84bf00",
-    "#b24c66",
-    "#7f7f7f",
-    "#3f3fa5",
-    "#a5512b",
-]
-
-alphabet_list = list(ascii_uppercase + ascii_lowercase)
-
-
 def create_job_name(suffix=None):
 
     """
@@ -320,179 +274,6 @@ def display_structure(
     if color == "lDDT":
         plot_plddt_legend().show()
 
-def plot_pdb(
-    pred_output_path,
-    show_sidechains=False,
-    show_mainchains=False,
-    color="lDDT",
-    chains=None,
-    Ls=None,
-    vmin=50,
-    vmax=90,
-    color_HP=False,
-    size=(800, 480),
-):
-
-    """
-    Create a 3D view of a pdb structure
-    Copied from https://github.com/sokrypton/ColabFold/blob/main/beta/colabfold.py
-    """
-
-    if chains is None:
-        chains = 1 if Ls is None else len(Ls)
-
-    view = py3Dmol.view(
-        js="https://3dmol.org/build/3Dmol.js", width=size[0], height=size[1]
-    )
-    view.addModel(open(pred_output_path,'r').read(),'pdb')
-    if color == "lDDT":
-        view.setStyle(
-            {
-                "cartoon": {
-                    "colorscheme": {
-                        "prop": "b",
-                        "gradient": "roygb",
-                        "min": vmin,
-                        "max": vmax,
-                    }
-                }
-            }
-        )
-    elif color == "rainbow":
-        view.setStyle({"cartoon": {"color": "spectrum"}})
-    elif color == "chain":
-        for n, chain, color in zip(range(chains), alphabet_list, pymol_color_list):
-            view.setStyle({"chain": chain}, {"cartoon": {"color": color}})
-    if show_sidechains:
-        BB = ["C", "O", "N"]
-        HP = [
-            "ALA",
-            "GLY",
-            "VAL",
-            "ILE",
-            "LEU",
-            "PHE",
-            "MET",
-            "PRO",
-            "TRP",
-            "CYS",
-            "TYR",
-        ]
-        if color_HP:
-            view.addStyle(
-                {"and": [{"resn": HP}, {"atom": BB, "invert": True}]},
-                {"stick": {"colorscheme": "yellowCarbon", "radius": 0.3}},
-            )
-            view.addStyle(
-                {"and": [{"resn": HP, "invert": True}, {"atom": BB, "invert": True}]},
-                {"stick": {"colorscheme": "whiteCarbon", "radius": 0.3}},
-            )
-            view.addStyle(
-                {"and": [{"resn": "GLY"}, {"atom": "CA"}]},
-                {"sphere": {"colorscheme": "yellowCarbon", "radius": 0.3}},
-            )
-            view.addStyle(
-                {"and": [{"resn": "PRO"}, {"atom": ["C", "O"], "invert": True}]},
-                {"stick": {"colorscheme": "yellowCarbon", "radius": 0.3}},
-            )
-        else:
-            view.addStyle(
-                {
-                    "and": [
-                        {"resn": ["GLY", "PRO"], "invert": True},
-                        {"atom": BB, "invert": True},
-                    ]
-                },
-                {"stick": {"colorscheme": f"WhiteCarbon", "radius": 0.3}},
-            )
-            view.addStyle(
-                {"and": [{"resn": "GLY"}, {"atom": "CA"}]},
-                {"sphere": {"colorscheme": f"WhiteCarbon", "radius": 0.3}},
-            )
-            view.addStyle(
-                {"and": [{"resn": "PRO"}, {"atom": ["C", "O"], "invert": True}]},
-                {"stick": {"colorscheme": f"WhiteCarbon", "radius": 0.3}},
-            )
-    if show_mainchains:
-        BB = ["C", "O", "N", "CA"]
-        view.addStyle(
-            {"atom": BB}, {"stick": {"colorscheme": f"WhiteCarbon", "radius": 0.3}}
-        )
-    view.zoomTo()
-    return view
-
-
-def plot_plddt_legend(dpi=100):
-
-    """
-    Create 3D Plot legend
-    Copied from https://github.com/sokrypton/ColabFold/blob/main/beta/colabfold.py
-    """
-
-    thresh = [
-        "plDDT:",
-        "Very low (<50)",
-        "Low (60)",
-        "OK (70)",
-        "Confident (80)",
-        "Very high (>90)",
-    ]
-    plt.figure(figsize=(1, 0.1), dpi=dpi)
-    ########################################
-    for c in ["#FFFFFF", "#FF0000", "#FFFF00", "#00FF00", "#00FFFF", "#0000FF"]:
-        plt.bar(0, 0, color=c)
-    plt.legend(
-        thresh,
-        frameon=False,
-        loc="center",
-        ncol=6,
-        handletextpad=1,
-        columnspacing=1,
-        markerscale=0.5,
-    )
-    plt.axis(False)
-    return plt
-
-def plot_msa_info(msa):
-
-    """
-    Plot a representation of the MSA coverage.
-    Copied from https://github.com/sokrypton/ColabFold/blob/main/beta/colabfold.py
-    """
-
-    msa_arr = np.unique(msa, axis=0)
-    total_msa_size = len(msa_arr)
-    print(f"\n{total_msa_size} Sequences Found in Total\n")
-
-    if total_msa_size > 1:
-        plt.figure(figsize=(8, 5), dpi=100)
-        plt.title("Sequence coverage")
-        seqid = (msa[0] == msa_arr).mean(-1)
-        seqid_sort = seqid.argsort()
-        non_gaps = (msa_arr != 20).astype(float)
-        non_gaps[non_gaps == 0] = np.nan
-        plt.imshow(
-            non_gaps[seqid_sort] * seqid[seqid_sort, None],
-            interpolation="nearest",
-            aspect="auto",
-            cmap="rainbow_r",
-            vmin=0,
-            vmax=1,
-            origin="lower",
-            extent=(0, msa_arr.shape[1], 0, msa_arr.shape[0]),
-        )
-        plt.plot((msa_arr != 20).sum(0), color="black")
-        plt.xlim(0, msa_arr.shape[1])
-        plt.ylim(0, msa_arr.shape[0])
-        plt.colorbar(
-            label="Sequence identity to query",
-        )
-        plt.xlabel("Positions")
-        plt.ylabel("Sequences")
-        plt.show()
-    else:
-        print("Unable to display MSA of length 1")
-
 
 def submit_batch_alphafold_job(
     job_name,
@@ -661,3 +442,187 @@ def validate_input(input_sequences):
         return output, model_preset
     else:
         raise ValueError("Please provide at least one input sequence.")
+
+
+
+### ---------------------------------------------
+# Original Copyright 2021 Sergey Ovchinnikov https://github.com/sokrypton/ColabFold
+# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+pymol_color_list = [
+    "#33ff33",
+    "#00ffff",
+    "#ff33cc",
+    "#ffff00",
+    "#ff9999",
+    "#e5e5e5",
+    "#7f7fff",
+    "#ff7f00",
+    "#7fff7f",
+    "#199999",
+    "#ff007f",
+    "#ffdd5e",
+    "#8c3f99",
+    "#b2b2b2",
+    "#007fff",
+    "#c4b200",
+    "#8cb266",
+    "#00bfbf",
+    "#b27f7f",
+    "#fcd1a5",
+    "#ff7f7f",
+    "#ffbfdd",
+    "#7fffff",
+    "#ffff7f",
+    "#00ff7f",
+    "#337fcc",
+    "#d8337f",
+    "#bfff3f",
+    "#ff7fff",
+    "#d8d8ff",
+    "#3fffbf",
+    "#b78c4c",
+    "#339933",
+    "#66b2b2",
+    "#ba8c84",
+    "#84bf00",
+    "#b24c66",
+    "#7f7f7f",
+    "#3f3fa5",
+    "#a5512b",
+]
+
+alphabet_list = list(ascii_uppercase + ascii_lowercase)
+
+def plot_pdb(
+    pred_output_path,
+    show_sidechains=False,
+    show_mainchains=False,
+    color="lDDT",
+    chains=None,
+    Ls=None,
+    vmin=50,
+    vmax=90,
+    color_HP=False,
+    size=(800, 480),
+):
+
+    """
+    Create a 3D view of a pdb structure
+    Copied from https://github.com/sokrypton/ColabFold/blob/main/beta/colabfold.py
+    """
+
+    if chains is None:
+        chains = 1 if Ls is None else len(Ls)
+
+    view = py3Dmol.view(
+        js="https://3dmol.org/build/3Dmol.js", width=size[0], height=size[1]
+    )
+    view.addModel(open(pred_output_path,'r').read(),'pdb')
+    if color == "lDDT":
+        view.setStyle(
+            {
+                "cartoon": {
+                    "colorscheme": {
+                        "prop": "b",
+                        "gradient": "roygb",
+                        "min": vmin,
+                        "max": vmax,
+                    }
+                }
+            }
+        )
+    elif color == "rainbow":
+        view.setStyle({"cartoon": {"color": "spectrum"}})
+    elif color == "chain":
+        for n, chain, color in zip(range(chains), alphabet_list, pymol_color_list):
+            view.setStyle({"chain": chain}, {"cartoon": {"color": color}})
+    if show_sidechains:
+        BB = ["C", "O", "N"]
+        HP = [
+            "ALA",
+            "GLY",
+            "VAL",
+            "ILE",
+            "LEU",
+            "PHE",
+            "MET",
+            "PRO",
+            "TRP",
+            "CYS",
+            "TYR",
+        ]
+        if color_HP:
+            view.addStyle(
+                {"and": [{"resn": HP}, {"atom": BB, "invert": True}]},
+                {"stick": {"colorscheme": "yellowCarbon", "radius": 0.3}},
+            )
+            view.addStyle(
+                {"and": [{"resn": HP, "invert": True}, {"atom": BB, "invert": True}]},
+                {"stick": {"colorscheme": "whiteCarbon", "radius": 0.3}},
+            )
+            view.addStyle(
+                {"and": [{"resn": "GLY"}, {"atom": "CA"}]},
+                {"sphere": {"colorscheme": "yellowCarbon", "radius": 0.3}},
+            )
+            view.addStyle(
+                {"and": [{"resn": "PRO"}, {"atom": ["C", "O"], "invert": True}]},
+                {"stick": {"colorscheme": "yellowCarbon", "radius": 0.3}},
+            )
+        else:
+            view.addStyle(
+                {
+                    "and": [
+                        {"resn": ["GLY", "PRO"], "invert": True},
+                        {"atom": BB, "invert": True},
+                    ]
+                },
+                {"stick": {"colorscheme": f"WhiteCarbon", "radius": 0.3}},
+            )
+            view.addStyle(
+                {"and": [{"resn": "GLY"}, {"atom": "CA"}]},
+                {"sphere": {"colorscheme": f"WhiteCarbon", "radius": 0.3}},
+            )
+            view.addStyle(
+                {"and": [{"resn": "PRO"}, {"atom": ["C", "O"], "invert": True}]},
+                {"stick": {"colorscheme": f"WhiteCarbon", "radius": 0.3}},
+            )
+    if show_mainchains:
+        BB = ["C", "O", "N", "CA"]
+        view.addStyle(
+            {"atom": BB}, {"stick": {"colorscheme": f"WhiteCarbon", "radius": 0.3}}
+        )
+    view.zoomTo()
+    return view
+
+def plot_plddt_legend(dpi=100):
+
+    """
+    Create 3D Plot legend
+    Copied from https://github.com/sokrypton/ColabFold/blob/main/beta/colabfold.py
+    """
+
+    thresh = [
+        "plDDT:",
+        "Very low (<50)",
+        "Low (60)",
+        "OK (70)",
+        "Confident (80)",
+        "Very high (>90)",
+    ]
+    plt.figure(figsize=(1, 0.1), dpi=dpi)
+    ########################################
+    for c in ["#FFFFFF", "#FF0000", "#FFFF00", "#00FF00", "#00FFFF", "#0000FF"]:
+        plt.bar(0, 0, color=c)
+    plt.legend(
+        thresh,
+        frameon=False,
+        loc="center",
+        ncol=6,
+        handletextpad=1,
+        columnspacing=1,
+        markerscale=0.5,
+    )
+    plt.axis(False)
+    return plt
+### ---------------------------------------------
