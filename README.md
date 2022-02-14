@@ -44,7 +44,7 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 ![Sagemaker Notebook Instances](imgs/notebook-nav.png)
 
 ### Clone Notebook Repository
-(If *LaunchSageMakerNotebook* set to F)
+(If *LaunchSageMakerNotebook* set to N)
 1. Navigate to [CodeCommit](https://console.aws.amazon.com/codesuite/codecommit).
 2. Select the aws-alphafold repository that was just created and copy the clone URL.
 3. Use the URL to clone the repository into your Jupyter notebook environment of choice, such as SageMaker Studio.
@@ -54,7 +54,7 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 
 ```
 pip install -r notebooks/notebook-requirements.txt
-python notebooks/download_ref_data.py <STACK NAME>
+python notebooks/download_ref_data.py --stack_name <STACK NAME>
 ```
 
 Replacing `<STACK NAME>` with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
