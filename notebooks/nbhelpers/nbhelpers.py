@@ -41,7 +41,7 @@ def create_job_name(suffix=None):
     else:
         ## Ensure that the suffix conforms to the Batch requirements, (only letters,
         ## numbers, hyphens, and underscores are allowed).
-        suffix = sub("\W", "_", suffix)
+        suffix = re.sub("\W", "_", suffix)
         return datetime.now().strftime("%Y%m%dT%H%M%S") + "_" + suffix
 
 
