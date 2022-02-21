@@ -1,7 +1,7 @@
 # AWS Batch Architecture for AlphaFold 
 -----
 ## Overview
-Proteins are large biomolecules that play an important role in the body. Knowing the physical structure of proteins is key to understanding their function. However, it can be difficult and expensive to determine the structure of many proteins experimentally. One alternative is to predict these structures using machine learning algorithms. Several high-profile research teams have released such algorithms, including [AlphaFold 2](https://deepmind.com/blog/article/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology),  [RoseTTAFold](https://www.ipd.uw.edu/2021/07/rosettafold-accurate-protein-structure-prediction-accessible-to-all/), and others. Their work was important enough for Science magazine to name it the ["2021 Breakthrough of the Year"](https://www.science.org/content/article/breakthrough-2021).
+Proteins are large biomolecules that play an important role in the body. Knowing the physical structure of proteins is key to understanding their function. However, it can be difficult and expensive to determine the structure of many proteins experimentally. One alternative is to predict these structures using machine learning algorithms. Several high-profile research teams have released such algorithms, including [AlphaFold 2](https://deepmind.com/blog/article/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology), [RoseTTAFold](https://www.ipd.uw.edu/2021/07/rosettafold-accurate-protein-structure-prediction-accessible-to-all/), and others. Their work was important enough for Science magazine to name it the ["2021 Breakthrough of the Year"](https://www.science.org/content/article/breakthrough-2021).
 
 Both AlphaFold 2 and RoseTTAFold use a multi-track transformer architecture trained on known protein templates to predict the structure of unknown peptide sequences. These predictions are heavily GPU-dependent and take anywhere from minutes to days to complete. The input features for these predictions include multiple sequence alignment (MSA) data. MSA algorithms are CPU-dependent and can themselves require several hours of processing time.
 
@@ -17,34 +17,34 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 ## First time setup
 ### Deploy the infrastructure stack
 
-1. Choose *Launch Stack*:
+1. Choose **Launch Stack**:
 
     [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-hcls-ml.s3.amazonaws.com/blog_post_support_materials/aws-alphafold/cfn.yaml)
 
 2. Specify the following required parameters:
-  - For *Stack Name*, enter a value unique to your account and region.
-  - For *StackAvailabilityZone* choose an availability zone.
+  - For **Stack Name**, enter a value unique to your account and region.
+  - For **StackAvailabilityZone** choose an availability zone.
 3. If needed, specify the following optional parameters:
-  - Select a different value for *AlphaFoldVersion* if you want to include another version of the public Alphafold repo in your Batch job container.
-  - Specify a different value for *CodeRepoBucket* and *CodeRepoKey* if you want to populate your AWS-Alphafold CodeCommit repository with custom code stored in another S3 bucket.
-  - Select a different value for *FSXForLustreStorageCapacity* if you want to provision a larger file system. The default value of 1200 GB is sufficient to store compressed instances of the Alphafold parameters, BFD (small and reduced), Mgnify, PDB70, PDB mmCIF, Uniclust30, Uniref90, UniProt, and PDB SeqRes datasets.
-  - Select a different value for for *FSxForLustreThroughput* if you have unique performance needs. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
-  - Select Y for *LaunchSageMakerNotebook* if you want to launch a managed sagemaker notebook instance to quickly run the provided Jupyter notebook.
+  - Select a different value for **AlphaFoldVersion** if you want to include another version of the public Alphafold repo in your Batch job container.
+  - Specify a different value for **CodeRepoBucket** and **CodeRepoKey** if you want to populate your AWS-Alphafold CodeCommit repository with custom code stored in another S3 bucket.
+  - Select a different value for **FSXForLustreStorageCapacity** if you want to provision a larger file system. The default value of 1200 GB is sufficient to store compressed instances of the Alphafold parameters, BFD (small and reduced), Mgnify, PDB70, PDB mmCIF, Uniclust30, Uniref90, UniProt, and PDB SeqRes datasets.
+  - Select a different value for for **FSxForLustreThroughput** if you have unique performance needs. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
+  - Select Y for **LaunchSageMakerNotebook** if you want to launch a managed sagemaker notebook instance to quickly run the provided Jupyter notebook.
 
-4. Select *I acknowledge that AWS CloudFormation might create IAM resources with custom names*.
-5. Choose *Create stack*.
+4. Select **I acknowledge that AWS CloudFormation might create IAM resources with custom names**.
+5. Choose **Create stack**.
 6. Wait 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
 
 ### Launch SageMaker Notebook
-(If *LaunchSageMakerNotebook* set to Y)
-1. Navigate to [SageMaker](https://console.aws.amazon.com/codesuite/sagemaker)
-2. Select *Notebook* > *Notebook instances*.
-3. Select the *AWS-Alphafold-Notebook* instance and then *Actions* > *Open Jupyter* or *Open JupyterLab*.
+(If **LaunchSageMakerNotebook** set to Y)
+1. Navigate to [SageMaker](https://console.aws.amazon.com/sagemaker)
+2. Select **Notebook** > **Notebook instances**.
+3. Select the **AWS-Alphafold-Notebook** instance and then **Actions** > **Open Jupyter** or **Open JupyterLab**.
 
 ![Sagemaker Notebook Instances](imgs/notebook-nav.png)
 
 ### Clone Notebook Repository
-(If *LaunchSageMakerNotebook* set to N)
+(If **LaunchSageMakerNotebook** set to N)
 1. Navigate to [CodeCommit](https://console.aws.amazon.com/codesuite/codecommit).
 2. Select the aws-alphafold repository that was just created and copy the clone URL.
 3. Use the URL to clone the repository into your Jupyter notebook environment of choice, such as SageMaker Studio.
@@ -61,10 +61,43 @@ Replacing `<STACK NAME>` with the name of your cloudformation stack. By default,
 
 2. It will take several hours to populate the file system. You can track its progress by navigating to the file system in the FSx for Lustre console.
 
+### Cleaning Up
+1. To delete all provisioned resources from from your account, navigate to [S3](https://console.aws.amazon.com/s3) and search for your stack name. This should return a bucket named `<STACK NAME>` followed by `codepipelines3bucket` a random key. Select the bucket and then **Delete**.
+2. Navigate to [ECR](https://console.aws.amazon.com/ecr) and search for your stack name. This should return two container repositories named `<STACK ID>` followed by either `downloadcontainerregistry` or `foldingcontainerregistry`. Select both repositories and then **Delete**.
+3. Finally, navigate to [Cloud Formation](https://console.aws.amazon.com/cloudformation), select your stack, and then **Delete**. 
 
 -----
 ## Usage
 Use the provided `AWS-AlphaFold.ipynb` notebook to submit sequences for analysis and download the results.
+
+-----
+## Performance
+To determine the optimal compute settings, we used the [CASP14 target list](https://predictioncenter.org/casp14/targetlist.cgi) to test various CPU, memory, and GPU settings for the data preparation and prediction jobs. Using the full BFD database can increase the duration of data preparation jobs by as much as 10x. However the resulting increase in MSA coverage can increase the maximum pLDDT scores for some targets.
+
+![Job Performance Depends on Target Size and DB Type](imgs/performance.png)
+![Using Reduced BFD Can Affect Prediction Quality](imgs/plddt.png)
+
+Based on this analysis, we recommend the following AWS Batch compute resource settings:
+
+### Data Preparation (Reduced BFD)
+- CPsU: 4 vCPU
+- Memory: 16 GiB
+- GPUs: 0
+
+### Data Preparation (Full BFD)
+- CPUs: 16 vCPU
+- Memory: 32 GiB
+- GPUs: 0
+
+### Prediction (Sequence Length < 700)
+- CPUs: 4
+- Memory: 16 GiB
+- GPUs: 1
+
+### Prediction (Sequence Length > 700)
+- CPUs: 16
+- Memory: 64 GiB
+- GPUs: 1
 
 -----
 ## Additional Information
