@@ -722,7 +722,7 @@ Resources:
         BranchName: "main"
         S3:
           Bucket: "aws-hcls-ml"
-          Key: "blog_post_support_materials/aws-alphafold/aws-alphafold.zip"
+          Key: "blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip"
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [

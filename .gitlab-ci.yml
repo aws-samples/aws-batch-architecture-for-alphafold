@@ -28,7 +28,7 @@ secret_detection:
   variables:
     CI_DEBUG_TRACE: "true"
 
-push-to-s3:
+push-to-s3-dev:
   stage: deploy
   variables:
     AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
@@ -37,5 +37,21 @@ push-to-s3:
     - yum update -y && yum install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
-    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/aws-alphafold.zip
-    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/cfn.yaml
+    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/dev/aws-alphafold.zip
+    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/dev/cfn.yaml
+  only:
+    - dev
+
+push-to-s3-main:
+  stage: deploy
+  variables:
+    AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
+    AWS_DEFAULT_REGION: us-east-1
+  before_script:
+    - yum update -y && yum install -y awscli zip
+  script:
+    - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
+    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip
+    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/cfn.yaml    
+  only:
+    - main
