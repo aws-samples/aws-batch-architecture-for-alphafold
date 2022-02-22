@@ -13,18 +13,14 @@
 # limitations under the License.
 
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+### Modified by Amazon Web Services (AWS) to update cuda version and add Alphafold
+### parameter
 ARG CUDA=11.4.2
 ARG AF_VERSION=v2.1.2
 FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
-### ---------------------------------------------
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
-### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 ARG AF_VERSION
 ### ---------------------------------------------
 
@@ -35,8 +31,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       build-essential \
       cmake \
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.      
+### Modified by AWS to update cuda version    
       cuda-command-line-tools-11.4 \
 ### ---------------------------------------------
       git \
@@ -45,8 +40,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       tzdata \
       wget \
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.          
+### Modified by AWS to address openssl issue identified during testing
     && apt-get install -y --only-upgrade openssl \
 ### ---------------------------------------------
     && rm -rf /var/lib/apt/lists/*
@@ -73,18 +67,12 @@ RUN conda update -qy conda \
     && conda install -y -c conda-forge \
       openmm=7.5.1 \
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.        
+### Modified by AWS to update cuda version and add awscli   
       cudatoolkit==${CUDA} \
-### ---------------------------------------------      
       pdbfixer \
       pip \
       python=3.7 \
-### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.           
       awscli
-
 
 RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alphafold.git /app/alphafold
 COPY run_aws_alphafold.py /app/alphafold
@@ -96,8 +84,7 @@ RUN wget -q -P /app/alphafold/alphafold/common/ \
 RUN pip3 install --upgrade pip \
     && pip3 install -r /app/alphafold/requirements.txt \
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.      
+### Modified by AWS to update cuda version and add boto3   
     && pip3 install --upgrade jax jaxlib>=0.1.69+cuda${CUDA/./} -f \
       https://storage.googleapis.com/jax-releases/jax_releases.html \
     && pip3 install boto3
@@ -108,8 +95,8 @@ WORKDIR /opt/conda/lib/python3.7/site-packages
 RUN patch -p0 < /app/alphafold/docker/openmm.patch
 
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.   
+### Modified by AWS to clean up container
+  
 RUN rm -rf /app/alphafold/docker /app/alphafold/imgs /app/alphafold/notebooks /app/alphafold/scripts
 ### ---------------------------------------------     
 
@@ -122,8 +109,7 @@ WORKDIR /app/alphafold
 RUN echo $'#!/bin/bash\n\
 ldconfig\n\
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.     
+### Modified by AWS to point to new script    
 python /app/alphafold/run_aws_alphafold.py "$@"' > /app/run_aws_alphafold.sh \
   && chmod +x /app/run_aws_alphafold.sh
 ENTRYPOINT ["/app/run_aws_alphafold.sh"]
