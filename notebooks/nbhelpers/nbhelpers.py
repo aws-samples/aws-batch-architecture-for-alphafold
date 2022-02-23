@@ -253,8 +253,8 @@ def display_structure(
     show_sidechains=False,
     show_mainchains=False,
     chains=1,
-    vmin=0.5,
-    vmax=0.9,
+    vmin=50,
+    vmax=90,
 ):
     """
     Display the predicted structure in a Jupyter notebook cell
