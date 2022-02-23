@@ -50,7 +50,7 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 3. Use the URL to clone the repository into your Jupyter notebook environment of choice, such as SageMaker Studio.
 
 ### Populate FSx for Lustre File System
-1. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, run the following commands at the terminal of your notebook environment:
+1. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, open a terminal in your notebooks environment and run the following commands from the AWS-AlphaFold directory:
 
 ```
 > pip install -r notebooks/notebook-requirements.txt
@@ -98,6 +98,20 @@ Based on this analysis, we recommend the following AWS Batch compute resource se
 - CPUs: 16
 - Memory: 64 GiB
 - GPUs: 1
+
+-----
+## Cost Estimation
+Follow these steps to estimate the per-run costs asociated with a protein of size X:
+
+1. Pick either the full or reduced bfd database
+1. Find the length of your target sequence on the x-axis.
+1. Use the plotted curves to identify the estimated data prep and prediction job durations.
+1. Refer to the [EC2 On-Demand pricing page](https://aws.amazon.com/ec2/pricing/on-demand/) to obtain the hourly rate for the data prep job instance type equivalent (m5.xlarge or c5.4xlarge, depending on bfd database type) and prediction job instance type equivalent (g4dn.xlarge or g4dn.4xlarge, depending on sequence length).
+
+![AWS Batch Run Time Estimation](imgs/cost-estimation.png)
+
+For example, analyzing a 625-residue sequence using the reduced bfd database will take approximately 0.3 hours of data prep time, plus 1 hour of prediction time. As of February 2022, the on-demand rate for a m5.xlarge instance in the us-east-1 Region is $0.192/hr. and the rate for a g4dn.xlarge instance is $0.526/hr., for a total estimated cost of $0.72 per run. Please note that this pricing is subject to change at any time.
+
 
 -----
 ## Additional Information

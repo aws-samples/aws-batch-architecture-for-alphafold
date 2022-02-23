@@ -41,8 +41,7 @@ from alphafold.relax import relax
 import numpy as np
 
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+### Modified by Amazon Web Services (AWS) to add urlparse and boto3
 from urllib.parse import urlparse
 import boto3
 s3 = boto3.client("s3")
@@ -137,8 +136,8 @@ flags.DEFINE_boolean('use_gpu_relax', None, 'Whether to relax on GPU. '
                      ' if this setting is enabled.')
 
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+### Modified by AWS to add urlparse and boto3
+
 flags.DEFINE_string(
     "s3_bucket",
     None,
@@ -190,8 +189,8 @@ def predict_structure(
     random_seed: int,
     is_prokaryote: Optional[bool] = None,
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+### Modified by AWS to add support for 2-step jobs
+
     features_path: Optional[str] = None,
     run_features_only: Optional[bool] = False,
 ### ---------------------------------------------
@@ -209,8 +208,8 @@ def predict_structure(
     # Get features.
     t_0 = time.time()
 ### ---------------------------------------------    
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+### Modified by AWS to add support for 2-step jobs
+
     # If we already have feature.pkl file, skip the MSA and template finding step
     if features_path is not None:
         logging.info(f"{features_path} found. Loading...")
@@ -234,9 +233,8 @@ def predict_structure(
             pickle.dump(feature_dict, f, protocol=4)
 
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Inserted Code Copyright 2021 Bozitao Zhong (https://github.com/Zuricho/ParallelFold)
+### Modified by AWS to add support for 2-step jobs.
+### See https://github.com/Zuricho/ParallelFold)
 
     if run_features_only:
         logging.info(
@@ -397,8 +395,8 @@ def main(argv):
     else:  # Default is_prokaryote to False.
         is_prokaryote_list = [False] * len(fasta_names)
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+### Modified by AWS to add support for 2-step jobs.
+
     # Check that features_paths has the same number of elements as fasta_paths,
     # (if it is not None)
     if FLAGS.features_paths is not None:
@@ -492,8 +490,8 @@ def main(argv):
         is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
         fasta_name = fasta_names[i]
 ### ---------------------------------------------
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+### Modified by AWS to add support for 2-step jobs and data storage in S3.
+
         # --------- Download files from S3 ---------------------------
         if FLAGS.s3_bucket is not None:
             s3_fasta_url = os.path.join(FLAGS.s3_bucket, fasta_path)
@@ -544,8 +542,8 @@ def main(argv):
             random_seed=random_seed,
             is_prokaryote=is_prokaryote,
 ### ---------------------------------------------            
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.            
+### Modified by AWS to add support for 2-step jobs.
+           
             features_path=features_path,
             run_features_only=FLAGS.run_features_only            
         )
@@ -640,8 +638,8 @@ if __name__ == '__main__':
             'max_template_date',
             'obsolete_pdbs_path',
 ### ---------------------------------------------            
-# Original Copyright 2021 DeepMind Technologies Limited
-# Modifications Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.              
+### Modified by AWS to resolve issue found in testing.
+            
             #'use_gpu_relax',
 ### ---------------------------------------------            
         ])
