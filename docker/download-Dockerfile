@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 ARG AF_VERSION=v2.1.2
 FROM public.ecr.aws/amazonlinux/amazonlinux:latest
 ARG AF_VERSION

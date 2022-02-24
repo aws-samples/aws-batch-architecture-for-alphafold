@@ -112,6 +112,15 @@ Follow these steps to estimate the per-run costs asociated with a protein of siz
 
 For example, analyzing a 625-residue sequence using the reduced bfd database will take approximately 0.3 hours of data prep time, plus 1 hour of prediction time. As of February 2022, the on-demand rate for a m5.xlarge instance in the us-east-1 Region is $0.192/hr. and the rate for a g4dn.xlarge instance is $0.526/hr., for a total estimated cost of $0.72 per run. Please note that this pricing is subject to change at any time.
 
+-----
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+-----
+## License
+
+This project is licensed under the Apache-2.0 License.
 
 -----
 ## Additional Information
