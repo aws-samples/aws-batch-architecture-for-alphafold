@@ -446,18 +446,12 @@ Resources:
           - Action:
               - s3:GetBucketAcl
               - s3:GetBucketLocation  
-            Effect: Allow
-            Resource: 
-              - !GetAtt CodePipelineS3Bucket.Arn
-            Principal: 
-              AWS: !Ref AWS::AccountId
-          - Action:
               - s3:PutBucketPolicy
             Effect: Allow
             Resource: 
               - !GetAtt CodePipelineS3Bucket.Arn
             Principal: 
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:role/Admin                      
+              AWS: !Ref AWS::AccountId                
           
   S3Endpoint:
     Type: "AWS::EC2::VPCEndpoint"
