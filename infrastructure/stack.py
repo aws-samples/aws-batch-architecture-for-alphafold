@@ -9,6 +9,7 @@ from aws_cdk import (
     aws_codebuild as codebuild,
     aws_codepipeline as codepipeline,
     aws_batch as batch,
+    aws_sagemaker as sagemaker,
 )
 
 
@@ -873,4 +874,42 @@ class LokaFoldBasic(core.Stack):
             propagate_tags=True,
             retry_strategy=batch.CfnJobDefinition.RetryStrategyProperty(attempts=3),
             type="container",
+        )
+
+        # SageMaker
+
+        notebook_role = iam.Role(self, "SageMakerNotebookExecutionRole", path="/")
+
+        notebook_role.add_managed_policy(
+            iam.ManagedPolicy.from_managed_policy_arn(
+                f"arn:{Aws.PARTITION}:iam:aws:policy:AmazonSageMakerFullAccess"
+            )
+        )
+
+        notebook_role.add_managed_policy(
+            iam.ManagedPolicy.from_managed_policy_arn(
+                f"arn:{Aws.PARTITION}:iam:aws:policy:AWSCodeCommitReadOnly"
+            )
+        )
+        notebook_role.add_managed_policy(
+            iam.ManagedPolicy.from_managed_policy_arn(
+                f"arn:{Aws.PARTITION}:iam:aws:policy:AWSCloudFormationReadOnlyAccess"
+            )
+        )
+        notebook_role.add_managed_policy(
+            iam.ManagedPolicy.from_managed_policy_arn(
+                f"arn:{Aws.PARTITION}:iam:aws:policy:AWSBatchFullAccess"
+            )
+        )
+
+        notebook_instance = sagemaker.CfnNotebookInstance(
+            self,
+            "AlphafoldNotebookInstance",
+            direct_internet_access="Enabled",
+            instance_type="ml.c4.2xlarge",
+            default_code_repository=repo.repository_clone_url_http,
+            kms_key_id=key.key_arn,
+            role_arn=notebook_role.role_arn,
+            subnet_id=vpc.private_subnets[0],
+            security_group_ids=[vpc.vpc_default_security_group],
         )
