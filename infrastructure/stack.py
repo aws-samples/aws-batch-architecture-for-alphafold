@@ -273,8 +273,9 @@ class LokaFoldBasic(Stack):
             ),
         )
 
-        # WIP
-        # endpoint = vpc.add_gateway_endpoint("S3Endpoint", f"com.amazonaws.{region}.s3")
+        endpoint = vpc.add_gateway_endpoint(
+            "S3Endpoint", service=ec2.GatewayVpcEndpointAwsService.S3
+        )
 
         # FSx
 
@@ -322,7 +323,12 @@ class LokaFoldBasic(Stack):
             self, "InstanceProfile", roles=[ec2_role.role_name]
         )
 
-        user_data = None  # WIP
+        user_data = ec2.UserData.for_linux()
+
+        user_data.add_commands(
+            f'MIME-Version: 1.0\nContent-Type: multipart/mixed; boundary="==MYBOUNDARY=="\n\n--==MYBOUNDARY==\nContent-Type: text/cloud-config; charset="us-ascii"\n\nruncmd:\n- file_system_id_01={lustre.file_system_id}\n- region={Aws.REGION}\n- fsx_directory=/fsx\n- fsx_mount_name={lustre.mount_name}\n- amazon-linux-extras install -y lustre2.10\n'
+            + "- mkdir -p ${fsx_directory}\n- mount -t lustre ${file_system_id_01}.fsx.${region}.amazonaws.com@tcp:/${fsx_mount_name} ${fsx_directory}\n\n--==MYBOUNDARY==--"
+        )
 
         launch_template = ec2.LaunchTemplate(
             self,
