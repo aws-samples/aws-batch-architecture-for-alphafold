@@ -170,7 +170,7 @@ class LokaFoldBasic(Stack):
             cidr_block=vpc.vpc_cidr_block,
         )
 
-        private_subnet = ec2.Subnet(
+        private_subnet = ec2.CfnSubnet(
             self,
             "PrivateSubnet0",
             vpc_id=vpc.vpc_id,
@@ -237,7 +237,7 @@ class LokaFoldBasic(Stack):
         private_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
             self,
             "PrivateSubnetRouteTableAssociation0",
-            subnet_id=private_subnet.subnet_id,
+            subnet_id=private_subnet.attr_subnet_id,
             route_table_id=private_route_table.attr_route_table_id,
         )
 
@@ -286,7 +286,7 @@ class LokaFoldBasic(Stack):
                 deployment_type=fsx.LustreDeploymentType.PERSISTENT_2,
                 per_unit_storage_throughput=125,  # fsx_throughput.value_as_number, WIP
             ),
-            vpc_subnet=vpc.private_subnets[0],
+            vpc_subnet=private_subnet,
             storage_capacity_gib=1200,  # fsx_capacity.value_as_number, WIP
             vpc=vpc,
         )
@@ -368,7 +368,7 @@ class LokaFoldBasic(Stack):
             image_scanning_configuration=ecr.CfnRepository.ImageScanningConfigurationProperty(
                 scan_on_push=True
             ),
-            repository_name="LokaFold-folding-container-repo",
+            repository_name="lokafold-folding-container-repo",
         )
 
         download_container = ecr.CfnRepository(
@@ -380,7 +380,7 @@ class LokaFoldBasic(Stack):
             image_scanning_configuration=ecr.CfnRepository.ImageScanningConfigurationProperty(
                 scan_on_push=True
             ),
-            repository_name="LokaFold-download-container-repo",
+            repository_name="lokafold_download_container_repo",
         )
 
         codebuild_role = iam.Role(
@@ -406,7 +406,7 @@ class LokaFoldBasic(Stack):
                             "logs:PutLogEvents",
                         ],
                         resources=[
-                            f"arn:aws:logs={Aws.REGION}:{Aws.ACCOUNT_ID}:log-group:/aws/codebuild/AWS-Alphafold*"
+                            f"arn:aws:logs:{Aws.REGION}:{Aws.ACCOUNT_ID}:log-group:/aws/codebuild/AWS-Alphafold*"
                         ],
                     ),
                     iam.PolicyStatement(
@@ -619,7 +619,7 @@ class LokaFoldBasic(Stack):
                 maxv_cpus=256,
                 minv_cpus=0,
                 security_group_ids=[vpc.vpc_default_security_group],
-                subnets=[private_subnet.subnet_id],
+                subnets=[private_subnet.attr_subnet_id],
                 type="EC2",
             ),
             state="ENABLED",
@@ -639,7 +639,7 @@ class LokaFoldBasic(Stack):
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                subnets=[private_subnet.subnet_id],
+                subnets=[private_subnet.attr_subnet_id],
                 type="EC2",
             ),
             state="ENABLED",
@@ -660,7 +660,7 @@ class LokaFoldBasic(Stack):
                 maxv_cpus=256,
                 minv_cpus=0,
                 security_group_ids=[vpc.vpc_default_security_group],
-                subnets=[private_subnet.subnet_id],
+                subnets=[private_subnet.attr_subnet_id],
                 type="EC2",
             ),
             state="ENABLED",
@@ -1076,7 +1076,7 @@ class LokaFoldBasic(Stack):
             iam.ManagedPolicy.from_managed_policy_arn(
                 self,
                 "notebook_sagemaker_policy",
-                f"arn:{Aws.PARTITION}:iam:aws:policy:AmazonSageMakerFullAccess",
+                f"arn:{Aws.PARTITION}:iam::aws:policy/AmazonSageMakerFullAccess",
             )
         )
 
@@ -1084,21 +1084,21 @@ class LokaFoldBasic(Stack):
             iam.ManagedPolicy.from_managed_policy_arn(
                 self,
                 "notebook_codecommit_policy",
-                f"arn:{Aws.PARTITION}:iam:aws:policy:AWSCodeCommitReadOnly",
+                f"arn:{Aws.PARTITION}:iam::aws:policy/AWSCodeCommitReadOnly",
             )
         )
         notebook_role.add_managed_policy(
             iam.ManagedPolicy.from_managed_policy_arn(
                 self,
                 "notebook_cloudformation_policy",
-                f"arn:{Aws.PARTITION}:iam:aws:policy:AWSCloudFormationReadOnlyAccess",
+                f"arn:{Aws.PARTITION}:iam::aws:policy/AWSCloudFormationReadOnlyAccess",
             )
         )
         notebook_role.add_managed_policy(
             iam.ManagedPolicy.from_managed_policy_arn(
                 self,
                 "notebook_batch_policy",
-                f"arn:{Aws.PARTITION}:iam:aws:policy:AWSBatchFullAccess",
+                f"arn:{Aws.PARTITION}:iam::aws:policy/AWSBatchFullAccess",
             )
         )
 
@@ -1110,6 +1110,6 @@ class LokaFoldBasic(Stack):
             default_code_repository=repo.attr_clone_url_http,
             kms_key_id=key.key_arn,
             role_arn=notebook_role.role_arn,
-            subnet_id=private_subnet.subnet_id,
+            subnet_id=private_subnet.attr_subnet_id,
             security_group_ids=[vpc.vpc_default_security_group],
         )
