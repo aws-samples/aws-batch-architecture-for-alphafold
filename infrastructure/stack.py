@@ -537,7 +537,14 @@ class LokaFoldBasic(Stack):
             )
         )
 
-        configuration = None  # WIP
+        configuration = {
+            "Configuration": [
+                {"RepositoryName": repo.repository_name},
+                {"BranchName": "main"},
+                {"PollForSourceChanges": "false"},
+                # {"ActionMode": "CREATE_UPDATE"}, WIP
+            ]
+        }
 
         pipeline = codepipeline.CfnPipeline(
             self,
@@ -560,7 +567,7 @@ class LokaFoldBasic(Stack):
                                 provider="CodeCommit",
                                 version="1",
                             ),
-                            # configuration=configuration, WIP
+                            configuration=configuration,
                             namespace="SourceVariables",
                             output_artifacts=[
                                 codepipeline.CfnPipeline.OutputArtifactProperty(
@@ -583,7 +590,7 @@ class LokaFoldBasic(Stack):
                                 provider="CodeBuild",
                                 version="1",
                             ),
-                            # configuration=configuration, WIP
+                            configuration=configuration,
                             namespace="BuildVariables",
                             input_artifacts=[
                                 codepipeline.CfnPipeline.InputArtifactProperty(
