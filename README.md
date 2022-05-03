@@ -19,7 +19,7 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 
 1. Choose **Launch Stack**:
 
-    [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-hcls-ml.s3.amazonaws.com/blog_post_support_materials/aws-alphafold/main/cfn-vpc.yaml)
+    [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://cfn-without-vpc.s3.amazonaws.com/cfn-vpc.yaml)
 
 2. Specify the following required parameters:
   - For **Stack Name**, enter a value unique to your account and region.
