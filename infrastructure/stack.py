@@ -116,130 +116,132 @@ class LokaFoldBasic(Stack):
         )
 
         # Network Configuration
-        vpc = ec2.Vpc(self, "VPC", cidr="10.0.0.0/16")
+        vpc = ec2.Vpc(self, "VPC", cidr="10.0.0.0/16", max_azs=1)
 
-        vpc_flow_role = iam.Role(
-            self,
-            "VPCFlowLogRole",
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
-        )
+        # vpc_flow_role = iam.Role(
+        #     self,
+        #     "VPCFlowLogRole",
+        #     assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
+        # )
 
-        vpc_flow_role.attach_inline_policy(
-            iam.Policy(
-                self,
-                "vpc_flow_policy",
-                statements=[
-                    iam.PolicyStatement(
-                        actions=[
-                            "logs:CreateLogGroup",
-                            "logs:CreateLogStream",
-                            "logs:PutLogEvents",
-                            "logs:DescribeLogGroups",
-                            "logs:DescribeLogStreams",
-                        ],
-                        resources=[
-                            f"arn:{Aws.PARTITION}:ec2:{Aws.REGION}:{Aws.ACCOUNT_ID}:vpc-flow-log/*"
-                        ],
-                    )
-                ],
-            )
-        )
+        # vpc_flow_role.attach_inline_policy(
+        #     iam.Policy(
+        #         self,
+        #         "vpc_flow_policy",
+        #         statements=[
+        #             iam.PolicyStatement(
+        #                 actions=[
+        #                     "logs:CreateLogGroup",
+        #                     "logs:CreateLogStream",
+        #                     "logs:PutLogEvents",
+        #                     "logs:DescribeLogGroups",
+        #                     "logs:DescribeLogStreams",
+        #                 ],
+        #                 resources=[
+        #                     f"arn:{Aws.PARTITION}:ec2:{Aws.REGION}:{Aws.ACCOUNT_ID}:vpc-flow-log/*"
+        #                 ],
+        #             )
+        #         ],
+        #     )
+        # )
 
-        vpc_flow_logs_group = logs.CfnLogGroup(
-            self,
-            "VPCFlowLogsGroup",
-            kms_key_id=key.key_arn,
-            retention_in_days=120,
-        )
+        # vpc_flow_logs_group = logs.CfnLogGroup(
+        #     self,
+        #     "VPCFlowLogsGroup",
+        #     kms_key_id=key.key_arn,
+        #     retention_in_days=120,
+        # )
 
-        vpc_flow_log = ec2.CfnFlowLog(
-            self,
-            "VPCFlowLog",
-            deliver_logs_permission_arn=vpc_flow_role.role_arn,
-            log_group_name=vpc_flow_logs_group.log_group_name,
-            resource_id=vpc.vpc_id,
-            resource_type="VPC",
-            traffic_type="ALL",
-        )
+        # vpc_flow_log = ec2.CfnFlowLog(
+        #     self,
+        #     "VPCFlowLog",
+        #     deliver_logs_permission_arn=vpc_flow_role.role_arn,
+        #     log_group_name=vpc_flow_logs_group.log_group_name,
+        #     resource_id=vpc.vpc_id,
+        #     resource_type="VPC",
+        #     traffic_type="ALL",
+        # )
 
-        public_subnet = ec2.CfnSubnet(
-            self,
-            "PublicSubnet0",
-            vpc_id=vpc.vpc_id,
-            availability_zone=az.to_string(),
-            cidr_block=vpc.vpc_cidr_block,
-        )
+        # public_subnet = ec2.CfnSubnet(
+        #     self,
+        #     "PublicSubnet0",
+        #     vpc_id=vpc.vpc_id,
+        #     availability_zone=az.to_string(),
+        #     cidr_block=vpc.vpc_cidr_block,
+        # )
+        public_subnet = vpc.public_subnets[0]
 
-        private_subnet = ec2.CfnSubnet(
-            self,
-            "PrivateSubnet0",
-            vpc_id=vpc.vpc_id,
-            availability_zone=az.to_string(),
-            map_public_ip_on_launch=False,
-            cidr_block=vpc.vpc_cidr_block,
-        )
+        # private_subnet = ec2.CfnSubnet(
+        #     self,
+        #     "PrivateSubnet0",
+        #     vpc_id=vpc.vpc_id,
+        #     availability_zone=az.to_string(),
+        #     map_public_ip_on_launch=False,
+        #     cidr_block=vpc.vpc_cidr_block,
+        # )
+        private_subnet = vpc.private_subnets[0]
 
-        internet_gateway = ec2.CfnInternetGateway(self, "InternetGateway")
+        # internet_gateway = ec2.CfnInternetGateway(self, "InternetGateway")
 
-        gateway_to_internet = ec2.CfnVPCGatewayAttachment(
-            self,
-            "GatewayToInternet",
-            vpc_id=vpc.vpc_id,
-            internet_gateway_id=internet_gateway.attr_internet_gateway_id,
-        )
+        # gateway_to_internet = ec2.CfnVPCGatewayAttachment(
+        #     self,
+        #     "GatewayToInternet",
+        #     vpc_id=vpc.vpc_id,
+        #     internet_gateway_id=internet_gateway.attr_internet_gateway_id,
+        # )
 
-        public_route_table = ec2.CfnRouteTable(
-            self, "PublicRouteTable", vpc_id=vpc.vpc_id
-        )
+        # public_route_table = ec2.CfnRouteTable(
+        #     self, "PublicRouteTable", vpc_id=vpc.vpc_id
+        # )
 
-        public_route = ec2.CfnRoute(
-            self,
-            "PublicRoute",
-            route_table_id=public_route_table.attr_route_table_id,
-            destination_cidr_block="0.0.0.0/0",
-            gateway_id=internet_gateway.attr_internet_gateway_id,
-        )
+        # public_route = ec2.CfnRoute(
+        #     self,
+        #     "PublicRoute",
+        #     route_table_id=public_route_table.attr_route_table_id,
+        #     destination_cidr_block="0.0.0.0/0",
+        #     gateway_id=internet_gateway.attr_internet_gateway_id,
+        # )
 
-        public_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
-            self,
-            "PublicSubnetRouteTableAssociation0",
-            subnet_id=public_subnet.attr_subnet_id,
-            route_table_id=public_route_table.attr_route_table_id,
-        )
+        # public_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
+        #     self,
+        #     "PublicSubnetRouteTableAssociation0",
+        #     subnet_id=public_subnet.subnet_id,
+        #     route_table_id=public_route_table.attr_route_table_id,
+        # )
 
-        elastic_ip = ec2.CfnEIP(
-            self,
-            "ElasticIP0",
-            domain="vpc",
-        )
+        # elastic_ip = ec2.CfnEIP(
+        #     self,
+        #     "ElasticIP0",
+        #     domain="vpc",
+        # )
 
-        nat_gateway = ec2.CfnNatGateway(
-            self,
-            "NATGateway0",
-            allocation_id=elastic_ip.attr_allocation_id,
-            subnet_id=public_subnet.attr_subnet_id,
-        )
+        # nat_gateway = ec2.CfnNatGateway(
+        #     self,
+        #     "NATGateway0",
+        #     allocation_id=elastic_ip.attr_allocation_id,
+        #     subnet_id=public_subnet.subnet_id,
+        # )
 
-        private_route_table = ec2.CfnRouteTable(
-            self,
-            "PrivateRouteTable0",
-            vpc_id=vpc.vpc_id,
-        )
+        # private_route_table = ec2.CfnRouteTable(
+        #     self,
+        #     "PrivateRouteTable0",
+        #     vpc_id=vpc.vpc_id,
+        # )
 
-        private_route_to_internet = ec2.CfnRoute(
-            self,
-            "PrivateRouteToInternet0",
-            route_table_id=private_route_table.attr_route_table_id,
-            destination_cidr_block="0.0.0.0/0",
-            nat_gateway_id=nat_gateway.allocation_id,
-        )
+        # private_route_to_internet = ec2.CfnRoute(
+        #     self,
+        #     "PrivateRouteToInternet0",
+        #     route_table_id=private_route_table.attr_route_table_id,
+        #     destination_cidr_block="0.0.0.0/0",
+        #     nat_gateway_id=nat_gateway.allocation_id,
+        # )
 
-        private_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
-            self,
-            "PrivateSubnetRouteTableAssociation0",
-            subnet_id=private_subnet.attr_subnet_id,
-            route_table_id=private_route_table.attr_route_table_id,
-        )
+        # private_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
+        #     self,
+        #     "PrivateSubnetRouteTableAssociation0",
+        #     subnet_id=private_subnet.subnet_id,
+        #     route_table_id=private_route_table.attr_route_table_id,
+        # )
 
         # S3
 
@@ -340,7 +342,7 @@ class LokaFoldBasic(Stack):
         public_launch_template = ec2.LaunchTemplate(
             self,
             "PublicInstanceLaunchTemplate",
-            launch_template_name="LokaFold-launch-template",
+            launch_template_name="LokaFold-public-launch-template",
             user_data=user_data,
         )
 
@@ -384,7 +386,9 @@ class LokaFoldBasic(Stack):
         )
 
         codebuild_role = iam.Role(
-            self, "CodeBuildRole", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
+            self,
+            "CodeBuildRole",
+            assumed_by=iam.ServicePrincipal("codebuild.amazonaws.com"),
         )
 
         codebuild_role.add_managed_policy(
@@ -444,7 +448,7 @@ class LokaFoldBasic(Stack):
         codebuild_project = codebuild.CfnProject(
             self,
             "CodeBuildProject",
-            artifacts=codebuild.CfnProject.ArtifactsProperty(type="NO-ARTIFACTS"),
+            artifacts=codebuild.CfnProject.ArtifactsProperty(type="NO_ARTIFACTS"),
             encryption_key=key.key_id,
             environment=codebuild.CfnProject.EnvironmentProperty(
                 compute_type="BUILD_GENERAL1_MEDIUM",
@@ -490,7 +494,7 @@ class LokaFoldBasic(Stack):
         codepipeline_role = iam.Role(
             self,
             "CodePipelineRole",
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
+            assumed_by=iam.ServicePrincipal("codepipeline.amazonaws.com"),
         )
 
         codepipeline_role.attach_inline_policy(
@@ -537,20 +541,18 @@ class LokaFoldBasic(Stack):
             )
         )
 
-        configuration = {
-            "Configuration": [
-                {"RepositoryName": repo.repository_name},
-                {"BranchName": "main"},
-                {"PollForSourceChanges": "false"},
-                # {"ActionMode": "CREATE_UPDATE"}, WIP
-            ]
+        source_configuration = {
+            "RepositoryName": repo.repository_name,
+            "BranchName": "main",
+            "PollForSourceChanges": "false",
         }
+        build_configuration = {"ProjectName": codebuild_project.name}
 
         pipeline = codepipeline.CfnPipeline(
             self,
             "CodePipeline",
             artifact_store=codepipeline.CfnPipeline.ArtifactStoreProperty(
-                location=bucket.bucket_arn, type="S3"
+                location=bucket.bucket_name, type="S3"
             ),
             name="Lokafold-codepipeline",
             restart_execution_on_update=True,
@@ -567,7 +569,7 @@ class LokaFoldBasic(Stack):
                                 provider="CodeCommit",
                                 version="1",
                             ),
-                            configuration=configuration,
+                            configuration=source_configuration,
                             namespace="SourceVariables",
                             output_artifacts=[
                                 codepipeline.CfnPipeline.OutputArtifactProperty(
@@ -590,7 +592,7 @@ class LokaFoldBasic(Stack):
                                 provider="CodeBuild",
                                 version="1",
                             ),
-                            configuration=configuration,
+                            configuration=build_configuration,
                             namespace="BuildVariables",
                             input_artifacts=[
                                 codepipeline.CfnPipeline.InputArtifactProperty(
@@ -617,16 +619,16 @@ class LokaFoldBasic(Stack):
             "PrivateCPUComputeEnvironment",
             compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
                 allocation_strategy="BEST_FIT_PROGRESSIVE",
-                instance_role=ec2_role.role_arn,
+                instance_role=instance_profile.attr_arn,
                 instance_types=["m5", "r5", "c5"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
                     launch_template_id=launch_template.launch_template_id,
-                    version="$Latest",
+                    version=launch_template.latest_version_number
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                security_group_ids=[vpc.vpc_default_security_group],
-                subnets=[private_subnet.attr_subnet_id],
+                # security_group_ids=[vpc.vpc_default_security_group],
+                subnets=[private_subnet.subnet_id],
                 type="EC2",
             ),
             state="ENABLED",
@@ -638,15 +640,15 @@ class LokaFoldBasic(Stack):
             "PublicCPUComputeEnvironment",
             compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
                 allocation_strategy="BEST_FIT_PROGRESSIVE",
-                instance_role=ec2_role.role_arn,
+                instance_role=instance_profile.attr_arn,
                 instance_types=["m5", "r5", "c5"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
-                    launch_template_id=launch_template.launch_template_id,
-                    version="$Latest",
+                    launch_template_id=public_launch_template.launch_template_id,
+                    version=public_launch_template.latest_version_number
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                subnets=[private_subnet.attr_subnet_id],
+                subnets=[public_subnet.subnet_id],
                 type="EC2",
             ),
             state="ENABLED",
@@ -658,16 +660,16 @@ class LokaFoldBasic(Stack):
             "PrivateGPUComputeEnvironment",
             compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
                 allocation_strategy="BEST_FIT_PROGRESSIVE",
-                instance_role=ec2_role.role_arn,
+                instance_role=instance_profile.attr_arn,
                 instance_types=["g4dn"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
                     launch_template_id=launch_template.launch_template_id,
-                    version="$Latest",
+                    version=launch_template.latest_version_number
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                security_group_ids=[vpc.vpc_default_security_group],
-                subnets=[private_subnet.attr_subnet_id],
+                # security_group_ids=[vpc.vpc_default_security_group],
+                subnets=[private_subnet.subnet_id],
                 type="EC2",
             ),
             state="ENABLED",
@@ -1076,7 +1078,7 @@ class LokaFoldBasic(Stack):
             self,
             "SageMakerNotebookExecutionRole",
             path="/",
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
+            assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"),
         )
 
         notebook_role.add_managed_policy(
@@ -1117,6 +1119,6 @@ class LokaFoldBasic(Stack):
             default_code_repository=repo.attr_clone_url_http,
             kms_key_id=key.key_arn,
             role_arn=notebook_role.role_arn,
-            subnet_id=private_subnet.attr_subnet_id,
+            subnet_id=private_subnet.subnet_id,
             security_group_ids=[vpc.vpc_default_security_group],
         )
