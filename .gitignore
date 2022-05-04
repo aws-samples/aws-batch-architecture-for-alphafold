@@ -7,3 +7,7 @@ notebooks/data/*
 notebooks/nbhelpers/__pycache__*
 notebooks/.DS_Store
 .idea
+.env
+__pycache__/
+cdk.out/
+cdk.context.json
