@@ -37,14 +37,26 @@ Parameters:
     Default: v2.1.2
     AllowedValues:
       - v2.1.2  
+  VPCID:
+    Description: (Optional) ID of VPC to use. If left empty, a new VPC will be created.
+    Type: AWS::EC2::VPC::Id
+    Default: ""
+  SubnetID:
+    Description: (Optional) ID of public subnet to use. If left empty, a new public subnet will be created.
+    Type: AWS::EC2::Subnet::Id
+    Default: ""
 Conditions:
   createSageMakerNotebook: !Equals [ !Ref 'LaunchSageMakerNotebook', 'Y' ]
+  createNewVPC: !Equals [!Ref 'VPCID', ""]
+  createNewSubnet: !Equals [!Ref 'SubnetID', ""]
+
 Resources:
   ##################################################
   # Network Configuration
   ##################################################
   VPC:
     Type: "AWS::EC2::VPC"
+    Condition: createSageMakerNotebook
     Properties:
       EnableDnsSupport: "true"
       EnableDnsHostnames: "true"
