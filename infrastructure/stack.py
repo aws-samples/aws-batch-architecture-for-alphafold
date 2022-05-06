@@ -280,17 +280,37 @@ class LokaFoldBasic(Stack):
         )
 
         # FSx
+        # security_group=ec2.SecurityGroup.
 
-        lustre = fsx.LustreFileSystem(
+        # lustre = fsx.LustreFileSystem(
+        #     self,
+        #     "FSX",
+        #     lustre_configuration=fsx.LustreConfiguration(
+        #         deployment_type=fsx.LustreDeploymentType.PERSISTENT_2,
+        #         per_unit_storage_throughput=125,  # fsx_throughput.value_as_number, WIP
+        #     ),
+        #     vpc_subnet=private_subnet,
+        #     storage_capacity_gib=1200,  # fsx_capacity.value_as_number, WIP
+        #     vpc=vpc,
+        #     security_group=vpc.vpc_default_security_group,
+        # )
+
+        lustre = fsx.CfnFileSystem(
             self,
             "FSX",
-            lustre_configuration=fsx.LustreConfiguration(
-                deployment_type=fsx.LustreDeploymentType.PERSISTENT_2,
+            file_system_type="LUSTRE",
+            file_system_type_version="2.12",
+
+            lustre_configuration=fsx.CfnFileSystem.LustreConfigurationProperty(
+                data_compression_type="LZ4",
+                deployment_type="PERSISTENT_2",
                 per_unit_storage_throughput=125,  # fsx_throughput.value_as_number, WIP
             ),
-            vpc_subnet=private_subnet,
-            storage_capacity_gib=1200,  # fsx_capacity.value_as_number, WIP
-            vpc=vpc,
+            
+            security_group_ids=[vpc.vpc_default_security_group],
+            storage_capacity=1200,  # WIP
+            storage_type="SSD",
+            subnet_ids=[private_subnet.subnet_id],
         )
 
         # EC2 Launch Template
@@ -322,28 +342,70 @@ class LokaFoldBasic(Stack):
         )
 
         instance_profile = iam.CfnInstanceProfile(
-            self, "InstanceProfile", roles=[ec2_role.role_name]
+            self, "InstanceProfile", roles=[ec2_role.role_name], instance_profile_name="InstanceProfile"
         )
 
-        user_data = ec2.UserData.for_linux()
+        user_data = ec2.UserData.for_linux() # WIP
 
-        user_data.add_commands(
-            f'MIME-Version: 1.0\nContent-Type: multipart/mixed; boundary="==MYBOUNDARY=="\n\n--==MYBOUNDARY==\nContent-Type: text/cloud-config; charset="us-ascii"\n\nruncmd:\n- file_system_id_01={lustre.file_system_id}\n- region={Aws.REGION}\n- fsx_directory=/fsx\n- fsx_mount_name={lustre.mount_name}\n- amazon-linux-extras install -y lustre2.10\n'
-            + "- mkdir -p ${fsx_directory}\n- mount -t lustre ${file_system_id_01}.fsx.${region}.amazonaws.com@tcp:/${fsx_mount_name} ${fsx_directory}\n\n--==MYBOUNDARY==--"
-        )
+        # user_data.add_commands(
+        #     f'MIME-Version: 1.0\nContent-Type: multipart/mixed; boundary="==MYBOUNDARY=="\n\n--==MYBOUNDARY==\nContent-Type: text/cloud-config; charset="us-ascii"\n\nruncmd:\n- file_system_id_01={lustre.file_system_id}\n- region={Aws.REGION}\n- fsx_directory=/fsx\n- fsx_mount_name={lustre.mount_name}\n- amazon-linux-extras install -y lustre2.10\n'
+        #     + "- mkdir -p ${fsx_directory}\n- mount -t lustre ${file_system_id_01}.fsx.${region}.amazonaws.com@tcp:/${fsx_mount_name} ${fsx_directory}\n\n--==MYBOUNDARY==--"
+        # )
 
-        launch_template = ec2.LaunchTemplate(
+        print(instance_profile.instance_profile_name)
+
+        launch_template = ec2.CfnLaunchTemplate(
             self,
             "InstanceLaunchTemplate",
             launch_template_name="LokaFold-launch-template",
-            user_data=user_data,
+            launch_template_data=ec2.CfnLaunchTemplate.LaunchTemplateDataProperty(
+                block_device_mappings=[
+                    ec2.CfnLaunchTemplate.BlockDeviceMappingProperty(
+                        device_name="/dev/xvda",
+                        ebs=ec2.CfnLaunchTemplate.EbsProperty(
+                            delete_on_termination=True,
+                            encrypted=True,
+                            volume_size=50,
+                            volume_type="gp2",
+                        ),
+                    )
+                ],
+                iam_instance_profile=ec2.CfnLaunchTemplate.IamInstanceProfileProperty(
+                    name=instance_profile.instance_profile_name
+                ),
+                # user_data=user_data.render(),
+            ),
         )
 
-        public_launch_template = ec2.LaunchTemplate(
+        public_launch_template = ec2.CfnLaunchTemplate(
             self,
             "PublicInstanceLaunchTemplate",
             launch_template_name="LokaFold-public-launch-template",
-            user_data=user_data,
+            launch_template_data=ec2.CfnLaunchTemplate.LaunchTemplateDataProperty(
+                block_device_mappings=[
+                    ec2.CfnLaunchTemplate.BlockDeviceMappingProperty(
+                        device_name="/dev/xvda",
+                        ebs=ec2.CfnLaunchTemplate.EbsProperty(
+                            delete_on_termination=True,
+                            encrypted=True,
+                            volume_size=50,
+                            volume_type="gp2",
+                        ),
+                    )
+                ],
+                iam_instance_profile=ec2.CfnLaunchTemplate.IamInstanceProfileProperty(
+                    name=instance_profile.instance_profile_name
+                ),
+                network_interfaces=[
+                    ec2.CfnLaunchTemplate.NetworkInterfaceProperty(
+                        associate_public_ip_address=True,
+                        device_index=0,
+                        groups=[vpc.vpc_default_security_group],
+                        subnet_id=public_subnet.subnet_id,
+                    )
+                ],
+                # user_data=user_data.render(),
+            ),
         )
 
         # Container Services
@@ -622,12 +684,12 @@ class LokaFoldBasic(Stack):
                 instance_role=instance_profile.attr_arn,
                 instance_types=["m5", "r5", "c5"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
-                    launch_template_id=launch_template.launch_template_id,
-                    version=launch_template.latest_version_number,
+                    launch_template_id=launch_template.logical_id,
+                    version=launch_template.attr_latest_version_number,
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                # security_group_ids=[vpc.vpc_default_security_group],
+                security_group_ids=[vpc.vpc_default_security_group],
                 subnets=[private_subnet.subnet_id],
                 type="EC2",
             ),
@@ -643,8 +705,8 @@ class LokaFoldBasic(Stack):
                 instance_role=instance_profile.attr_arn,
                 instance_types=["m5", "r5", "c5"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
-                    launch_template_id=public_launch_template.launch_template_id,
-                    version=public_launch_template.latest_version_number,
+                    launch_template_id=public_launch_template.logical_id,
+                    version=public_launch_template.attr_latest_version_number,
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
@@ -663,12 +725,12 @@ class LokaFoldBasic(Stack):
                 instance_role=instance_profile.attr_arn,
                 instance_types=["g4dn"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
-                    launch_template_id=launch_template.launch_template_id,
-                    version=launch_template.latest_version_number,
+                    launch_template_id=launch_template.logical_id,
+                    version=launch_template.attr_latest_version_number,
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                # security_group_ids=[vpc.vpc_default_security_group],
+                security_group_ids=[vpc.vpc_default_security_group],
                 subnets=[private_subnet.subnet_id],
                 type="EC2",
             ),
