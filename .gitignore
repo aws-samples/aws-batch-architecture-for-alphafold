@@ -5,4 +5,7 @@ random_commands.sh
 aws-alphafold.zip
 notebooks/data/*
 notebooks/nbhelpers/__pycache__*
-notebooks/.DS_Store
+notebooks/
+.DS_Store
+venv37/
+__pycache__/
