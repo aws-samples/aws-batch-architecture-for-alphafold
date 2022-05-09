@@ -9,50 +9,54 @@ import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_batch as batch
 import aws_cdk.aws_fsx as fsx
 
+mount_path = "/fsx" # do not touch
+
+region_name = cdk.Aws.REGION
+
 class BatchStack(cdk.Stack):
     def __init__(self, scope: Construct, id: str, vpc, folding_container, download_container, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        # Parameters
-        az = CfnParameter(
-            self,
-            "StackAvailabilityZone",
-            description="Availability zone to deploy stack resources",
-        )
+        # # Parameters
+        # az = CfnParameter(
+        #     self,
+        #     "StackAvailabilityZone",
+        #     description="Availability zone to deploy stack resources",
+        # )
 
-        launch_sagemaker = CfnParameter(
-            self,
-            "LaunchSageMakerNotebook",
-            description="Create a SageMaker Notebook Instance",
-            default="Y",
-            allowed_values=["Y", "N"],
-        )
+        # launch_sagemaker = CfnParameter(
+        #     self,
+        #     "LaunchSageMakerNotebook",
+        #     description="Create a SageMaker Notebook Instance",
+        #     default="Y",
+        #     allowed_values=["Y", "N"],
+        # )
 
-        fsx_capacity = CfnParameter(
-            self,
-            "FSXForLustreStorageCapacity",
-            description="Storage capacity in GB, 1200 or increments of 2400",
-            default="1200",
-            allowed_values=["1200", "2400", "4800", "7200"],
-            type="Number",
-        )
+        # fsx_capacity = CfnParameter(
+        #     self,
+        #     "FSXForLustreStorageCapacity",
+        #     description="Storage capacity in GB, 1200 or increments of 2400",
+        #     default="1200",
+        #     allowed_values=["1200", "2400", "4800", "7200"],
+        #     type="Number",
+        # )
 
-        fsx_throughput = CfnParameter(
-            self,
-            "FSxForLustreThroughput",
-            description="Throughput for unit storage (MB/s/TB) to provision for FSx for Lustre file system",
-            default="500",
-            allowed_values=["125", "250", "500", "1000"],
-            type="Number",
-        )
+        # fsx_throughput = CfnParameter(
+        #     self,
+        #     "FSxForLustreThroughput",
+        #     description="Throughput for unit storage (MB/s/TB) to provision for FSx for Lustre file system",
+        #     default="500",
+        #     allowed_values=["125", "250", "500", "1000"],
+        #     type="Number",
+        # )
 
-        alphafold_version = CfnParameter(
-            self,
-            "AlphaFoldVersion",
-            description="AlphaFold release to include as part of the job container",
-            default="v2.1.2",
-            allowed_values=["v2.1.2", "v2.2.2"],
-        )
+        # alphafold_version = CfnParameter(
+        #     self,
+        #     "AlphaFoldVersion",
+        #     description="AlphaFold release to include as part of the job container",
+        #     default="v2.1.2",
+        #     allowed_values=["v2.1.2", "v2.2.2"],
+        # )
         
         # Network
         public_subnet = vpc.public_subnets[0]
@@ -90,30 +94,58 @@ class BatchStack(cdk.Stack):
             self, "InstanceProfile", roles=[ec2_role.role_name], instance_profile_name="InstanceProfile"
         )
         
-        lustre = fsx.CfnFileSystem(
+        lustre_file_system = fsx.CfnFileSystem(
             self,
             "FSX",
             file_system_type="LUSTRE",
-            file_system_type_version="2.12",
-
+            # file_system_type_version="2.12",
             lustre_configuration=fsx.CfnFileSystem.LustreConfigurationProperty(
                 data_compression_type="LZ4",
                 deployment_type="PERSISTENT_2",
                 per_unit_storage_throughput=125,  # fsx_throughput.value_as_number, WIP
             ),
-            
             security_group_ids=[vpc.vpc_default_security_group],
             storage_capacity=1200,  # WIP
             storage_type="SSD",
             subnet_ids=[private_subnet.subnet_id],
         )
         
-        # user_data = ec2.UserData.for_linux() # WIP
-        
-        # user_data.add_commands(
-        #     f'MIME-Version: 1.0\nContent-Type: multipart/mixed; boundary="==MYBOUNDARY=="\n\n--==MYBOUNDARY==\nContent-Type: text/cloud-config; charset="us-ascii"\n\nruncmd:\n- file_system_id_01={lustre.file_system_id}\n- region={Aws.REGION}\n- fsx_directory=/fsx\n- fsx_mount_name={lustre.mount_name}\n- amazon-linux-extras install -y lustre2.10\n'
-        #     + "- mkdir -p ${fsx_directory}\n- mount -t lustre ${file_system_id_01}.fsx.${region}.amazonaws.com@tcp:/${fsx_mount_name} ${fsx_directory}\n\n--==MYBOUNDARY==--"
+        # the construct doesnt have data_compression_type...
+        # self.file_system = fsx.LustreFileSystem(
+        #     self,
+        #     'LokaFoldFileSystem',
+        #     # lustre_configuration={"deployment_type": fsx.LustreDeploymentType.PERSISTENT_1,
+        #     #                         "per_unit_storage_throughput":100},
+        #     lustre_configuration=fsx.LustreConfiguration(
+        #         deployment_type=fsx.LustreDeploymentType.PERSISTENT_2,
+                
+        #     )
+        #     {
+                
+        #     },
+        #     vpc = self.vpc,
+        #     vpc_subnet=self.vpc.public_subnets[0],
+        #     # vpc_subnet=self.vpc.private_subnets[0],
+        #     storage_capacity_gib = 4800,
+        #     removal_policy=cdk.RemovalPolicy.DESTROY,
+        #     security_group = self.sg,
         # )
+        
+        mount_name = lustre_file_system.attr_lustre_mount_name
+        file_system_id = lustre_file_system.attr_root_volume_id
+        
+        user_data = ec2.MultipartUserData()
+        user_data.add_part(
+            ec2.MultipartBody.from_user_data(
+                ec2.UserData.custom(
+                    "amazon-linux-extras install -y lustre2.10\n"
+                    f"mkdir -p {mount_path}\n"
+                    f"mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}\n"
+                    f"echo '{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0' >> /etc/fstab \n"
+                    "mkdir -p /tmp/alphafold"
+                )
+            )
+        )
         
         launch_template = ec2.CfnLaunchTemplate(
             self,
@@ -134,7 +166,7 @@ class BatchStack(cdk.Stack):
                 iam_instance_profile=ec2.CfnLaunchTemplate.IamInstanceProfileProperty(
                     name=instance_profile.instance_profile_name
                 ),
-                # user_data=user_data.render(),
+                user_data=user_data.render(),
             ),
         )
         
@@ -165,7 +197,7 @@ class BatchStack(cdk.Stack):
                         subnet_id=public_subnet.subnet_id,
                     )
                 ],
-                # user_data=user_data.render(),
+                user_data=user_data.render(),
             ),
         )
         
@@ -191,7 +223,7 @@ class BatchStack(cdk.Stack):
             state="ENABLED",
             type="MANAGED",
         )
-        
+                
         public_compute_environment = batch.CfnComputeEnvironment(
             self,
             "PublicCPUComputeEnvironment",
@@ -240,7 +272,7 @@ class BatchStack(cdk.Stack):
             "PrivateCPUJobQueue",
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
-                    compute_environment=private_compute_environment.attr_compute_environment_arn,
+                    compute_environment=private_compute_environment.to_string(),
                     order=1,
                 ),
             ],
@@ -253,7 +285,7 @@ class BatchStack(cdk.Stack):
             "PublicCPUJobQueue",
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
-                    compute_environment=public_compute_environment.attr_compute_environment_arn,
+                    compute_environment=public_compute_environment.to_string(),
                     order=1,
                 ),
             ],
@@ -266,7 +298,7 @@ class BatchStack(cdk.Stack):
             "PrivateGPUJobQueue",
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
-                    compute_environment=gpu_compute_environment.attr_compute_environment_arn,
+                    compute_environment=gpu_compute_environment.to_string(),
                     order=1,
                 ),
             ],

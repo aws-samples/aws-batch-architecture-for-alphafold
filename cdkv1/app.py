@@ -3,8 +3,9 @@ from stacks.vpc import VpcStack
 from stacks.codepipeline import CodePipelineStack
 from stacks.sagemaker import SageMakerStack
 from stacks.batch import BatchStack
+from dotenv import load_dotenv
 
-
+load_dotenv()
 app = core.App()
 
 vpc_stack = VpcStack(app, "LokaFoldVpcStack")

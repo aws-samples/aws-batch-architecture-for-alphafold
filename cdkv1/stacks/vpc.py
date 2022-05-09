@@ -70,7 +70,7 @@ class VpcStack(cdk.Stack):
         self.vpc = ec2.Vpc(
             self,
             "VPC",
-            vpc_name="LokaFoldVpc", 
+            # vpc_name="LokaFoldVpc", 
             cidr="10.0.0.0/16", 
             max_azs=1
         )
