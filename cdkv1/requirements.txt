@@ -1,0 +1,15 @@
+aws-cdk.aws_ec2
+aws-cdk.aws_apigateway
+aws-cdk.aws_dynamodb
+aws_cdk.aws_fsx
+aws-cdk.aws_apigatewayv2
+aws-cdk.aws_apigatewayv2_authorizers
+aws-cdk.aws_apigatewayv2_integrations
+aws_cdk.aws_s3_notifications
+aws_cdk.aws_batch
+aws_cdk.aws_ecs
+aws_cdk.aws_events
+aws_cdk.aws_events_targets
+aws_cdk.aws_lambda_event_sources
+aws_cdk.aws_s3_deployment
+aws_cdk.aws_sagemaker
