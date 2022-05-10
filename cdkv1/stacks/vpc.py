@@ -12,10 +12,8 @@ import aws_cdk.aws_kms as kms
 class VpcStack(cdk.Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
-
         # KMS
         self.key = kms.Key(self, "EncryptionKey", enable_key_rotation=True)
-
         self.key.add_to_resource_policy(
             iam.PolicyStatement(
                 actions=[
@@ -38,7 +36,6 @@ class VpcStack(cdk.Stack):
                 principals=[iam.AnyPrincipal()],
             ),
         )
-
         self.key.add_to_resource_policy(
             iam.PolicyStatement(
                 actions=[
@@ -65,16 +62,13 @@ class VpcStack(cdk.Stack):
                 principals=[iam.AnyPrincipal()],
             ),
         )
-        
         # Network Configuration
         self.vpc = ec2.Vpc(
             self,
             "VPC",
-            # vpc_name="LokaFoldVpc", 
             cidr="10.0.0.0/16", 
             max_azs=1
         )
-        
         self.sg = ec2.SecurityGroup(
             self, 
             "LokaFoldSecurityGroup",

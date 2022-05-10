@@ -10,7 +10,6 @@ import aws_cdk.aws_batch as batch
 import aws_cdk.aws_fsx as fsx
 
 mount_path = "/fsx" # do not touch
-
 region_name = cdk.Aws.REGION
 
 class BatchStack(cdk.Stack):
@@ -19,59 +18,12 @@ class BatchStack(cdk.Stack):
 
         public_subnet = vpc.public_subnets[0]
         private_subnet = vpc.private_subnets[0]
-        
-        # # Parameters
-        # az = CfnParameter(
-        #     self,
-        #     "StackAvailabilityZone",
-        #     description="Availability zone to deploy stack resources",
-        # )
-
-        # launch_sagemaker = CfnParameter(
-        #     self,
-        #     "LaunchSageMakerNotebook",
-        #     description="Create a SageMaker Notebook Instance",
-        #     default="Y",
-        #     allowed_values=["Y", "N"],
-        # )
-
-        # fsx_capacity = CfnParameter(
-        #     self,
-        #     "FSXForLustreStorageCapacity",
-        #     description="Storage capacity in GB, 1200 or increments of 2400",
-        #     default="1200",
-        #     allowed_values=["1200", "2400", "4800", "7200"],
-        #     type="Number",
-        # )
-
-        # fsx_throughput = CfnParameter(
-        #     self,
-        #     "FSxForLustreThroughput",
-        #     description="Throughput for unit storage (MB/s/TB) to provision for FSx for Lustre file system",
-        #     default="500",
-        #     allowed_values=["125", "250", "500", "1000"],
-        #     type="Number",
-        # )
-
-        # alphafold_version = CfnParameter(
-        #     self,
-        #     "AlphaFoldVersion",
-        #     description="AlphaFold release to include as part of the job container",
-        #     default="v2.1.2",
-        #     allowed_values=["v2.1.2", "v2.2.2"],
-        # )
-        
-        # Network
-
-        
-        
         # EC2 Launch Template
         ec2_role = iam.Role(
             self,
             "EC2InstanceRole",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
         )
-        
         ec2_role.add_managed_policy(
             iam.ManagedPolicy.from_managed_policy_arn(
                 self,
@@ -91,11 +43,9 @@ class BatchStack(cdk.Stack):
                 self, "s3_access_policy", "arn:aws:iam::aws:policy/AmazonS3FullAccess"
             )
         )
-        
         instance_profile = iam.CfnInstanceProfile(
             self, "InstanceProfile", roles=[ec2_role.role_name], instance_profile_name="InstanceProfile"
         )
-        
         lustre_file_system = fsx.CfnFileSystem(
             self,
             "FSX",
@@ -112,33 +62,9 @@ class BatchStack(cdk.Stack):
             subnet_ids=[private_subnet.subnet_id],
         )
         
-        # the construct doesnt have data_compression_type...
-        # self.file_system = fsx.LustreFileSystem(
-        #     self,
-        #     'LokaFoldFileSystem',
-        #     # lustre_configuration={"deployment_type": fsx.LustreDeploymentType.PERSISTENT_1,
-        #     #                         "per_unit_storage_throughput":100},
-        #     lustre_configuration=fsx.LustreConfiguration(
-        #         deployment_type=fsx.LustreDeploymentType.PERSISTENT_2,
-                
-        #     )
-        #     {
-                
-        #     },
-        #     vpc = self.vpc,
-        #     vpc_subnet=self.vpc.public_subnets[0],
-        #     # vpc_subnet=self.vpc.private_subnets[0],
-        #     storage_capacity_gib = 4800,
-        #     removal_policy=cdk.RemovalPolicy.DESTROY,
-        #     security_group = sg,
-        # )
-        
         mount_name = lustre_file_system.attr_lustre_mount_name
         file_system_id = lustre_file_system.ref
-        
-        print(mount_name)
-        print(file_system_id)
-        
+
         user_data = ec2.MultipartUserData()
         user_data.add_part(
             ec2.MultipartBody.from_user_data(
@@ -208,7 +134,6 @@ class BatchStack(cdk.Stack):
         )
         
         # Batch Compute environments
-        
         private_compute_environment = batch.CfnComputeEnvironment(
             self,
             "PrivateCPUComputeEnvironment",
@@ -283,17 +208,6 @@ class BatchStack(cdk.Stack):
             type="MANAGED",
         )
         
-        # Batch Queues (not working)
-        # private_cpu_queue = batch.JobQueue(
-        #     self,
-        #     "PrivateCPUJobQueue",
-        #     compute_environments=[
-        #         batch.JobQueueComputeEnvironment(compute_environment=private_compute_environment, order=1)
-        #     ],
-        #     priority=10,
-        #     enabled=True,
-        # )
-        
         private_cpu_queue = batch.CfnJobQueue(
             self,
             "PrivateCPUJobQueue",
@@ -334,7 +248,6 @@ class BatchStack(cdk.Stack):
         )
         
         # Batch Job Definitions
-        
         cpu_folding_job = batch.CfnJobDefinition(
             self,
             "CPUFoldingJobDefinition",
