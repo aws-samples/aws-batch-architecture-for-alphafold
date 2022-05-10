@@ -10,3 +10,4 @@ notebooks/
 venv37/
 __pycache__/
 cdk.out/
+chalice.out/

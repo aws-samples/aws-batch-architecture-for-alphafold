@@ -3,6 +3,7 @@ from stacks.vpc import VpcStack
 from stacks.codepipeline import CodePipelineStack
 from stacks.sagemaker import SageMakerStack
 from stacks.batch import BatchStack
+from stacks.chaliceapp import ChaliceApp
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,5 +30,10 @@ sagemaker_stack = SageMakerStack(
     vpc_stack.vpc,
     codepipeline_stack.repo,
     vpc_stack.key
+)
+# TODO: add vpc to lambda
+chalice_stack = ChaliceApp(
+    app, 
+    "LokaFoldChaliceStack"
 )
 app.synth()

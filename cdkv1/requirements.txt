@@ -14,3 +14,6 @@ aws_cdk.aws_lambda_event_sources
 aws_cdk.aws_s3_deployment
 aws_cdk.aws_sagemaker
 python-dotenv==0.20.0
+chalice[cdk]
+-r "lokafold-app/requirements.txt"
+# chalice[cdkv2] # extra to support chalice construct
