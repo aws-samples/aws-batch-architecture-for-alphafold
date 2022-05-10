@@ -157,65 +157,65 @@ Resources:
           Value: !Ref AWS::StackId
       TrafficType: ALL
 
-  ElasticIP0:
-    Type: "AWS::EC2::EIP"
-    Properties:
-      Domain: vpc
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "eip",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
+#  ElasticIP0:
+#    Type: "AWS::EC2::EIP"
+#    Properties:
+#      Domain: vpc
+#      Tags:
+#        - Key: Application
+#          Value: AWS-Alphafold
+#        - Key: Name
+#          Value:
+#            !Join [
+#              "-",
+#              [
+#                "AWS-Alphafold",
+#                "eip",
+#                !Select [
+#                  4,
+#                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+#                ],
+#              ],
+#            ]
+#        - Key: StackId
+#          Value: !Ref AWS::StackId
 
-  NATGateway0:
-    Type: "AWS::EC2::NatGateway"
-    Properties:
-      AllocationId:
-        "Fn::GetAtt":
-          - ElasticIP0
-          - AllocationId
-      SubnetId:
-        Ref: PublicSubnet0
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "nat-gateway",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
+#  NATGateway0:
+#    Type: "AWS::EC2::NatGateway"
+#    Properties:
+#      AllocationId:
+#        "Fn::GetAtt":
+#          - ElasticIP0
+#          - AllocationId
+#      SubnetId:
+#        Ref: PublicSubnet0
+#      Tags:
+#        - Key: Application
+#          Value: AWS-Alphafold
+#        - Key: Name
+#          Value:
+#            !Join [
+#              "-",
+#              [
+#                "AWS-Alphafold",
+#                "nat-gateway",
+#                !Select [
+#                  4,
+#                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+#                ],
+#              ],
+#            ]
+#        - Key: StackId
+#          Value: !Ref AWS::StackId
 
-  PrivateRouteToInternet0:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId:
-        Ref: PrivateRouteTable0
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId:
-        Ref: NATGateway0
+#  PrivateRouteToInternet0:
+#    Type: "AWS::EC2::Route"
+#    Properties:
+#      RouteTableId:
+#        Ref: PrivateRouteTable0
+#      DestinationCidrBlock: 0.0.0.0/0
+#      NatGatewayId:
+#        Ref: NATGateway0
 
 
   ##################################################
