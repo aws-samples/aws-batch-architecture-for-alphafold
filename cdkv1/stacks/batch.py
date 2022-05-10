@@ -14,9 +14,12 @@ mount_path = "/fsx" # do not touch
 region_name = cdk.Aws.REGION
 
 class BatchStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, vpc, folding_container, download_container, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, vpc, sg, folding_container, download_container, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
+        public_subnet = vpc.public_subnets[0]
+        private_subnet = vpc.private_subnets[0]
+        
         # # Parameters
         # az = CfnParameter(
         #     self,
@@ -59,8 +62,7 @@ class BatchStack(cdk.Stack):
         # )
         
         # Network
-        public_subnet = vpc.public_subnets[0]
-        private_subnet = vpc.private_subnets[0]
+
         
         
         # EC2 Launch Template
@@ -104,7 +106,7 @@ class BatchStack(cdk.Stack):
                 deployment_type="PERSISTENT_2",
                 per_unit_storage_throughput=125,  # fsx_throughput.value_as_number, WIP
             ),
-            security_group_ids=[vpc.vpc_default_security_group],
+            security_group_ids=[sg.security_group_id],
             storage_capacity=1200,  # WIP
             storage_type="SSD",
             subnet_ids=[private_subnet.subnet_id],
@@ -128,22 +130,26 @@ class BatchStack(cdk.Stack):
         #     # vpc_subnet=self.vpc.private_subnets[0],
         #     storage_capacity_gib = 4800,
         #     removal_policy=cdk.RemovalPolicy.DESTROY,
-        #     security_group = self.sg,
+        #     security_group = sg,
         # )
         
         mount_name = lustre_file_system.attr_lustre_mount_name
-        file_system_id = lustre_file_system.attr_root_volume_id
+        file_system_id = lustre_file_system.ref
+        
+        print(mount_name)
+        print(file_system_id)
         
         user_data = ec2.MultipartUserData()
         user_data.add_part(
             ec2.MultipartBody.from_user_data(
-                ec2.UserData.custom(
+                user_data=ec2.UserData.custom(
                     "amazon-linux-extras install -y lustre2.10\n"
                     f"mkdir -p {mount_path}\n"
                     f"mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}\n"
                     f"echo '{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0' >> /etc/fstab \n"
                     "mkdir -p /tmp/alphafold"
-                )
+                ),
+                content_type='text/cloud-config; charset="utf-8"'
             )
         )
         
@@ -166,7 +172,7 @@ class BatchStack(cdk.Stack):
                 iam_instance_profile=ec2.CfnLaunchTemplate.IamInstanceProfileProperty(
                     name=instance_profile.instance_profile_name
                 ),
-                user_data=user_data.render(),
+                # user_data=user_data.render(), # WIP
             ),
         )
         
@@ -193,11 +199,11 @@ class BatchStack(cdk.Stack):
                     ec2.CfnLaunchTemplate.NetworkInterfaceProperty(
                         associate_public_ip_address=True,
                         device_index=0,
-                        groups=[vpc.vpc_default_security_group],
+                        groups=[sg.security_group_id],
                         subnet_id=public_subnet.subnet_id,
                     )
                 ],
-                user_data=user_data.render(),
+                # user_data=user_data.render(),
             ),
         )
         
@@ -211,37 +217,49 @@ class BatchStack(cdk.Stack):
                 instance_role=instance_profile.attr_arn,
                 instance_types=["m5", "r5", "c5"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
-                    launch_template_id=launch_template.logical_id,
+                    launch_template_name=launch_template.launch_template_name,
                     version=launch_template.attr_latest_version_number,
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                security_group_ids=[vpc.vpc_default_security_group],
+                security_group_ids=[sg.security_group_id],
                 subnets=[private_subnet.subnet_id],
                 type="EC2",
             ),
             state="ENABLED",
             type="MANAGED",
         )
-                
-        public_compute_environment = batch.CfnComputeEnvironment(
-            self,
+
+        # Using CfnComputeEnvironment leads to an error where both security_groups and subnets
+        # can't be configured at the same time.
+        public_compute_environment = batch.ComputeEnvironment(
+            self, 
             "PublicCPUComputeEnvironment",
-            compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
-                allocation_strategy="BEST_FIT_PROGRESSIVE",
+            compute_resources=batch.ComputeResources(
+                allocation_strategy=batch.AllocationStrategy.BEST_FIT_PROGRESSIVE,
                 instance_role=instance_profile.attr_arn,
-                instance_types=["m5", "r5", "c5"],
-                launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
-                    launch_template_id=public_launch_template.logical_id,
-                    version=public_launch_template.attr_latest_version_number,
+                instance_types=[
+                    ec2.InstanceType.of(instance_class=ec2.InstanceClass.STANDARD5, instance_size=ec2.InstanceSize.LARGE),
+                    ec2.InstanceType.of(instance_class=ec2.InstanceClass.MEMORY5, instance_size=ec2.InstanceSize.LARGE),
+                    ec2.InstanceType.of(instance_class=ec2.InstanceClass.COMPUTE5, instance_size=ec2.InstanceSize.LARGE)
+                ],
+                launch_template=batch.LaunchTemplateSpecification(
+                    launch_template_name=launch_template.launch_template_name,
+                    version=launch_template.attr_latest_version_number,
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                subnets=[public_subnet.subnet_id],
-                type="EC2",
+                security_groups=[
+                    sg
+                ],
+                vpc_subnets=ec2.SubnetSelection(
+                    subnets=[private_subnet]
+                ),
+                type=batch.ComputeResourceType.ON_DEMAND,
+                vpc=vpc,
             ),
-            state="ENABLED",
-            type="MANAGED",
+            managed=True,
+            enabled=True
         )
         
         gpu_compute_environment = batch.CfnComputeEnvironment(
@@ -252,12 +270,12 @@ class BatchStack(cdk.Stack):
                 instance_role=instance_profile.attr_arn,
                 instance_types=["g4dn"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
-                    launch_template_id=launch_template.logical_id,
+                    launch_template_name=launch_template.launch_template_name,
                     version=launch_template.attr_latest_version_number,
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                security_group_ids=[vpc.vpc_default_security_group],
+                security_group_ids=[sg.security_group_id],
                 subnets=[private_subnet.subnet_id],
                 type="EC2",
             ),
@@ -265,14 +283,23 @@ class BatchStack(cdk.Stack):
             type="MANAGED",
         )
         
-        # Batch Queues
+        # Batch Queues (not working)
+        # private_cpu_queue = batch.JobQueue(
+        #     self,
+        #     "PrivateCPUJobQueue",
+        #     compute_environments=[
+        #         batch.JobQueueComputeEnvironment(compute_environment=private_compute_environment, order=1)
+        #     ],
+        #     priority=10,
+        #     enabled=True,
+        # )
         
         private_cpu_queue = batch.CfnJobQueue(
             self,
             "PrivateCPUJobQueue",
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
-                    compute_environment=private_compute_environment.to_string(),
+                    compute_environment=private_compute_environment.attr_compute_environment_arn,
                     order=1,
                 ),
             ],
@@ -285,12 +312,12 @@ class BatchStack(cdk.Stack):
             "PublicCPUJobQueue",
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
-                    compute_environment=public_compute_environment.to_string(),
+                    compute_environment=public_compute_environment.compute_environment_arn,
                     order=1,
                 ),
             ],
             priority=10,
-            state="Enabled",
+            state="ENABLED",
         )
 
         gpu_job_queue = batch.CfnJobQueue(
@@ -298,7 +325,7 @@ class BatchStack(cdk.Stack):
             "PrivateGPUJobQueue",
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
-                    compute_environment=gpu_compute_environment.to_string(),
+                    compute_environment=gpu_compute_environment.attr_compute_environment_arn,
                     order=1,
                 ),
             ],

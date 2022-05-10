@@ -74,3 +74,14 @@ class VpcStack(cdk.Stack):
             cidr="10.0.0.0/16", 
             max_azs=1
         )
+        
+        self.sg = ec2.SecurityGroup(
+            self, 
+            "LokaFoldSecurityGroup",
+            vpc=self.vpc,
+            description="Allow access from VPC CIDR and SSH",
+            security_group_name="CDK SecurityGroup",
+            allow_all_outbound=True,
+        )
+        self.sg.add_ingress_rule(ec2.Peer.ipv4(self.vpc.vpc_cidr_block),ec2.Port.all_traffic())
+        self.sg.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(22), "allow ssh access from the world")

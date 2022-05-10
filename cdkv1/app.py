@@ -19,14 +19,15 @@ batch_stack = BatchStack(
     app, 
     "LokaFoldBatchStack",
     vpc_stack.vpc,
+    vpc_stack.sg,
     codepipeline_stack.folding_container,
     codepipeline_stack.download_container
 )
-sagemaker_stack = SageMakerStack(
-    app, 
-    "LokaFoldSagemakerStack",
-    vpc_stack.vpc,
-    codepipeline_stack.repo,
-    vpc_stack.key
-)
+# sagemaker_stack = SageMakerStack(
+#     app, 
+#     "LokaFoldSagemakerStack",
+#     vpc_stack.vpc,
+#     codepipeline_stack.repo,
+#     vpc_stack.key
+# )
 app.synth()
