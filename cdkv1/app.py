@@ -11,12 +11,18 @@ from stacks.chaliceapp import ChaliceApp
 load_dotenv()
 app = core.App()
 
-vpc_stack = VpcStack(app, "LokaFoldVpcStack")
+environment = core.Environment(
+    account=os.environ["CDK_DEFAULT_ACCOUNT"],
+    region=os.environ["CDK_DEFAULT_REGION"])
+
+vpc_stack = VpcStack(app, "LokaFoldVpcStack", env=environment)
+
 codepipeline_stack = CodePipelineStack(
     app, 
     "LokaFoldCodePipelineStack", 
     vpc_stack.key, 
-    vpc_stack.vpc
+    vpc_stack.vpc,
+    env=environment
 )
 batch_stack = BatchStack(
     app, 
@@ -24,19 +30,23 @@ batch_stack = BatchStack(
     vpc_stack.vpc,
     vpc_stack.sg,
     codepipeline_stack.folding_container,
-    codepipeline_stack.download_container
+    codepipeline_stack.download_container,
+    env=environment
 )
 sagemaker_stack = SageMakerStack(
     app, 
     "LokaFoldSagemakerStack",
     vpc_stack.vpc,
+    vpc_stack.sg,
     codepipeline_stack.repo,
     vpc_stack.key,
-    os.environ.get("launch_sagemaker", True)
+    os.environ.get("launch_sagemaker", True),
+    env=environment
 )
 # TODO: add vpc to lambda
 chalice_stack = ChaliceApp(
     app, 
-    "LokaFoldChaliceStack"
+    "LokaFoldChaliceStack",
+    env=environment
 )
 app.synth()

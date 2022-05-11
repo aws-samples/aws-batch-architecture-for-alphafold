@@ -16,8 +16,16 @@ class BatchStack(cdk.Stack):
     def __init__(self, scope: Construct, id: str, vpc, sg, folding_container, download_container, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        public_subnet = vpc.public_subnets[0]
-        private_subnet = vpc.private_subnets[0]
+        public_subnet = None
+        private_subnet = None
+
+        try:
+            public_subnet = vpc.public_subnets[0]
+            private_subnet = vpc.private_subnets[0]
+        except IndexError:
+            raise Exception(f"Be sure that you have a Public Subnet and a Private subnet in the vpc with id {os.environ.get('vpc_id')}")
+
+        sg = ec2.SecurityGroup.from_security_group_id(self, "SG", sg, mutable=True)
         # EC2 Launch Template
         ec2_role = iam.Role(
             self,

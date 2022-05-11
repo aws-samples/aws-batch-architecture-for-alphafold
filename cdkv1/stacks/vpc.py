@@ -65,27 +65,19 @@ class VpcStack(cdk.Stack):
 
         # Network Configuration
         vpc_id = os.environ.get("vpc_id", None)
-        use_default_vpc = os.environ.get("use_default_vpc", None)
+        use_default_vpc = bool(int(os.environ.get("use_default_vpc", None)))
 
         if use_default_vpc:
             self.vpc = ec2.Vpc.from_lookup(self, 'LokaFoldVPC', is_default=True)
+            self.sg = os.environ.get("default_vpc_sg", None)
         elif vpc_id is None or vpc_id == '':
+
             self.vpc = ec2.Vpc(
                 self,
                 "LokaFoldVPC",
                 cidr="10.0.0.0/16",
                 max_azs=1
             )
-            # self.sg = ec2.SecurityGroup(
-            #     self,
-            #     "LokaFoldSecurityGroup",
-            #     vpc=self.vpc,
-            #     description="Allow access from VPC CIDR and SSH",
-            #     security_group_name="CDK SecurityGroup",
-            #     allow_all_outbound=True,
-            # )
-            # self.sg.add_ingress_rule(ec2.Peer.ipv4(self.vpc.vpc_cidr_block), ec2.Port.all_traffic())
-            # self.sg.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(22), "allow ssh access from the world")
 
             self.public_subnet = ec2.CfnSubnet(
                 self,
@@ -128,7 +120,7 @@ class VpcStack(cdk.Stack):
             public_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
                 self,
                 "PublicSubnetRouteTableAssociation0",
-                subnet_id=self.public_subnet.subnet_id,
+                subnet_id=self.public_subnet.attr_subnet_id,
                 route_table_id=self.public_route_table.attr_route_table_id,
             )
 
@@ -142,7 +134,7 @@ class VpcStack(cdk.Stack):
                 self,
                 "NATGateway0",
                 allocation_id=self.elastic_ip.attr_allocation_id,
-                subnet_id=self.public_subnet.subnet_id,
+                subnet_id=self.public_subnet.attr_subnet_id,
             )
 
             self.private_route_table = ec2.CfnRouteTable(
@@ -162,9 +154,14 @@ class VpcStack(cdk.Stack):
             private_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
                 self,
                 "PrivateSubnetRouteTableAssociation0",
-                subnet_id=self.private_subnet.subnet_id,
+                subnet_id=self.private_subnet.attr_subnet_id,
                 route_table_id=self.private_route_table.attr_route_table_id,
             )
+
+            endpoint = self.vpc.add_gateway_endpoint(
+                "S3Endpoint", service=ec2.GatewayVpcEndpointAwsService.S3
+            )
+            self.sg = self.vpc.vpc_default_security_group
 
         else:
 

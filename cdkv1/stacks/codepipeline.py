@@ -51,10 +51,6 @@ class CodePipelineStack(cdk.Stack):
             ),
         )
 
-        endpoint = vpc.add_gateway_endpoint(
-            "S3Endpoint", service=ec2.GatewayVpcEndpointAwsService.S3
-        )
-
         # Container Services
         self.repo = codecommit.CfnRepository(
             self,

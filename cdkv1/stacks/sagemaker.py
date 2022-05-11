@@ -4,12 +4,13 @@ from aws_cdk.core import (
     Aws,
     Construct,
 )
+import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_sagemaker as sagemaker
 
 
 class SageMakerStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, vpc, repo, key, launch_sagemaker, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, vpc, sg, repo, key, launch_sagemaker, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
         if launch_sagemaker:
             # vpc
@@ -60,5 +61,5 @@ class SageMakerStack(cdk.Stack):
                 kms_key_id=key.key_arn,
                 role_arn=notebook_role.role_arn,
                 subnet_id=private_subnet.subnet_id,
-                security_group_ids=[vpc.vpc_default_security_group],
+                security_group_ids=[sg],
             )
