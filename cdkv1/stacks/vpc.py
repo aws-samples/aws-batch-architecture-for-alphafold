@@ -5,7 +5,6 @@ from aws_cdk.core import (
 )
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_ec2 as ec2
-import aws_cdk.aws_batch as batch
 import aws_cdk.aws_kms as kms
 
 class VpcStack(cdk.Stack):
@@ -72,55 +71,80 @@ class VpcStack(cdk.Stack):
             self.sg = os.environ.get("default_vpc_sg", None)
         elif vpc_id is None or vpc_id == '':
 
+            subnet_configuration=[
+                ec2.SubnetConfiguration(
+                    name="PublicSubnet0",
+                    subnet_type = ec2.SubnetType.PUBLIC,
+                    cidr_mask = 26
+                ),
+                ec2.SubnetConfiguration(
+                    name = "PrivateSubnet0",
+                    subnet_type = ec2.SubnetType.PRIVATE,
+                    cidr_mask = 26
+                )
+            ]
+
             self.vpc = ec2.Vpc(
                 self,
                 "LokaFoldVPC",
                 cidr="10.0.0.0/16",
-                max_azs=1
+                max_azs=1,
+                subnet_configuration=subnet_configuration,
             )
+            
+            # self.public_subnet = ec2.CfnSubnet(
+            #     self,
+            #     "PublicSubnet0",
+            #     vpc_id=self.vpc.vpc_id,
+            #     availability_zone=os.environ.get("az", None),
+            #     cidr_block="10.0.0.0/24",
+            # )
 
-            self.public_subnet = ec2.CfnSubnet(
-                self,
-                "PublicSubnet0",
-                vpc_id=self.vpc.vpc_id,
-                availability_zone=os.environ.get("az", None),
-                cidr_block=self.vpc.vpc_cidr_block,
-            )
+            # self.private_subnet = ec2.CfnSubnet(
+            #     self,
+            #     "PrivateSubnet0",
+            #     vpc_id=self.vpc.vpc_id,
+            #     availability_zone=os.environ.get("az", None),
+            #     map_public_ip_on_launch=False,
+            #     cidr_block="10.0.3.0/24",
+            # )
 
-            self.private_subnet = ec2.CfnSubnet(
-                self,
-                "PrivateSubnet0",
-                vpc_id=self.vpc.vpc_id,
-                availability_zone=os.environ.get("az", None),
-                map_public_ip_on_launch=False,
-                cidr_block=self.vpc.vpc_cidr_block,
-            )
+            # self.internet_gateway = ec2.CfnInternetGateway(self, "InternetGateway")
 
-            self.internet_gateway = ec2.CfnInternetGateway(self, "InternetGateway")
-
-            gateway_to_internet = ec2.CfnVPCGatewayAttachment(
-                self,
-                "GatewayToInternet",
-                vpc_id=self.vpc.vpc_id,
-                internet_gateway_id=self.internet_gateway.attr_internet_gateway_id,
-            )
+            # gateway_to_internet = ec2.CfnVPCGatewayAttachment(
+            #     self,
+            #     "GatewayToInternet",
+            #     vpc_id=self.vpc.vpc_id,
+            #     internet_gateway_id=self.internet_gateway.attr_internet_gateway_id,
+            # )
 
             self.public_route_table = ec2.CfnRouteTable(
-                self, "PublicRouteTable", vpc_id=self.vpc.vpc_id
+                self, 
+                "PublicRouteTable", 
+                vpc_id=self.vpc.vpc_id,
             )
+
+            self.private_route_table = ec2.CfnRouteTable(
+                self,
+                "PrivateRouteTable0",
+                vpc_id=self.vpc.vpc_id,
+            )
+
+            print(dir(self.vpc))
+            print(self.vpc.internet_gateway_id)
 
             self.public_route = ec2.CfnRoute(
                 self,
                 "PublicRoute",
                 route_table_id=self.public_route_table.attr_route_table_id,
                 destination_cidr_block="0.0.0.0/0",
-                gateway_id=self.internet_gateway.attr_internet_gateway_id,
+                gateway_id=self.vpc.internet_gateway_id,
             )
 
             public_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
                 self,
                 "PublicSubnetRouteTableAssociation0",
-                subnet_id=self.public_subnet.attr_subnet_id,
+                subnet_id=self.vpc.public_subnets[0].subnet_id,
                 route_table_id=self.public_route_table.attr_route_table_id,
             )
 
@@ -134,27 +158,21 @@ class VpcStack(cdk.Stack):
                 self,
                 "NATGateway0",
                 allocation_id=self.elastic_ip.attr_allocation_id,
-                subnet_id=self.public_subnet.attr_subnet_id,
+                subnet_id=self.vpc.public_subnets[0].subnet_id,
             )
-
-            self.private_route_table = ec2.CfnRouteTable(
-                self,
-                "PrivateRouteTable0",
-                vpc_id=self.vpc.vpc_id,
-            )
-
+            
             private_route_to_internet = ec2.CfnRoute(
                 self,
                 "PrivateRouteToInternet0",
                 route_table_id=self.private_route_table.attr_route_table_id,
                 destination_cidr_block="0.0.0.0/0",
-                nat_gateway_id=self.nat_gateway.allocation_id,
+                nat_gateway_id=self.nat_gateway.ref, # nategateway_id
             )
 
             private_subnet_route_association = ec2.CfnSubnetRouteTableAssociation(
                 self,
                 "PrivateSubnetRouteTableAssociation0",
-                subnet_id=self.private_subnet.attr_subnet_id,
+                subnet_id=self.vpc.private_subnets[0].subnet_id,
                 route_table_id=self.private_route_table.attr_route_table_id,
             )
 
@@ -162,7 +180,6 @@ class VpcStack(cdk.Stack):
                 "S3Endpoint", service=ec2.GatewayVpcEndpointAwsService.S3
             )
             self.sg = self.vpc.vpc_default_security_group
-
         else:
 
             self.vpc = ec2.Vpc.from_vpc_attributes(

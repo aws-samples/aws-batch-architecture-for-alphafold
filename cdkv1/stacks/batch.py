@@ -2,7 +2,6 @@ import os
 from aws_cdk import core as cdk
 from aws_cdk.core import (
     Construct,
-    CfnParameter,
 )
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_ec2 as ec2

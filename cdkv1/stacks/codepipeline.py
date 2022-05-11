@@ -2,13 +2,11 @@ import os
 from aws_cdk import core as cdk
 from aws_cdk.core import (
     Aws,
-    Construct,
+    Construct
 )
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_ecr as ecr
 import aws_cdk.aws_s3 as s3
-import aws_cdk.aws_ec2 as ec2
-
 import aws_cdk.aws_codecommit as codecommit
 import aws_cdk.aws_codebuild as codebuild
 import aws_cdk.aws_codepipeline as codepipeline
@@ -18,6 +16,9 @@ import aws_cdk.aws_codepipeline as codepipeline
 class CodePipelineStack(cdk.Stack):
     def __init__(self, scope: Construct, id: str, key, vpc, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
+
+        # TODO: move to .env        
+        codebuild_project_name = "LokaFold-codebuild-project"
 
         bucket = s3.Bucket(
             self,
@@ -115,7 +116,7 @@ class CodePipelineStack(cdk.Stack):
                             "logs:PutLogEvents",
                         ],
                         resources=[
-                            f"arn:aws:logs:{Aws.REGION}:{Aws.ACCOUNT_ID}:log-group:/aws/codebuild/AWS-Alphafold*"
+                            f"arn:aws:logs:{Aws.REGION}:{Aws.ACCOUNT_ID}:log-group:/aws/codebuild/{codebuild_project_name}:log-stream:*"
                         ],
                     ),
                     iam.PolicyStatement(
@@ -188,7 +189,7 @@ class CodePipelineStack(cdk.Stack):
                 privileged_mode=True,
                 type="LINUX_CONTAINER",
             ),
-            name="LokaFold-codebuild-project",
+            name=codebuild_project_name,
             resource_access_role=codebuild_role.role_arn,
             service_role=codebuild_role.role_arn,
             source=codebuild.CfnProject.SourceProperty(
@@ -206,12 +207,17 @@ class CodePipelineStack(cdk.Stack):
             assumed_by=iam.ServicePrincipal("codepipeline.amazonaws.com"),
         )
 
+        print("REPO")
+        print(self.repo.attr_arn)
+        print(self.repo.get_att("resource.arn"))
+
         codepipeline_role.attach_inline_policy(
             iam.Policy(
                 self,
                 "codepipeline_role",
                 statements=[
                     iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
                         actions=[
                             "codecommit:CancelUploadArchive",
                             "codecommit:GetBranch",
@@ -223,6 +229,7 @@ class CodePipelineStack(cdk.Stack):
                         resources=[self.repo.attr_arn],
                     ),
                     iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
                         actions=[
                             "s3:PutObject",
                             "s3:GetObject",
@@ -231,6 +238,7 @@ class CodePipelineStack(cdk.Stack):
                         resources=[f"arn:aws:s3:::{bucket.bucket_name}/*"],
                     ),
                     iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
                         actions=[
                             "s3:GetBucketAcl",
                             "s3:GetBucketLocation",
@@ -238,6 +246,7 @@ class CodePipelineStack(cdk.Stack):
                         resources=[bucket.bucket_arn],
                     ),
                     iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
                         actions=[
                             "codebuild:BatchGetBuilds",
                             "codebuild:StartBuild",
