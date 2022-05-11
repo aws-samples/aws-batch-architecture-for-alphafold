@@ -424,10 +424,10 @@ class BatchStack(cdk.Stack):
                 command=["nvidia-smi"],
                 environment=[
                     batch.CfnJobDefinition.EnvironmentProperty(
-                        name="TF_FORCE_UNIFIED_MEMORY", value=1
+                        name="TF_FORCE_UNIFIED_MEMORY", value="1"
                     ),
                     batch.CfnJobDefinition.EnvironmentProperty(
-                        name="XLA_PYTHON_CLIENT_MEM_FRACTION", value=4.0
+                        name="XLA_PYTHON_CLIENT_MEM_FRACTION", value="4.0"
                     ),
                 ],
                 image=folding_container.attr_repository_uri,

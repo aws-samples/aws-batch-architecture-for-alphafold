@@ -23,7 +23,7 @@ class CodePipelineStack(cdk.Stack):
             self,
             "CodePipelineS3Bucket",
             encryption=s3.BucketEncryption.S3_MANAGED,
-            access_control=s3.BucketAccessControl.PRIVATE,
+            # access_control=s3.BucketAccessControl.PRIVATE,
             removal_policy=cdk.RemovalPolicy.RETAIN,
             versioned=False,
         )
@@ -161,7 +161,7 @@ class CodePipelineStack(cdk.Stack):
             encryption_key=key.key_id,
             cache=codebuild.CfnProject.ProjectCacheProperty(
                 type="LOCAL",
-                modes="LOCAL_DOCKER_LAYER_CACHE",
+                modes=["LOCAL_DOCKER_LAYER_CACHE"],
             ),
             environment=codebuild.CfnProject.EnvironmentProperty(
                 compute_type="BUILD_GENERAL1_MEDIUM",
