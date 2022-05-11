@@ -1,10 +1,12 @@
+import os
 from aws_cdk import core
+from dotenv import load_dotenv
+
 from stacks.vpc import VpcStack
 from stacks.codepipeline import CodePipelineStack
 from stacks.sagemaker import SageMakerStack
 from stacks.batch import BatchStack
 from stacks.chaliceapp import ChaliceApp
-from dotenv import load_dotenv
 
 load_dotenv()
 app = core.App()
@@ -29,7 +31,8 @@ sagemaker_stack = SageMakerStack(
     "LokaFoldSagemakerStack",
     vpc_stack.vpc,
     codepipeline_stack.repo,
-    vpc_stack.key
+    vpc_stack.key,
+    os.environ.get("launch_sagemaker", True)
 )
 # TODO: add vpc to lambda
 chalice_stack = ChaliceApp(
