@@ -11,3 +11,6 @@ venv37/
 __pycache__/
 cdk.out/
 chalice.out/
+infrastructure/cdk.context.json
+.idea/
+.env
