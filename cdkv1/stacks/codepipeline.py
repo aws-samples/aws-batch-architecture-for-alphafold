@@ -23,6 +23,8 @@ class CodePipelineStack(cdk.Stack):
             self,
             "CodePipelineS3Bucket",
             encryption=s3.BucketEncryption.S3_MANAGED,
+            # access_control=s3.BucketAccessControl.PRIVATE,
+            removal_policy=cdk.RemovalPolicy.RETAIN,
             versioned=False,
         )
 
@@ -78,7 +80,8 @@ class CodePipelineStack(cdk.Stack):
             ),
             repository_name="lokafold-folding-container-repo",
         )
-
+        self.folding_container.apply_removal_policy(cdk.RemovalPolicy.RETAIN)
+        
         self.download_container = ecr.CfnRepository(
             self,
             "DownloadContainerRegistry",
@@ -90,13 +93,13 @@ class CodePipelineStack(cdk.Stack):
             ),
             repository_name="lokafold_download_container_repo",
         )
+        self.download_container.apply_removal_policy(cdk.RemovalPolicy.RETAIN)
 
         codebuild_role = iam.Role(
             self,
             "CodeBuildRole",
             assumed_by=iam.ServicePrincipal("codebuild.amazonaws.com"),
         )
-
         codebuild_role.add_managed_policy(
             iam.ManagedPolicy.from_managed_policy_arn(
                 self,
@@ -156,6 +159,10 @@ class CodePipelineStack(cdk.Stack):
             "CodeBuildProject",
             artifacts=codebuild.CfnProject.ArtifactsProperty(type="NO_ARTIFACTS"),
             encryption_key=key.key_id,
+            cache=codebuild.CfnProject.ProjectCacheProperty(
+                type="LOCAL",
+                modes=["LOCAL_DOCKER_LAYER_CACHE"],
+            ),
             environment=codebuild.CfnProject.EnvironmentProperty(
                 compute_type="BUILD_GENERAL1_MEDIUM",
                 environment_variables=[
@@ -167,7 +174,7 @@ class CodePipelineStack(cdk.Stack):
                         value=self.folding_container.repository_name,
                     ),
                     codebuild.CfnProject.EnvironmentVariableProperty(
-                        name="AF_VERSION", value="v2.1.2"
+                        name="AF_VERSION", value=os.environ.get("AF_VERSION", "v2.1.2")
                     ),
                     codebuild.CfnProject.EnvironmentVariableProperty(
                         name="DOWNLOAD_IMAGE_TAG", value="latest"
@@ -190,7 +197,7 @@ class CodePipelineStack(cdk.Stack):
             service_role=codebuild_role.role_arn,
             source=codebuild.CfnProject.SourceProperty(
                 type="CODECOMMIT",
-                build_spec="infrastructure.buildspec.yaml",
+                build_spec="infrastructure/buildspec.yaml",
                 git_clone_depth=1,
                 location=self.repo.attr_clone_url_http,
             ),

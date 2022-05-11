@@ -54,10 +54,10 @@ class BatchStack(cdk.Stack):
             lustre_configuration=fsx.CfnFileSystem.LustreConfigurationProperty(
                 data_compression_type="LZ4",
                 deployment_type="PERSISTENT_2",
-                per_unit_storage_throughput=125,  # fsx_throughput.value_as_number, WIP
+                per_unit_storage_throughput=int(os.environ.get("fsx_throughput", 500)),
             ),
             security_group_ids=[sg.security_group_id],
-            storage_capacity=1200,  # WIP
+            storage_capacity=int(os.environ.get("fsx_capacity", 1200)),
             storage_type="SSD",
             subnet_ids=[private_subnet.subnet_id],
         )
@@ -65,19 +65,36 @@ class BatchStack(cdk.Stack):
         mount_name = lustre_file_system.attr_lustre_mount_name
         file_system_id = lustre_file_system.ref
 
-        user_data = ec2.MultipartUserData()
-        user_data.add_part(
-            ec2.MultipartBody.from_user_data(
-                user_data=ec2.UserData.custom(
-                    "amazon-linux-extras install -y lustre2.10\n"
-                    f"mkdir -p {mount_path}\n"
-                    f"mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}\n"
-                    f"echo '{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0' >> /etc/fstab \n"
-                    "mkdir -p /tmp/alphafold"
-                ),
-                content_type='text/cloud-config; charset="utf-8"'
-            )
-        )
+        # user_data = ec2.MultipartUserData()
+        # user_data.add_part(
+        #     ec2.MultipartBody.from_user_data(
+        #         user_data=ec2.UserData.custom(
+        #             "amazon-linux-extras install -y lustre2.10\n"
+        #             f"mkdir -p {mount_path}\n"
+        #             f"mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}\n"
+        #             f"echo '{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0' >> /etc/fstab \n"
+        #             "mkdir -p /tmp/alphafold"
+        #         ),
+        #         content_type='text/cloud-config; charset="utf-8"'
+        #     )
+        # )
+        
+        user_data = f"""MIME-Version: 1.0
+        Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+        --==MYBOUNDARY==
+        Content-Type: text/cloud-config; charset="us-ascii"
+
+        runcmd:
+
+        - amazon-linux-extras install -y lustre2.10
+        - mkdir -p {mount_path}
+        - mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}
+        - echo "{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0" >> /etc/fstab
+        - mkdir -p /tmp/alphafold
+
+        --==MYBOUNDARY==--
+        """
         
         launch_template = ec2.CfnLaunchTemplate(
             self,
@@ -98,7 +115,7 @@ class BatchStack(cdk.Stack):
                 iam_instance_profile=ec2.CfnLaunchTemplate.IamInstanceProfileProperty(
                     name=instance_profile.instance_profile_name
                 ),
-                # user_data=user_data.render(), # WIP
+                user_data=cdk.Fn.base64(user_data),
             ),
         )
         
@@ -129,7 +146,7 @@ class BatchStack(cdk.Stack):
                         subnet_id=public_subnet.subnet_id,
                     )
                 ],
-                # user_data=user_data.render(),
+                user_data=cdk.Fn.base64(user_data),
             ),
         )
         
@@ -174,9 +191,7 @@ class BatchStack(cdk.Stack):
                 ),
                 maxv_cpus=256,
                 minv_cpus=0,
-                security_groups=[
-                    sg
-                ],
+                security_groups=[sg],
                 vpc_subnets=ec2.SubnetSelection(
                     subnets=[private_subnet]
                 ),
