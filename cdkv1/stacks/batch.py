@@ -71,20 +71,6 @@ class BatchStack(cdk.Stack):
         
         mount_name = lustre_file_system.attr_lustre_mount_name
         file_system_id = lustre_file_system.ref
-
-        # user_data = ec2.MultipartUserData()
-        # user_data.add_part(
-        #     ec2.MultipartBody.from_user_data(
-        #         user_data=ec2.UserData.custom(
-        #             "amazon-linux-extras install -y lustre2.10\n"
-        #             f"mkdir -p {mount_path}\n"
-        #             f"mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}\n"
-        #             f"echo '{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0' >> /etc/fstab \n"
-        #             "mkdir -p /tmp/alphafold"
-        #         ),
-        #         content_type='text/cloud-config; charset="utf-8"'
-        #     )
-        # )
         
         user_data = f"""MIME-Version: 1.0
         Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
@@ -426,7 +412,7 @@ class BatchStack(cdk.Stack):
         
         gpu_folding_job = batch.CfnJobDefinition(
             self,
-            "GPUFoldingJob",
+            "GPUFoldingJobDefinition",
             container_properties=batch.CfnJobDefinition.ContainerPropertiesProperty(
                 command=["nvidia-smi"],
                 environment=[

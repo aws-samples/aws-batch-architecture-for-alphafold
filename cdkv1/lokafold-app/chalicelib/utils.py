@@ -125,7 +125,7 @@ def list_alphafold_stacks():
     for stack in cfn.list_stacks(
         StackStatusFilter=["CREATE_COMPLETE", "UPDATE_COMPLETE"]
     )["StackSummaries"]:
-        if "Alphafold on AWS Batch" in stack["TemplateDescription"]:
+        if stack["StackName"] == "LokaFoldBatchStack":
             af_stacks.append(stack)
     return af_stacks
 

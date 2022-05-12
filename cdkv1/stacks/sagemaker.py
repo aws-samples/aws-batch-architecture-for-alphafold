@@ -52,7 +52,7 @@ class SageMakerStack(cdk.Stack):
 
             notebook_instance = sagemaker.CfnNotebookInstance(
                 self,
-                "AlphafoldNotebookInstance",
+                "LokaFoldNotebookInstance",
                 direct_internet_access="Enabled",
                 instance_type="ml.c4.2xlarge",
                 default_code_repository=repo.attr_clone_url_http,

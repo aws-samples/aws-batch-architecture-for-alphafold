@@ -91,32 +91,6 @@ class VpcStack(cdk.Stack):
                 max_azs=1,
                 subnet_configuration=subnet_configuration,
             )
-            
-            # self.public_subnet = ec2.CfnSubnet(
-            #     self,
-            #     "PublicSubnet0",
-            #     vpc_id=self.vpc.vpc_id,
-            #     availability_zone=os.environ.get("az", None),
-            #     cidr_block="10.0.0.0/24",
-            # )
-
-            # self.private_subnet = ec2.CfnSubnet(
-            #     self,
-            #     "PrivateSubnet0",
-            #     vpc_id=self.vpc.vpc_id,
-            #     availability_zone=os.environ.get("az", None),
-            #     map_public_ip_on_launch=False,
-            #     cidr_block="10.0.3.0/24",
-            # )
-
-            # self.internet_gateway = ec2.CfnInternetGateway(self, "InternetGateway")
-
-            # gateway_to_internet = ec2.CfnVPCGatewayAttachment(
-            #     self,
-            #     "GatewayToInternet",
-            #     vpc_id=self.vpc.vpc_id,
-            #     internet_gateway_id=self.internet_gateway.attr_internet_gateway_id,
-            # )
 
             self.public_route_table = ec2.CfnRouteTable(
                 self, 
@@ -129,9 +103,6 @@ class VpcStack(cdk.Stack):
                 "PrivateRouteTable0",
                 vpc_id=self.vpc.vpc_id,
             )
-
-            print(dir(self.vpc))
-            print(self.vpc.internet_gateway_id)
 
             self.public_route = ec2.CfnRoute(
                 self,

@@ -77,6 +77,7 @@ class CodePipelineStack(cdk.Stack):
             ),
             repository_name="lokafold-folding-container-repo",
         )
+        # this will cause stack to fail if it's already created
         self.folding_container.apply_removal_policy(cdk.RemovalPolicy.RETAIN)
         
         self.download_container = ecr.CfnRepository(
@@ -206,10 +207,6 @@ class CodePipelineStack(cdk.Stack):
             "CodePipelineRole",
             assumed_by=iam.ServicePrincipal("codepipeline.amazonaws.com"),
         )
-
-        print("REPO")
-        print(self.repo.attr_arn)
-        print(self.repo.get_att("resource.arn"))
 
         codepipeline_role.attach_inline_policy(
             iam.Policy(
