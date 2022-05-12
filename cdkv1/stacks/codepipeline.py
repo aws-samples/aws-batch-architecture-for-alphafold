@@ -253,54 +253,6 @@ class CodePipelineStack(cdk.Stack):
             ]
         )
 
-        # codepipeline_role.attach_inline_policy(
-        #     iam.Policy(
-        #         self,
-        #         "codepipeline_role",
-        #         statements=[
-        #             iam.PolicyStatement(
-        #                 effect=iam.Effect.ALLOW,
-        #                 actions=[
-        #                     "codecommit:CancelUploadArchive",
-        #                     "codecommit:GetBranch",
-        #                     "codecommit:GetCommit",
-        #                     "codecommit:GetRepository",
-        #                     "codecommit:GetUploadArchiveStatus",
-        #                     "codecommit:UploadArchive",
-        #                 ],
-        #                 resources=["*"],
-        #             ),
-        #             iam.PolicyStatement(
-        #                 effect=iam.Effect.ALLOW,
-        #                 actions=[
-        #                     "s3:PutObject",
-        #                     "s3:GetObject",
-        #                     "s3:GetObjectVersion",
-        #                 ],
-        #                 resources=[f"arn:aws:s3:::{bucket.bucket_name}/*"],
-        #             ),
-        #             iam.PolicyStatement(
-        #                 effect=iam.Effect.ALLOW,
-        #                 actions=[
-        #                     "s3:GetBucketAcl",
-        #                     "s3:GetBucketLocation",
-        #                 ],
-        #                 resources=[bucket.bucket_arn],
-        #             ),
-        #             iam.PolicyStatement(
-        #                 effect=iam.Effect.ALLOW,
-        #                 actions=[
-        #                     "codebuild:BatchGetBuilds",
-        #                     "codebuild:StartBuild",
-        #                     "codebuild:BatchGetBuildBatches",
-        #                     "codebuild:StartBuildBatch",
-        #                 ],
-        #                 resources=[codebuild_project.attr_arn],
-        #             ),
-        #         ],
-        #     )
-        # )
-
         source_configuration = {
             "RepositoryName": self.repo.repository_name,
             "BranchName": "main",
