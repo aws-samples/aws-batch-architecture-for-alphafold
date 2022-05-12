@@ -16,7 +16,6 @@ environment = core.Environment(
     region=os.environ["CDK_DEFAULT_REGION"])
 
 vpc_stack = VpcStack(app, "LokaFoldVpcStack", env=environment)
-
 codepipeline_stack = CodePipelineStack(
     app, 
     "LokaFoldCodePipelineStack", 

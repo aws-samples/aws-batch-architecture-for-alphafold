@@ -128,8 +128,8 @@ class VpcStack(cdk.Stack):
             self.nat_gateway = ec2.CfnNatGateway(
                 self,
                 "NATGateway0",
-                allocation_id=self.elastic_ip.attr_allocation_id,
                 subnet_id=self.vpc.public_subnets[0].subnet_id,
+                allocation_id=self.elastic_ip.attr_allocation_id,
             )
             
             private_route_to_internet = ec2.CfnRoute(
