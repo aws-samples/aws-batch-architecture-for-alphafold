@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 def index():
     request = app.current_request
     body = request.json_body
+    # TODO: add schema validation using api gateway cababilities
     if request.method == 'GET':
         job_id = request.query_params["job_id"]
         # job_id_2 = request.query_params["prediction_job_id"]
@@ -116,3 +117,5 @@ def index():
             "prediction_job_response": step_2_response,
         }
         return response
+    else:
+        return {"Error": "Method is not implemented. Use either GET or POST"}
