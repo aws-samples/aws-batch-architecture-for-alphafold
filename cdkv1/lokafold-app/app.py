@@ -26,36 +26,47 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-'''
-{
-    "job_name": "",
-    "fasta_paths": "s3_key",
-    "output_dir": "job_name",
-    "db_preset": "DB_PRESET",
-    "model_preset": "model_preset",
-    "cpu": "prep_cpu",
-    "memory": "prep_mem",
-    "gpu": "prep_gpu",
-    "run_features_only": true
-}
-'''
-
 @app.route("/", methods=["POST", "GET"])
 def index():
     request = app.current_request
     body = request.json_body
     if request.method == 'GET':
-        # status_1 = get_batch_job_info(step_1_response["jobId"])
-        logger.info(body)
-        return {"Hello": "Warudo"}
+        job_id_1 = request.query_params["feature_extraction_job_id"]
+        job_id_2 = request.query_params["prediction_job_id"]
+        status_1 = get_batch_job_info(job_id_1)
+        status_2 = get_batch_job_info(job_id_2)
+        response = {
+            "status_feature_extraction_job": status_1,
+            "status_prediction_job": status_2,
+        }
+        return response
     elif request.method == 'POST':
         input_sequences = list(body["sequences"].values())
         input_ids = list(body["sequences"].keys())
         db_preset = body["db_preset"]
-        cpu = body["cpu"]
-        memory = body["memory"]
-        gpu = body["gpu"]
-        run_features_only = body["run_features_only"]
+        # cpu = body["cpu"]
+        # memory = body["memory"]
+        # gpu = body["gpu"]
+        # run_features_only = body["run_features_only"]
+        
+        if db_preset == "reduced_dbs":
+            prep_cpu = 4
+            prep_mem = 16
+            prep_gpu = 0
+
+        else:
+            prep_cpu = 16
+            prep_mem = 32
+            prep_gpu = 0
+
+        if sequence_length < 700:
+            predict_cpu = 4
+            predict_mem = 16
+            predict_gpu = 1
+        else:
+            predict_cpu = 16
+            predict_mem = 64
+            predict_gpu = 1
         
         # Validate input for invalid aminoacid residues
         input_sequences, model_preset = validate_input(input_sequences)
@@ -69,36 +80,38 @@ def index():
             job_name,
             region=region
         )
+        # Submit jobs to batch
+        step_1_response = submit_batch_alphafold_job(
+            job_name=str(job_name),
+            fasta_paths=object_key,
+            output_dir=job_name,
+            db_preset=db_preset,
+            model_preset=model_preset,
+            s3_bucket=S3_BUCKET,
+            cpu=prep_cpu,
+            memory=prep_mem,
+            gpu=prep_gpu,
+            run_features_only=True,
+        )
         
-        # step_1_response = submit_batch_alphafold_job(
-        #     job_name=str(job_name),
-        #     fasta_paths=object_key,
-        #     output_dir=job_name,
-        #     db_preset=db_preset,
-        #     model_preset=model_preset,
-        #     s3_bucket=S3_BUCKET,
-        #     cpu=cpu,
-        #     memory=memory,
-        #     gpu=gpu,
-        #     run_features_only=run_features_only,
-        # )
-        
-        # step_2_response = submit_batch_alphafold_job(
-        #     job_name=str(job_name),
-        #     fasta_paths=object_key,
-        #     output_dir=job_name,
-        #     db_preset=db_preset,
-        #     model_preset=model_preset,
-        #     s3_bucket=S3_BUCKET,
-        #     cpu=cpu,
-        #     memory=memory,
-        #     gpu=gpu,
-        #     features_paths=os.path.join(job_name, job_name, "features.pkl"),
-        #     depends_on=step_1_response["jobId"],
-        # )
+        step_2_response = submit_batch_alphafold_job(
+            job_name=str(job_name),
+            fasta_paths=object_key,
+            output_dir=job_name,
+            db_preset=db_preset,
+            model_preset=model_preset,
+            s3_bucket=S3_BUCKET,
+            cpu=predict_cpu,
+            memory=predict_mem,
+            gpu=predict_gpu,
+            features_paths=os.path.join(job_name, job_name, "features.pkl"),
+            depends_on=step_1_response["jobId"],
+        )
         
         response = {
-            "feature_extraction_job_id": "jobid1",#step_1_response["jobId"],
-            "prediction_job_id": "jobid2"#step_2_response["jobId"],
+            "feature_extraction_job_id": step_1_response["jobId"],
+            "feature_extraction_job_response": step_1_response,
+            "prediction_job_id": step_2_response["jobId"],
+            "prediction_job_response": step_2_response,
         }
         return response

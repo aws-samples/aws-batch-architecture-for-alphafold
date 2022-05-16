@@ -3,6 +3,7 @@ from aws_cdk import core
 from dotenv import load_dotenv
 
 from stacks.vpc import VpcStack
+from stacks.fsx import FileSystemStack
 from stacks.codepipeline import CodePipelineStack
 from stacks.sagemaker import SageMakerStack
 from stacks.batch import BatchStack
@@ -13,9 +14,17 @@ app = core.App()
 
 environment = core.Environment(
     account=os.environ["CDK_DEFAULT_ACCOUNT"],
-    region=os.environ["CDK_DEFAULT_REGION"])
+    region=os.environ["CDK_DEFAULT_REGION"]
+)
 
 vpc_stack = VpcStack(app, "LokaFoldVpcStack", env=environment)
+file_system_stack = FileSystemStack(
+    app, 
+    "LokaFoldFileSystemStack",
+    vpc_stack.vpc,
+    vpc_stack.sg,
+    env=environment
+)
 codepipeline_stack = CodePipelineStack(
     app, 
     "LokaFoldCodePipelineStack", 
@@ -30,6 +39,7 @@ batch_stack = BatchStack(
     vpc_stack.sg,
     codepipeline_stack.folding_container,
     codepipeline_stack.download_container,
+    file_system_stack.lustre_file_system,
     env=environment
 )
 sagemaker_stack = SageMakerStack(

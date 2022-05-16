@@ -6,13 +6,12 @@ from aws_cdk.core import (
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_batch as batch
-import aws_cdk.aws_fsx as fsx
 
 mount_path = "/fsx" # do not touch
 region_name = cdk.Aws.REGION
 
 class BatchStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, vpc, sg, folding_container, download_container, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, vpc, sg, folding_container, download_container, lustre_file_system, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         public_subnet = None
@@ -52,21 +51,6 @@ class BatchStack(cdk.Stack):
         )
         instance_profile = iam.CfnInstanceProfile(
             self, "InstanceProfile", roles=[ec2_role.role_name], instance_profile_name="InstanceProfile"
-        )
-        lustre_file_system = fsx.CfnFileSystem(
-            self,
-            "FSX",
-            file_system_type="LUSTRE",
-            # file_system_type_version="2.12",
-            lustre_configuration=fsx.CfnFileSystem.LustreConfigurationProperty(
-                data_compression_type="LZ4",
-                deployment_type="PERSISTENT_2",
-                per_unit_storage_throughput=int(os.environ.get("fsx_throughput", 500)),
-            ),
-            security_group_ids=[sg.security_group_id],
-            storage_capacity=int(os.environ.get("fsx_capacity", 1200)),
-            storage_type="SSD",
-            subnet_ids=[private_subnet.subnet_id],
         )
         
         mount_name = lustre_file_system.attr_lustre_mount_name
