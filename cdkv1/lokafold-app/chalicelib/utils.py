@@ -3,6 +3,8 @@
 """
 Helper functions for the AWS-Alphafold API
 """
+import logging
+import sys
 from datetime import datetime
 import os
 import uuid
@@ -12,7 +14,6 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 import boto3
-# import pandas as pd
 
 boto_session = boto3.session.Session()
 region = boto_session.region_name
@@ -20,6 +21,14 @@ s3 = boto_session.client("s3", region_name=region)
 batch = boto_session.client("batch", region_name=region)
 cfn = boto_session.client("cloudformation", region_name=region)
 logs_client = boto_session.client("logs")
+
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-s:%(name)s: %(message)s",
+    level=logging.INFO,
+    datefmt="%H:%M:%S",
+    stream=sys.stderr
+)
+logger = logging.getLogger(__name__)
 
 def upload_fasta_to_s3(
     sequences,
@@ -135,12 +144,6 @@ def get_batch_logs(logStreamName):
     messages = ''
     for event in (response)['events']:
         messages = messages+'\n'+(str(event['message']))
-
-    # logs = pd.DataFrame.from_dict(response["events"])
-    # logs.timestamp = logs.timestamp.transform(
-    #     lambda x: datetime.fromtimestamp(x / 1000)
-    # )
-    # logs.drop("ingestionTime", axis=1, inplace=True)
     return messages
 
 def get_batch_job_info(jobId):
@@ -150,7 +153,7 @@ def get_batch_job_info(jobId):
     """
 
     job_description = batch.describe_jobs(jobs=[jobId])
-    
+        
     if len(job_description) == 0:
         raise "There is no jobs with that id. Please specify a valid job id."
     
@@ -166,12 +169,30 @@ def get_batch_job_info(jobId):
         "tags": job_description["jobs"][0]["tags"],
     }
 
-    if output["status"] in ["STARTING", "RUNNING", "SUCCEEDED", "FAILED"]:
+    if output["status"] == "SUCCEEDED":
         output["logStreamName"] = job_description["jobs"][0]["container"][
             "logStreamName"
         ]
         logs = get_batch_logs(output["logStreamName"])
         output["logs"] = logs
+        output["statusReason"] = job_description['jobs'][0]['statusReason']
+    elif output["status"] == "FAILED":
+        try:
+            output["logStreamName"] = job_description["jobs"][0]["container"][
+                "logStreamName"
+            ]
+            logs = get_batch_logs(output["logStreamName"])
+            output["logs"] = logs
+        except Exception as e:
+            logger.info("This failed job does not have logs yet.")
+            return output
+    else: # status = SUBMITTED/PENDING/RUNNABLE/STARTING/RUNNING
+        output["logStreamName"] = job_description["jobs"][0]["container"][
+            "logStreamName"
+        ]
+        logs = get_batch_logs(output["logStreamName"])
+        output["logs"] = logs  
+    
     return output
 
 def submit_batch_alphafold_job(
