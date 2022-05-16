@@ -371,7 +371,7 @@ class BatchStack(cdk.Stack):
                         ),
                     ),
                     batch.CfnJobDefinition.VolumesProperty(
-                        name="pdb_sqres",
+                        name="pdb_seqres",
                         host=batch.CfnJobDefinition.VolumesHostProperty(
                             source_path="/fsx/pdb_seqres"
                         ),
@@ -536,7 +536,7 @@ class BatchStack(cdk.Stack):
                         ),
                     ),
                     batch.CfnJobDefinition.VolumesProperty(
-                        name="pdb_sqres",
+                        name="pdb_seqres",
                         host=batch.CfnJobDefinition.VolumesHostProperty(
                             source_path="/fsx/pdb_seqres"
                         ),

@@ -3,28 +3,18 @@
 """
 Helper functions for the AWS-Alphafold API
 """
-from string import ascii_uppercase, ascii_lowercase
 from datetime import datetime
 import os
 import uuid
-import string
-import json
 import re
-# import sagemaker
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-# from Bio import AlignIO
-# from Bio.Align import MultipleSeqAlignment
-# import matplotlib.pyplot as plt
-# from matplotlib import colors
-# import numpy as np
-# import py3Dmol
+
 import boto3
-import pandas as pd
+# import pandas as pd
 
 boto_session = boto3.session.Session()
-# sm_session = sagemaker.session.Session(boto_session)
 region = boto_session.region_name
 s3 = boto_session.client("s3", region_name=region)
 batch = boto_session.client("batch", region_name=region)
@@ -36,7 +26,6 @@ def upload_fasta_to_s3(
     ids,
     bucket,
     job_name=uuid.uuid4(),
-    region="us-east-1",
 ):
 
     """
@@ -129,6 +118,31 @@ def list_alphafold_stacks():
             af_stacks.append(stack)
     return af_stacks
 
+def get_batch_logs(logStreamName):
+    """
+    Retrieve and format logs for batch job.
+    """
+    try:
+        response = logs_client.get_log_events(
+            logGroupName="/aws/batch/job", 
+            logStreamName=logStreamName,
+            startFromHead=False,
+            limit=20,
+        )
+    except logs_client.meta.client.exceptions.ResourceNotFoundException:
+        return f"Log stream {logStreamName} does not exist. Please try again in a few minutes"
+
+    messages = ''
+    for event in (response)['events']:
+        messages = messages+'\n'+(str(event['message']))
+
+    # logs = pd.DataFrame.from_dict(response["events"])
+    # logs.timestamp = logs.timestamp.transform(
+    #     lambda x: datetime.fromtimestamp(x / 1000)
+    # )
+    # logs.drop("ingestionTime", axis=1, inplace=True)
+    return messages
+
 def get_batch_job_info(jobId):
 
     """
@@ -136,7 +150,10 @@ def get_batch_job_info(jobId):
     """
 
     job_description = batch.describe_jobs(jobs=[jobId])
-
+    
+    if len(job_description) == 0:
+        raise "There is no jobs with that id. Please specify a valid job id."
+    
     output = {
         "jobArn": job_description["jobs"][0]["jobArn"],
         "jobName": job_description["jobs"][0]["jobName"],
@@ -153,27 +170,9 @@ def get_batch_job_info(jobId):
         output["logStreamName"] = job_description["jobs"][0]["container"][
             "logStreamName"
         ]
+        logs = get_batch_logs(output["logStreamName"])
+        output["logs"] = logs
     return output
-
-def get_batch_logs(logStreamName):
-
-    """
-    Retrieve and format logs for batch job.
-    """
-
-    try:
-        response = logs_client.get_log_events(
-            logGroupName="/aws/batch/job", logStreamName=logStreamName
-        )
-    except logs_client.meta.client.exceptions.ResourceNotFoundException:
-        return f"Log stream {logStreamName} does not exist. Please try again in a few minutes"
-
-    logs = pd.DataFrame.from_dict(response["events"])
-    logs.timestamp = logs.timestamp.transform(
-        lambda x: datetime.fromtimestamp(x / 1000)
-    )
-    logs.drop("ingestionTime", axis=1, inplace=True)
-    return logs
 
 def submit_batch_alphafold_job(
     job_name,
@@ -185,8 +184,8 @@ def submit_batch_alphafold_job(
     bfd_database_path="/mnt/bfd_database_path/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
     mgnify_database_path="/mnt/mgnify_database_path/mgy_clusters_2018_12.fa",
     pdb70_database_path="/mnt/pdb70_database_path/pdb70",
-    obsolete_pdbs_path="/mnt/obsolete_pdbs_path/obsolete.dat",
-    template_mmcif_dir="/mnt/template_mmcif_dir/mmcif_files",
+    obsolete_pdbs_path="/mnt/obsolete_pdbs_database_path/obsolete.dat",
+    template_mmcif_dir="/mnt/template_mmcif_database_path/mmcif_files",
     pdb_seqres_database_path="/mnt/pdb_seqres_database_path/pdb_seqres.txt",
     small_bfd_database_path="/mnt/small_bfd_database_path/bfd-first_non_consensus_sequences.fasta",
     uniclust30_database_path="/mnt/uniclust30_database_path/uniclust30_2018_08/uniclust30_2018_08",
@@ -285,7 +284,6 @@ def submit_batch_alphafold_job(
         job_definition = batch_resources["cpu_job_definition"]
         job_queue = batch_resources["cpu_job_queue"]
 
-    print(container_overrides)
     if depends_on is None:
         response = batch.submit_job(
             jobDefinition=job_definition,
