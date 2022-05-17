@@ -5,4 +5,14 @@ random_commands.sh
 aws-alphafold.zip
 notebooks/data/*
 notebooks/nbhelpers/__pycache__*
-notebooks/.DS_Store
+notebooks/
+.DS_Store
+venv37/
+__pycache__/
+cdk.out/
+chalice.out/
+infrastructure/cdk.context.json
+.idea/
+cdkv1/.env
+.env
+cdk.context.json
