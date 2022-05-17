@@ -1,0 +1,42 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "FirstStatement",
+			"Effect": "Allow",
+			"Action": [
+                "batch:SubmitJob", 
+                "batch:DescribeJobs"
+            ],
+			"Resource": "*"
+		},
+		{
+			"Sid": "SecondStatement",
+			"Effect": "Allow",
+			"Action": "s3:PutObject",
+			"Resource": "*"
+		},
+		{
+			"Sid": "ThirdStatement",
+			"Effect": "Allow",
+			"Action": [
+				"cloudformation:ListStacks",
+				"cloudformation:ListStackResources"
+			],
+			"Resource": "*"
+		},
+        {
+            "Sid": "FourthStatement",
+            "Effect": "Allow",
+            "Action": [
+                "logs:GetLogEvents",
+				"logs:CreateLogGroup",
+				"logs:CreateLogStream",
+				"logs:DescribeLogGroups",
+				"logs:DescribeLogStreams",
+				"logs:PutLogEvents"
+            ],
+			"Resource": "*"
+        }
+	]
+}

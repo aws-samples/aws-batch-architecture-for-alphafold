@@ -10,4 +10,11 @@ notebooks/.DS_Store
 .env
 __pycache__/
 cdk.out/
+notebooks/
+.DS_Store
+venv37/
+__pycache__/
+cdk.out/
+chalice.out/
+infrastructure/cdk.context.json
 cdk.context.json
