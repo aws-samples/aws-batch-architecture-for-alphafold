@@ -17,7 +17,11 @@ environment = core.Environment(
     region=os.environ["CDK_DEFAULT_REGION"]
 )
 
-vpc_stack = VpcStack(app, "LokaFoldVpcStack", env=environment)
+vpc_stack = VpcStack(
+    app, 
+    "LokaFoldVpcStack",
+    env=environment
+)
 file_system_stack = FileSystemStack(
     app, 
     "LokaFoldFileSystemStack",
@@ -52,7 +56,6 @@ sagemaker_stack = SageMakerStack(
     os.environ.get("launch_sagemaker", True),
     env=environment
 )
-# TODO: add vpc to lambda
 chalice_stack = ChaliceApp(
     app, 
     "LokaFoldChaliceStack",

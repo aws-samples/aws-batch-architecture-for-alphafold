@@ -51,7 +51,7 @@ def upload_fasta_to_s3(
     response = s3.upload_file(file_out, bucket, object_key)
     os.remove(file_out)
     s3_uri = f"s3://{bucket}/{object_key}"
-    print(f"Sequence file uploaded to {s3_uri}")
+    logger.info(f"Sequence file uploaded to {s3_uri}")
     return object_key
 
 def create_job_name(suffix=None):
@@ -79,11 +79,11 @@ def validate_input(input_sequences):
         output.append(sequence)
 
     if len(output) == 1:
-        print("Using the monomer models.")
+        logger.info("Using the monomer models.")
         model_preset = "monomer"
         return output, model_preset
     elif len(output) > 1:
-        print("Using the multimer models.")
+        logger.info("Using the multimer models.")
         model_preset = "multimer"
         return output, model_preset
     else:

@@ -33,9 +33,7 @@ def index():
     # TODO: add schema validation using api gateway cababilities
     if request.method == 'GET':
         job_id = request.query_params["job_id"]
-        # job_id_2 = request.query_params["prediction_job_id"]
         status = get_batch_job_info(job_id)
-        # status_2 = get_batch_job_info(job_id_2)
         response = {
             "job": status,
         }
@@ -44,10 +42,6 @@ def index():
         input_sequences = list(body["sequences"].values())
         input_ids = list(body["sequences"].keys())
         db_preset = body["db_preset"]
-        # cpu = body["cpu"]
-        # memory = body["memory"]
-        # gpu = body["gpu"]
-        # run_features_only = body["run_features_only"]
         
         # Validate input for invalid aminoacid residues
         input_sequences, model_preset = validate_input(input_sequences)
