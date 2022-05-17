@@ -60,8 +60,8 @@ class CodePipelineStack(cdk.Stack):
             code=codecommit.CfnRepository.CodeProperty(
                 branch_name="main",
                 s3=codecommit.CfnRepository.S3Property(
-                    bucket="aws-hcls-ml",
-                    key="blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip",
+                    bucket="cfn-without-vpc",
+                    key="lokafold-v2.2.0.zip",
                 ),
             ),
         )

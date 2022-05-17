@@ -57,7 +57,7 @@ sagemaker_stack = SageMakerStack(
     env=environment
 )
 chalice_stack = ChaliceApp(
-    app, 
+    app,
     "LokaFoldChaliceStack",
     env=environment
 )
