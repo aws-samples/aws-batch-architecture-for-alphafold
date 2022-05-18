@@ -148,39 +148,6 @@ class BatchStack(cdk.Stack):
             type="MANAGED",
         )
         private_compute_environment.add_depends_on(launch_template)
-
-        # Using CfnComputeEnvironment leads to an error where both security_groups and subnets
-        # can't be configured at the same time.
-        # public_compute_environment = batch.ComputeEnvironment(
-        #     self, 
-        #     "PublicCPUComputeEnvironment",
-        #     compute_resources=batch.ComputeResources(
-        #         allocation_strategy=batch.AllocationStrategy.BEST_FIT_PROGRESSIVE,
-        #         instance_role=instance_profile.attr_arn,
-        #         instance_types=[
-        #             ec2.InstanceType.of(instance_class=ec2.InstanceClass.STANDARD5, instance_size=ec2.InstanceSize.LARGE),
-        #             ec2.InstanceType.of(instance_class=ec2.InstanceClass.MEMORY5, instance_size=ec2.InstanceSize.LARGE),
-        #             ec2.InstanceType.of(instance_class=ec2.InstanceClass.COMPUTE5, instance_size=ec2.InstanceSize.LARGE),
-        #             ec2.InstanceType.of(instance_class=ec2.InstanceClass.STANDARD5, instance_size=ec2.InstanceSize.XLARGE),
-        #             ec2.InstanceType.of(instance_class=ec2.InstanceClass.MEMORY5, instance_size=ec2.InstanceSize.XLARGE),
-        #             ec2.InstanceType.of(instance_class=ec2.InstanceClass.COMPUTE5, instance_size=ec2.InstanceSize.XLARGE),
-        #         ],
-        #         launch_template=batch.LaunchTemplateSpecification(
-        #             launch_template_name=public_launch_template.launch_template_name,
-        #             version=launch_template.attr_latest_version_number,
-        #         ),
-        #         maxv_cpus=256,
-        #         minv_cpus=0,
-        #         security_groups=[sg],
-        #         vpc_subnets=ec2.SubnetSelection(
-        #             subnets=[public_subnet]
-        #         ),
-        #         type=batch.ComputeResourceType.ON_DEMAND,
-        #         vpc=vpc,
-        #     ),
-        #     managed=True,
-        #     enabled=True
-        # )
         
         public_compute_environment = batch.CfnComputeEnvironment(
             self,

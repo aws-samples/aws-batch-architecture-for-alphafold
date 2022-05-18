@@ -24,7 +24,6 @@ class CodePipelineStack(cdk.Stack):
             self,
             "CodePipelineS3Bucket",
             encryption=s3.BucketEncryption.S3_MANAGED,
-            # access_control=s3.BucketAccessControl.PRIVATE,
             removal_policy=cdk.RemovalPolicy.RETAIN,
             versioned=False,
         )
@@ -60,8 +59,8 @@ class CodePipelineStack(cdk.Stack):
             code=codecommit.CfnRepository.CodeProperty(
                 branch_name="main",
                 s3=codecommit.CfnRepository.S3Property(
-                    bucket="aws-hcls-ml",
-                    key="blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip",
+                    bucket="cfn-without-vpc",
+                    key="lokafold-v2.2.0.zip",
                 ),
             ),
         )

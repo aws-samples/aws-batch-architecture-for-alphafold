@@ -26,7 +26,6 @@ class FileSystemStack(cdk.Stack):
             self,
             "FSX",
             file_system_type="LUSTRE",
-            # file_system_type_version="2.12",
             lustre_configuration=fsx.CfnFileSystem.LustreConfigurationProperty(
                 data_compression_type="LZ4",
                 deployment_type="PERSISTENT_2",
