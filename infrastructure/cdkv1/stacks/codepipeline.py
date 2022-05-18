@@ -24,7 +24,6 @@ class CodePipelineStack(cdk.Stack):
             self,
             "CodePipelineS3Bucket",
             encryption=s3.BucketEncryption.S3_MANAGED,
-            # access_control=s3.BucketAccessControl.PRIVATE,
             removal_policy=cdk.RemovalPolicy.RETAIN,
             versioned=False,
         )

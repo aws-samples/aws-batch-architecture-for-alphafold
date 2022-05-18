@@ -43,13 +43,6 @@ flags.DEFINE_list(
     'multiple sequences, then it will be folded as a multimer. Paths should be '
     'separated by commas. All FASTA paths must have a unique basename as the '
     'basename is used to name the output directories for each prediction.')
-# flags.DEFINE_list(
-#     'is_prokaryote_list', None, 'Optional for multimer system, not used by the '
-#     'single chain system. This list should contain a boolean for each fasta '
-#     'specifying true where the target complex is from a prokaryote, and false '
-#     'where it is not, or where the origin is unknown. These values determine '
-#     'the pairing method for the MSA.')
-
 flags.DEFINE_string('data_dir', None, 'Path to directory of supporting data.')
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
                     'store the results.')
@@ -180,7 +173,6 @@ def predict_structure(
     amber_relaxer: relax.AmberRelaxation,
     benchmark: bool,
     random_seed: int,
-    # is_prokaryote: Optional[bool] = None,
 ### ---------------------------------------------
 ### Modified by AWS to add support for 2-step jobs
 
@@ -209,16 +201,10 @@ def predict_structure(
         feature_dict = pickle.load(open(features_path, "rb"))
     else:
 ### ---------------------------------------------        
-        # if is_prokaryote is None:
         feature_dict = data_pipeline.process(
             input_fasta_path=fasta_path,
             msa_output_dir=msa_output_dir
         )
-        # else:
-        #     feature_dict = data_pipeline.process(
-        #         input_fasta_path=fasta_path,
-        #         msa_output_dir=msa_output_dir,
-        #         is_prokaryote=is_prokaryote)
         timings['features'] = time.time() - t_0
 
         # Write out features as a pickled dictionary.
@@ -372,22 +358,6 @@ def main(argv):
     fasta_names = [pathlib.Path(p).stem for p in FLAGS.fasta_paths]
     if len(fasta_names) != len(set(fasta_names)):
         raise ValueError('All FASTA paths must have a unique basename.')
-
-    # # Check that is_prokaryote_list has same number of elements as fasta_paths,
-    # # and convert to bool.
-    # if FLAGS.is_prokaryote_list:
-    #     if len(FLAGS.is_prokaryote_list) != len(FLAGS.fasta_paths):
-    #         raise ValueError('--is_prokaryote_list must either be omitted or match '
-    #             'length of --fasta_paths.')
-    #     is_prokaryote_list = []
-    #     for s in FLAGS.is_prokaryote_list:
-    #         if s in ('true', 'false'):
-    #             is_prokaryote_list.append(s == 'true')
-    #         else:
-    #             raise ValueError('--is_prokaryote_list must contain comma separated '
-    #                 'true or false values.')
-    # else:  # Default is_prokaryote to False.
-    #     is_prokaryote_list = [False] * len(fasta_names)
 ### ---------------------------------------------
 ### Modified by AWS to add support for 2-step jobs.
 
@@ -460,7 +430,6 @@ def main(argv):
         model_params = data.get_model_haiku_params(
             model_name=model_name, data_dir=FLAGS.data_dir)
         model_runner = model.RunModel(model_config, model_params)
-        # model_runners[model_name] = model_runner
         for i in range(num_predictions_per_model):
             model_runners[f'{model_name}_pred_{i}'] = model_runner
 
@@ -480,13 +449,11 @@ def main(argv):
 
     random_seed = FLAGS.random_seed
     if random_seed is None:
-        # random_seed = random.randrange(sys.maxsize // len(model_names))
         random_seed = random.randrange(sys.maxsize // len(model_runners))
     logging.info('Using random seed %d for the data pipeline', random_seed)
 
     # Predict structure for each of the sequences.
     for i, fasta_path in enumerate(FLAGS.fasta_paths):
-        # is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
         fasta_name = fasta_names[i]
 ### ---------------------------------------------
 ### Modified by AWS to add support for 2-step jobs and data storage in S3.
@@ -539,10 +506,8 @@ def main(argv):
             amber_relaxer=amber_relaxer,
             benchmark=FLAGS.benchmark,
             random_seed=random_seed,
-            # is_prokaryote=is_prokaryote,
 ### ---------------------------------------------            
 ### Modified by AWS to add support for 2-step jobs.
-           
             features_path=features_path,
             run_features_only=FLAGS.run_features_only            
         )
