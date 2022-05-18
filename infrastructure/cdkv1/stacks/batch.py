@@ -177,7 +177,7 @@ class BatchStack(cdk.Stack):
             compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
                 allocation_strategy="BEST_FIT_PROGRESSIVE",
                 instance_role=instance_profile.attr_arn,
-                instance_types=["g4dn"],
+                instance_types=["g5"],
                 launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
                     launch_template_name=launch_template.launch_template_name,
                     version=launch_template.attr_latest_version_number,
