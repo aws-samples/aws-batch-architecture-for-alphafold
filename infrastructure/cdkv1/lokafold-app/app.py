@@ -26,7 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.route("/", methods=["POST", "GET"])
+@app.route("/compute", methods=["POST", "GET"])
 def index():
     request = app.current_request
     body = request.json_body
@@ -42,6 +42,7 @@ def index():
         input_sequences = list(body["sequences"].values())
         input_ids = list(body["sequences"].keys())
         db_preset = body["db_preset"]
+        use_spot_instances = body["use_spot_instances"]
         
         # Validate input for invalid aminoacid residues
         input_sequences, model_preset = validate_input(input_sequences)
@@ -88,6 +89,7 @@ def index():
                 memory=prep_mem,
                 gpu=prep_gpu,
                 run_features_only=True,
+                use_spot_instances=use_spot_instances
             )
             
             step_2_response = submit_batch_alphafold_job(

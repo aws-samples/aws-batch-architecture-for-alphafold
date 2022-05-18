@@ -28,13 +28,19 @@ def submit_download_data_job(
     memory,    
     download_dir,
     download_mode,
+    use_spot_instances,
     ):
     
     if stack_name is None:
         stack_name = nbhelpers.list_alphafold_stacks()[0]["StackName"]
     batch_resources = nbhelpers.get_batch_resources(stack_name)
+    
     job_definition = batch_resources["download_job_definition"]
-    job_queue = batch_resources["download_job_queue"]
+
+    if use_spot_instances:
+        job_queue = batch_resources["download_spot_job_queue"]
+    else:
+        job_queue = batch_resources["download_job_queue"]
 
     container_overrides = {
         "command": [
@@ -54,7 +60,6 @@ def submit_download_data_job(
         jobQueue=job_queue,
         containerOverrides=container_overrides,
     )
-
     return response
 
 if __name__ == "__main__":
