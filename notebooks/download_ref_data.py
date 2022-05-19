@@ -17,6 +17,7 @@ def _parse_args():
     parser.add_argument('--memory', type=int, default=16)
     parser.add_argument('--download_dir', type=str, default="/fsx")
     parser.add_argument('--download_mode', type=str, default="reduced_dbs")
+    parser.add_argument('--use_spot_instances', type=str, default=True)
     
     return parser.parse_known_args()
 
@@ -74,6 +75,7 @@ if __name__ == "__main__":
         cpu = args.cpu,
         memory = args.memory,        
         download_dir = args.download_dir,
-        download_mode = args.download_mode
+        download_mode = args.download_mode,
+        use_spot_instances = args.use_spot_instances
     )
     print(response)
