@@ -13,7 +13,7 @@ RUN echo 'chmod -R 755 ${DOWNLOAD_DIR}' >> download_all_data.sh
 COPY download_all_data_but_mmcif.sh download_pdb_mmcif_from_s3.sh /
 RUN amazon-linux-extras install epel -y \
   && yum update -y \
-  && yum install aria2 tar rsync -y
+  && yum install aria2 tar rsync unzip -y
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
   unzip awscliv2.zip && \
   sudo ./aws/install
