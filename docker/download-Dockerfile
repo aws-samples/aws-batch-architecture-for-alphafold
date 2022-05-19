@@ -10,6 +10,7 @@ RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alpha
 RUN cp -R /app/alphafold/scripts/* /
 RUN rm -rf /app
 RUN echo 'chmod -R 755 ${DOWNLOAD_DIR}' >> download_all_data.sh
+COPY download_all_data_but_mmcif.sh download_pdb_mmcif_from_s3.sh /
 RUN amazon-linux-extras install epel -y \
   && yum update -y \
   && yum install aria2 tar rsync -y
