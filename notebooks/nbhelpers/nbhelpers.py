@@ -97,7 +97,7 @@ def get_batch_resources(stack_name):
         if resource["LogicalResourceId"] == "PrivateGPUJobQueue":
             gpu_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "CPUFoldingJobDefinition":
-            cpu_job_definition = resource["PhysicalResourceId"]
+            cpu_job_definition = download_job_definition = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "PrivateCPUJobQueue":
             cpu_job_queue = download_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "CPUDownloadJobDefinition":
