@@ -59,6 +59,17 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 
 Replacing `<STACK NAME>` with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
 
+NOTE: If you're having trouble downloading PDB mmCIF you have two options:
+
+1. Update the `download_pdb_mmcif.sh` script to use a different mirror, per the DeepMind instructions, then rebuild the container by pushing the repo to CodeCommit and releasing the CodePipeline, or
+2. Download a snapshot of the PDB mmCIF data from S3 by running the following commands:
+
+```
+> python notebooks/download_ref_data.py --stack_name <STACK NAME> --script download_pdb_mmcif_from_s3.sh
+> python notebooks/download_ref_data.py --stack_name <STACK NAME> --script download_all_data_but_mmcif.sh
+
+```
+
 2. It will take several hours to populate the file system. You can track its progress by navigating to the file system in the FSx for Lustre console.
 
 ### Cleaning Up
