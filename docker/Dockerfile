@@ -66,7 +66,7 @@ RUN conda update -qy conda \
 ### ---------------------------------------------
 ### Modified by Loka to use our own version of the repository
 # RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alphafold.git /app/alphafold
-RUN git clone --branch feat/F22 --depth 1 https://github.com/LokaHQ/LokaFold.git /app/alphafold
+RUN git clone --branch main --depth 1 https://github.com/LokaHQ/LokaFold.git /app/alphafold
 COPY run_aws_alphafold.py /app/alphafold
 ### ---------------------------------------------     
 RUN wget -q -P /app/alphafold/alphafold/common/ \
