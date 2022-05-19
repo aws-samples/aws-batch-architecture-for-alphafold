@@ -149,6 +149,30 @@ class BatchStack(cdk.Stack):
         )
         private_compute_environment.add_depends_on(launch_template)
         
+        private_spot_compute_environment = batch.CfnComputeEnvironment(
+            self,
+            "PrivateSpotCPUComputeEnvironment",
+            compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
+                # allocation_strategy="BEST_FIT_PROGRESSIVE",
+                allocation_strategy="SPOT_CAPACITY_OPTIMIZED",
+                instance_role=instance_profile.attr_arn,
+                instance_types=["m5", "r5", "c5"],
+                launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
+                    launch_template_name=launch_template.launch_template_name,
+                    version=launch_template.attr_latest_version_number,
+                ),
+                maxv_cpus=256,
+                minv_cpus=0,
+                security_group_ids=[sg.security_group_id],
+                subnets=[private_subnet.subnet_id],
+                # type="EC2",
+                type="SPOT",
+            ),
+            state="ENABLED",
+            type="MANAGED",
+        )
+        private_spot_compute_environment.add_depends_on(launch_template)
+        
         public_compute_environment = batch.CfnComputeEnvironment(
             self,
             "PublicCPUComputeEnvironment",
@@ -170,6 +194,28 @@ class BatchStack(cdk.Stack):
             type="MANAGED",
         )
         public_compute_environment.add_depends_on(public_launch_template)
+        
+        public_spot_compute_environment = batch.CfnComputeEnvironment(
+            self,
+            "PublicSpotCPUComputeEnvironment",
+            compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
+                allocation_strategy="SPOT_CAPACITY_OPTIMIZED",
+                instance_role=instance_profile.attr_arn,
+                instance_types=["m5", "r5", "c5"],
+                launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
+                    launch_template_name=public_launch_template.launch_template_name,
+                    version=public_launch_template.attr_latest_version_number,
+                ),
+                maxv_cpus=256,
+                minv_cpus=0,
+                # security_group_ids=[sg.security_group_id],
+                subnets=[public_subnet.subnet_id],
+                type="SPOT",
+            ),
+            state="ENABLED",
+            type="MANAGED",
+        )
+        public_spot_compute_environment.add_depends_on(public_launch_template)
         
         gpu_compute_environment = batch.CfnComputeEnvironment(
             self,
@@ -205,6 +251,19 @@ class BatchStack(cdk.Stack):
             priority=10,
             state="ENABLED",
         )
+        
+        private_spot_cpu_queue = batch.CfnJobQueue(
+            self,
+            "PrivateSpotCPUJobQueue",
+            compute_environment_order=[
+                batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
+                    compute_environment=private_spot_compute_environment.attr_compute_environment_arn,
+                    order=1,
+                ),
+            ],
+            priority=10,
+            state="ENABLED",
+        )
 
         public_cpu_queue = batch.CfnJobQueue(
             self,
@@ -212,6 +271,19 @@ class BatchStack(cdk.Stack):
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
                     compute_environment=public_compute_environment.attr_compute_environment_arn,
+                    order=1,
+                ),
+            ],
+            priority=10,
+            state="ENABLED",
+        )
+
+        public_spot_cpu_queue = batch.CfnJobQueue(
+            self,
+            "PublicSpotCPUJobQueue",
+            compute_environment_order=[
+                batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
+                    compute_environment=public_spot_compute_environment.attr_compute_environment_arn,
                     order=1,
                 ),
             ],

@@ -79,7 +79,7 @@ def list_alphafold_stacks():
     for stack in cfn.list_stacks(
         StackStatusFilter=["CREATE_COMPLETE", "UPDATE_COMPLETE"]
     )["StackSummaries"]:
-        if "Alphafold on AWS Batch" in stack["TemplateDescription"]:
+        if stack["StackName"] == "LokaFoldBatchStack":
             af_stacks.append(stack)
     return af_stacks
 
@@ -100,10 +100,14 @@ def get_batch_resources(stack_name):
             cpu_job_definition = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "PrivateCPUJobQueue":
             cpu_job_queue = resource["PhysicalResourceId"]
+        if resource["LogicalResourceId"] == "PrivateSpotCPUJobQueue":
+            cpu_spot_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "CPUDownloadJobDefinition":
             download_job_definition = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "PublicCPUJobQueue":
             download_job_queue = resource["PhysicalResourceId"]
+        if resource["LogicalResourceId"] == "PublicSpotCPUJobQueue":
+            download_spot_job_queue = resource["PhysicalResourceId"]
     return {
         "gpu_job_definition": gpu_job_definition,
         "gpu_job_queue": gpu_job_queue,
@@ -111,6 +115,8 @@ def get_batch_resources(stack_name):
         "cpu_job_queue": cpu_job_queue,
         "download_job_definition": download_job_definition,
         "download_job_queue": download_job_queue,
+        "cpu_spot_job_queue": cpu_spot_job_queue,
+        "download_spot_job_queue": download_spot_job_queue,
     }
 
 
