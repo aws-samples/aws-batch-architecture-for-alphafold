@@ -16,7 +16,7 @@ RUN amazon-linux-extras install epel -y \
   && yum install aria2 tar rsync unzip -y
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
   unzip awscliv2.zip && \
-  sudo ./aws/install
+  ./aws/install
 VOLUME /fsx
 
 ENTRYPOINT ["usr/bin/bash"]
