@@ -37,6 +37,13 @@ Parameters:
     Default: v2.1.2
     AllowedValues:
       - v2.1.2  
+  Environment:
+    Description: Leave this as "main" unless you are testing a pre-release versions of this architecture.
+    Type: String
+    Default: main
+    AllowedValues:
+      - main
+      - dev
 Conditions:
   createSageMakerNotebook: !Equals [ !Ref 'LaunchSageMakerNotebook', 'Y' ]
 Resources:
@@ -719,7 +726,7 @@ Resources:
         BranchName: "main"
         S3:
           Bucket: "aws-hcls-ml"
-          Key: "blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip"
+          Key: !Sub 'blog_post_support_materials/aws-alphafold/${Environment}/aws-alphafold.zip'
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [
