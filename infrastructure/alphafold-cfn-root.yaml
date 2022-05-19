@@ -1,0 +1,93 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+# Deploy with
+# aws cloudformation package --template-file alphafold-cfn-root.yaml --output-template alphafold-cfn-packaged.yaml --s3-bucket alphafold-cfn-build
+# aws cloudformation deploy --template-file alphafold-cfn-packaged.yaml --stack-name aws-batch-alphafold
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Root stack for running AWS Batch Architecture for AlphaFold.
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: AlphaFold
+  StackAvailabilityZone:
+    Type: String
+    AllowedValues: [a, b, c]
+    Default: a
+  VPC:
+    Type: String
+    Default: ""
+  DefaultSecurityGroup:
+    Type: String
+    Default: ""
+  Subnet:
+    Type: String
+    Default: ""
+  FileSystemId:
+    Type: String
+    Default: ""
+  FileSystemMountName:
+    Type: String
+    Default: ""
+
+Conditions:
+  CreateNetwork: !Or [ !Equals [ !Ref VPC, "" ], !Equals [ !Ref DefaultSecurityGroup, "" ], !Equals [ !Ref Subnet, "" ] ]
+  CreateFileSystem: !Or [ !Equals [ !Ref FileSystemId, "" ], !Equals [ !Ref FileSystemMountName, "" ], !Equals [ !Ref VPC, "" ], !Equals [ !Ref DefaultSecurityGroup, "" ], !Equals [ !Ref Subnet, "" ] ]
+
+Resources:
+  Network:
+    Type: AWS::CloudFormation::Stack
+    Condition: CreateNetwork
+    Properties:
+      TemplateURL: alphafold-cfn-network.yaml
+      Parameters:
+        ApplicationName: !Ref ApplicationName
+        StackAvailabilityZone: !Join ["", [!Ref AWS::Region, !Ref StackAvailabilityZone]]
+
+  FileSystem:
+    Type: AWS::CloudFormation::Stack
+    Condition: CreateFileSystem
+    Properties:
+      TemplateURL: alphafold-cfn-fsx-lustre.yaml
+      Parameters:
+        ApplicationName: !Ref ApplicationName
+        DefaultSecurityGroup: 
+          "Fn::If":
+            - CreateNetwork
+            - !GetAtt Network.Outputs.DefaultSecurityGroup
+            - !Ref DefaultSecurityGroup
+        FSXForLustreStorageCapacity: 1200
+        FSxForLustreThroughput: 500
+        Subnet: 
+          "Fn::If":
+            - CreateNetwork
+            - !GetAtt Network.Outputs.PrivateSubnet
+            - !Ref Subnet
+
+  BatchEnvironment:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: alphafold-cfn-batch.yaml
+      Parameters:
+        ApplicationName: !Ref ApplicationName
+        DefaultSecurityGroup: 
+          "Fn::If":
+            - CreateNetwork
+            - !GetAtt Network.Outputs.DefaultSecurityGroup
+            - !Ref DefaultSecurityGroup        
+        FileSystemId: 
+          "Fn::If":
+            - CreateFileSystem
+            - !GetAtt FileSystem.Outputs.FileSystemId
+            - !Ref FileSystemId
+        FileSystemMountName: 
+          "Fn::If":
+            - CreateFileSystem
+            - !GetAtt FileSystem.Outputs.FileSystemMountName
+            - !Ref FileSystemMountName
+        Subnet: 
+          "Fn::If":
+            - CreateNetwork
+            - !GetAtt Network.Outputs.PrivateSubnet
+            - !Ref Subnet
