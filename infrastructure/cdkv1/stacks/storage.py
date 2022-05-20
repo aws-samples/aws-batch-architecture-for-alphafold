@@ -21,8 +21,6 @@ class StorageStack(cdk.Stack):
             removal_policy=cdk.RemovalPolicy.RETAIN,
             versioned=False,
         )
-        # if os.environ.get("first_time_running", False):
-            # S3 bucket for alphafold code
         self.code_asset = s3_assets.Asset(
             self, 
             "LokaFoldCodeAsset",

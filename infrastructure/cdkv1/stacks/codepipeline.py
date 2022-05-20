@@ -61,8 +61,8 @@ class CodePipelineStack(cdk.Stack):
             code=codecommit.CfnRepository.CodeProperty(
                 branch_name="main",
                 s3=codecommit.CfnRepository.S3Property(
-                    bucket=code_asset.s3_bucket_name, #"cfn-without-vpc",
-                    key=code_asset.s3_object_key, #"lokafold-v2.2.0.zip"
+                    bucket=code_asset.s3_bucket_name,
+                    key=code_asset.s3_object_key,
                 ),
             ),
         )
