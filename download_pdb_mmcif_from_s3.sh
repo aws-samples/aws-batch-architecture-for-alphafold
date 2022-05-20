@@ -43,4 +43,4 @@ find "${RAW_DIR}" -type d -empty -delete
 
 # aria2c "ftp://ftp.wwpdb.org/pub/pdb/data/status/obsolete.dat" --dir="${ROOT_DIR}"
 
-aws s3 cp --recursive s3://aws-batch-architecture-for-alphafold-public-artifacts/pdb_mmcif/obsolete.dat "${ROOT_DIR}"
+aws s3 cp s3://aws-batch-architecture-for-alphafold-public-artifacts/pdb_mmcif/obsolete.dat "${ROOT_DIR}"
