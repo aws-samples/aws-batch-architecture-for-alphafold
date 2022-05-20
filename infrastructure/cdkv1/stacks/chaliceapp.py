@@ -4,7 +4,7 @@ from aws_cdk.core import (
 )
 from aws_cdk import core as cdk
 from chalice.cdk import Chalice
-
+import aws_cdk.aws_s3 as s3
 
 RUNTIME_SOURCE_DIR = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), 
@@ -12,7 +12,7 @@ RUNTIME_SOURCE_DIR = os.path.join(
 )
 
 class ChaliceApp(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, **kwargs):
+    def __init__(self, scope: Construct, id: str, bucket: s3.Bucket, **kwargs):
         super().__init__(scope, id, **kwargs)
         
         self.chalice = Chalice(
@@ -30,7 +30,7 @@ class ChaliceApp(cdk.Stack):
                 "autogen_policy": False,
                 "iam_policy_file": "policy.json",
                 "environment_variables": {
-                    "FASTA_BUCKET": "lokafold-ec2-results"
+                    "FASTA_BUCKET": bucket.bucket_name
                 }
             }
         )

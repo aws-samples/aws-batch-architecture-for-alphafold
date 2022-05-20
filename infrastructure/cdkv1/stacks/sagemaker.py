@@ -5,10 +5,20 @@ from aws_cdk.core import (
 )
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_sagemaker as sagemaker
-
+import aws_cdk.aws_kms as kms
+import aws_cdk.aws_codecommit as codecommit
+import aws_cdk.aws_ec2 as ec2
 
 class SageMakerStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, vpc, sg, repo, key, launch_sagemaker, **kwargs) -> None:
+    def __init__(self, 
+                 scope: Construct, 
+                 id: str, 
+                 vpc: ec2.Vpc, 
+                 sg: str, 
+                 repo: codecommit.CfnRepository, 
+                 key: kms.Key, 
+                 launch_sagemaker: bool,
+                 **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
         if launch_sagemaker:
             # vpc

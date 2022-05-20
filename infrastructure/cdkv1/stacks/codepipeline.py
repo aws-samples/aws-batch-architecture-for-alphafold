@@ -10,11 +10,12 @@ import aws_cdk.aws_s3 as s3
 import aws_cdk.aws_codecommit as codecommit
 import aws_cdk.aws_codebuild as codebuild
 import aws_cdk.aws_codepipeline as codepipeline
-
+import aws_cdk.aws_kms as kms
+import aws_cdk.aws_s3_assets as s3_assets
 
 
 class CodePipelineStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, key, vpc, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, key: kms.Key, code_asset: s3_assets.Asset, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # TODO: move to .env        
@@ -24,8 +25,9 @@ class CodePipelineStack(cdk.Stack):
             self,
             "CodePipelineS3Bucket",
             encryption=s3.BucketEncryption.S3_MANAGED,
-            removal_policy=cdk.RemovalPolicy.RETAIN,
+            removal_policy=cdk.RemovalPolicy.DESTROY,
             versioned=False,
+            auto_delete_objects=True,
         )
 
         bucket.add_to_resource_policy(
@@ -59,11 +61,12 @@ class CodePipelineStack(cdk.Stack):
             code=codecommit.CfnRepository.CodeProperty(
                 branch_name="main",
                 s3=codecommit.CfnRepository.S3Property(
-                    bucket="cfn-without-vpc",
-                    key="lokafold-v2.2.0.zip",
+                    bucket=code_asset.s3_bucket_name, #"cfn-without-vpc",
+                    key=code_asset.s3_object_key, #"lokafold-v2.2.0.zip"
                 ),
             ),
         )
+        self.repo.apply_removal_policy(cdk.RemovalPolicy.RETAIN)
         
         self.folding_container = ecr.CfnRepository(
             self,

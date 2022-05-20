@@ -6,12 +6,22 @@ from aws_cdk.core import (
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_batch as batch
+import aws_cdk.aws_ecr as ecr
+import aws_cdk.aws_fsx as fsx
 
 mount_path = "/fsx" # do not touch
 region_name = cdk.Aws.REGION
 
 class BatchStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, vpc, sg, folding_container, download_container, lustre_file_system, **kwargs) -> None:
+    def __init__(
+            self, 
+            scope: Construct, 
+            id: str, 
+            vpc: ec2.Vpc, 
+            sg: str, 
+            folding_container: ecr.CfnRepository, 
+            download_container: ecr.CfnRepository, 
+            lustre_file_system: fsx.CfnFileSystem, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         public_subnet = None
@@ -62,9 +72,6 @@ class BatchStack(cdk.Stack):
                 ec2.UserData.custom(
                     "amazon-linux-extras install -y lustre2.10\n"
                     f"mkdir -p {mount_path}\n"
-                    # Maybe bugs in fsx.dnsName, 
-                    # extra .cn hostname in AWS china region. Current date:09/11/2021
-                    # f"mount -t lustre -o noatime,flock {dnsName}@tcp:/{mountName} {mountPath}",
                     f"mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}\n"
                     f"echo '{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0' >> /etc/fstab \n"
                     "mkdir -p /tmp/alphafold"
@@ -153,7 +160,6 @@ class BatchStack(cdk.Stack):
             self,
             "PrivateSpotCPUComputeEnvironment",
             compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
-                # allocation_strategy="BEST_FIT_PROGRESSIVE",
                 allocation_strategy="SPOT_CAPACITY_OPTIMIZED",
                 instance_role=instance_profile.attr_arn,
                 instance_types=["m5", "r5", "c5"],
@@ -165,7 +171,6 @@ class BatchStack(cdk.Stack):
                 minv_cpus=0,
                 security_group_ids=[sg.security_group_id],
                 subnets=[private_subnet.subnet_id],
-                # type="EC2",
                 type="SPOT",
             ),
             state="ENABLED",
