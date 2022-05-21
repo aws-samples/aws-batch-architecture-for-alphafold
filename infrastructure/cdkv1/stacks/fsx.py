@@ -5,12 +5,14 @@ from aws_cdk.core import (
 )
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_fsx as fsx
+import aws_cdk.aws_s3 as s3
+import aws_cdk.aws_s3_deployment as s3_deploy
 
 mount_path = "/fsx" # do not touch
 region_name = cdk.Aws.REGION
 
 class FileSystemStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, vpc, sg, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, vpc: ec2.Vpc, sg: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
         
         private_subnet = None
