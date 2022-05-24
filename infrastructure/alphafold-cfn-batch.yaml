@@ -5,42 +5,33 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Creates a stack for running Alphafold on AWS Batch.
 Parameters:
-  StackAvailabilityZone:
-    Description: Availability zone to deploy stack resources
-    Type: "AWS::EC2::AvailabilityZone::Name"
-  LaunchSageMakerNotebook:
-    Type: String 
-    Default: Y
-    Description: Create a SageMaker Notebook Instance.
-    AllowedValues: [Y, N]
-  FSXForLustreStorageCapacity:
-    Description: Storage capacity in GB, 1200 or increments of 2400.
-    Type: String
-    AllowedValues:
-      - 1200
-      - 2400
-      - 4800
-      - 7200
-    Default: 1200
-  FSxForLustreThroughput:
-    Description: Throughput for unit storage (MB/s/TB) to provision for FSx for Lustre file system.
-    Type: Number
-    AllowedValues:
-      - 125
-      - 250
-      - 500
-      - 1000
-    Default: 500    
   AlphaFoldVersion:
     Description: AlphaFold release to include as part of the job container
     Type: String
     Default: v2.1.2
     AllowedValues:
-      - v2.1.2  
-  CidrBlock:
-    Description: CIDR block of new (or existing) VPC
+      - v2.1.2
+  ApplicationName:
+    Description: Name of the application, if applicable
     Type: String
-    Default: "10.0.0.0/16"
+    Default: "Unknown"
+  DefaultSecurityGroupID:
+    Description: The default security group ID for the VPC
+    Type: String
+  FileSystemId:
+    Description: ID of the FSx for the Lustre file system
+    Type: String
+  FileSystemMountName:
+    Description: Mount name for the Lustre file system
+    Type: String
+  LaunchSageMakerNotebook:
+    Type: String 
+    Default: Y
+    Description: Create a SageMaker Notebook Instance.
+    AllowedValues: [Y, N]
+  Subnet:
+    Description: Subnet ID for the file system.
+    Type: String    
   Environment:
     Description: Leave this as "main" unless you are testing a pre-release versions of this architecture.
     Type: String
@@ -48,379 +39,11 @@ Parameters:
     AllowedValues:
       - main
       - dev
-  VPCID:
-    Description: (Optional) ID of VPC to use. If left empty, a new VPC will be created.
-    Type: AWS::EC2::VPC::Id
-    Default: ""
-  DefaultSecurityGroupID:
-    Description: (Optional) ID of the default security group for existing VPC. Not required for new VPC.
-    Type: String
-  # SubnetID:
-  #   Description: (Optional) ID of public subnet to use. If left empty, a new public subnet will be created.
-  #   Type: AWS::EC2::Subnet::Id
-  #   Default: ""
 
 Conditions:
-  createNewVPC: !Equals [!Ref 'VPCID', ""]
   createSageMakerNotebook: !Equals [ !Ref 'LaunchSageMakerNotebook', 'Y' ]
-  # createNewSubnet: !Equals [!Ref 'SubnetID', ""]
 
 Resources:
-  ##################################################
-  # Network Configuration
-  ##################################################
-  VPC:
-    Type: "AWS::EC2::VPC"
-    Condition: createSageMakerNotebook
-    Properties:
-      EnableDnsSupport: "true"
-      EnableDnsHostnames: "true"
-      CidrBlock: !Ref CidrBlock
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Network
-          Value: Public
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "VPC",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  VPCFlowLogRole:
-    Type: "AWS::IAM::Role"
-    Properties:
-      Description: "Required service policies to support running Alphafold on AWS Batch"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - vpc-flow-logs.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      Policies:
-        - PolicyName: VPCFlowLogPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                  - logs:DescribeLogGroups
-                  - logs:DescribeLogStreams
-                Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc-flow-log/*
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "flow-log-role",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  VPCFlowLogsGroup:
-    Type: AWS::Logs::LogGroup
-    Properties: 
-      KmsKeyId: !GetAtt EncryptionKey.Arn
-      RetentionInDays: 120
-      Tags: 
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "flow-log-group",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  VPCFlowLog:
-    Type: "AWS::EC2::FlowLog"
-    Properties: 
-      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
-      LogGroupName: !Ref VPCFlowLogsGroup    
-      # ResourceId: !Ref VPC
-      ResourceId: !If [createNewVPC, !Ref VPC, !Ref VPCID]
-      ResourceType: VPC
-      Tags: 
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "VPCFlowLog",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-      TrafficType: ALL
-
-  PublicSubnet0:
-    Type: "AWS::EC2::Subnet"
-    Properties:
-      # VpcId: !Ref VPC
-      VpcId: !If [createNewVPC, !Ref VPC, !Ref VPCID]
-      AvailabilityZone: !Ref StackAvailabilityZone
-      CidrBlock:
-        Fn::Select:
-          - 0
-          - Fn::Cidr: [!Ref CidrBlock, 6, 8]
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Network
-          Value: Public
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "public-subnet",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  PrivateSubnet0:
-    Type: "AWS::EC2::Subnet"
-    Properties:
-      VpcId: !If [createNewVPC, !Ref VPC, !Ref VPCID]
-        # Ref: VPC
-      AvailabilityZone: !Ref StackAvailabilityZone
-      MapPublicIpOnLaunch: false
-      CidrBlock:
-        Fn::Select:
-          - 3
-          - Fn::Cidr: [!Ref CidrBlock, 6, 8]
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Network
-          Value: Private
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "private-subnet",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  InternetGateway:
-    Type: "AWS::EC2::InternetGateway"
-    Properties:
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Network
-          Value: Public
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "igw",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  GatewayToInternet:
-    Type: "AWS::EC2::VPCGatewayAttachment"
-    Properties:
-      VpcId: !If [createNewVPC, !Ref VPC, !Ref VPCID]
-        # Ref: VPC
-      InternetGatewayId:
-        Ref: InternetGateway
-
-  PublicRouteTable:
-    Type: "AWS::EC2::RouteTable"
-    Properties:
-      VpcId: !If [createNewVPC, !Ref VPC, !Ref VPCID]
-        # Ref: VPC
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Network
-          Value: Public
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "public-route-table",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  PublicRoute:
-    Type: "AWS::EC2::Route"
-    DependsOn: GatewayToInternet
-    Properties:
-      RouteTableId:
-        Ref: PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Ref: InternetGateway
-
-  PublicSubnetRouteTableAssociation0:
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties:
-      SubnetId:
-        Ref: PublicSubnet0
-      RouteTableId:
-        Ref: PublicRouteTable
-
-  ElasticIP0:
-    Type: "AWS::EC2::EIP"
-    Properties:
-      Domain: vpc
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "eip",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  NATGateway0:
-    Type: "AWS::EC2::NatGateway"
-    Properties:
-      AllocationId:
-        "Fn::GetAtt":
-          - ElasticIP0
-          - AllocationId
-      SubnetId:
-        Ref: PublicSubnet0
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "nat-gateway",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  PrivateRouteTable0:
-    Type: "AWS::EC2::RouteTable"
-    Properties:
-      VpcId: !If [createNewVPC, !Ref VPC, !Ref VPCID]
-        # Ref: VPC
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "private-route-table",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
-
-  PrivateRouteToInternet0:
-    Type: "AWS::EC2::Route"
-    Properties:
-      RouteTableId:
-        Ref: PrivateRouteTable0
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId:
-        Ref: NATGateway0
-
-  PrivateSubnetRouteTableAssociation0:
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties:
-      SubnetId:
-        Ref: PrivateSubnet0
-      RouteTableId:
-        Ref: PrivateRouteTable0
-
   ##################################################
   # S3
   ##################################################
@@ -437,20 +60,7 @@ Resources:
         LogFilePrefix: code-pipeline-logs
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "s3",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
     DeletionPolicy: Retain
@@ -480,55 +90,7 @@ Resources:
             Resource: 
               - !GetAtt CodePipelineS3Bucket.Arn
             Principal: 
-              AWS: !Ref AWS::AccountId                
-          
-  S3Endpoint:
-    Type: "AWS::EC2::VPCEndpoint"
-    Properties:
-      RouteTableIds:
-        - !Ref PublicRouteTable
-        - !Ref PrivateRouteTable0
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
-      # VpcId: !Ref VPC
-      VpcId: !If [createNewVPC, !Ref VPC, !Ref VPCID]
-
-  ##################################################
-  # FSx File System
-  ##################################################
-  FSX:
-    Type: AWS::FSx::FileSystem
-    Properties:
-      FileSystemType: "LUSTRE"
-      FileSystemTypeVersion: "2.12"
-      LustreConfiguration:
-        DataCompressionType: "LZ4"
-        DeploymentType: "PERSISTENT_2"
-        PerUnitStorageThroughput: !Ref FSxForLustreThroughput
-      SecurityGroupIds:
-        - !If [createNewVPC, !GetAtt VPC.DefaultSecurityGroup, !Ref DefaultSecurityGroupID]
-        # - !GetAtt VPC.DefaultSecurityGroup
-      StorageCapacity: !Ref FSXForLustreStorageCapacity
-      StorageType: "SSD"
-      SubnetIds:
-        - !Ref PrivateSubnet0      
-      Tags:
-        - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "fsx-lustre",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
-        - Key: StackId
-          Value: !Ref AWS::StackId
+              AWS: !Ref AWS::AccountId
 
   ##################################################
   # EC2 Launch Template
@@ -553,56 +115,21 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "instance-role",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
   InstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
-      InstanceProfileName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "instance-profile",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
+      InstanceProfileName: !Ref ApplicationName
       Roles:
         - !Ref EC2InstanceRole
 
   InstanceLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "launch-template",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
+      LaunchTemplateName: !Ref ApplicationName
       LaunchTemplateData:
         BlockDeviceMappings:
           - DeviceName: "/dev/xvda"
@@ -617,23 +144,7 @@ Resources:
           - ResourceType: "instance"
             Tags:
               - Key: Application
-                Value: AWS-Alphafold
-              - Key: Name
-                Value:
-                  !Join [
-                    "-",
-                    [
-                      "AWS-Alphafold",
-                      "launch-template",
-                      !Select [
-                        4,
-                        !Split [
-                          "-",
-                          !Select [2, !Split ["/", !Ref AWS::StackId]],
-                        ],
-                      ],
-                    ],
-                  ]
+                Value: !Ref ApplicationName
               - Key: StackId
                 Value: !Ref AWS::StackId
         UserData:
@@ -650,14 +161,14 @@ Resources:
                   "\n",
                   "runcmd:\n",
                   "- file_system_id_01=",
-                  !Ref FSX,
+                  !Ref FileSystemId,
                   "\n",
                   "- region=",
                   !Ref AWS::Region,
                   "\n",
                   "- fsx_directory=/fsx\n",
                   "- fsx_mount_name=",
-                  !GetAtt FSX.LustreMountName,
+                  !Ref FileSystemMountName,
                   "\n",
                   "- amazon-linux-extras install -y lustre2.10\n",
                   "- mkdir -p ${fsx_directory}\n",
@@ -666,79 +177,6 @@ Resources:
                   "--==MYBOUNDARY==--",
                 ],
               ]
-
-  # PublicInstanceLaunchTemplate:
-  #   Type: AWS::EC2::LaunchTemplate
-  #   Properties:
-  #     LaunchTemplateData:
-  #       BlockDeviceMappings:
-  #         - DeviceName: "/dev/xvda"
-  #           Ebs:
-  #             DeleteOnTermination: true
-  #             Encrypted: true
-  #             VolumeSize: 50
-  #             VolumeType: "gp2"
-  #       IamInstanceProfile:
-  #         Name: !Ref InstanceProfile
-  #       NetworkInterfaces:
-  #         - AssociatePublicIpAddress: True
-  #           DeviceIndex: 0
-  #           Groups:
-  #             - !GetAtt VPC.DefaultSecurityGroup
-  #           SubnetId: !Ref PublicSubnet0
-  #       TagSpecifications:
-  #         - ResourceType: "instance"
-  #           Tags:
-  #             - Key: Application
-  #               Value: AWS-Alphafold
-  #             - Key: Name
-  #               Value:
-  #                 !Join [
-  #                   "-",
-  #                   [
-  #                     "AWS-Alphafold",
-  #                     "public-launch-template",
-  #                     !Select [
-  #                       4,
-  #                       !Split [
-  #                         "-",
-  #                         !Select [2, !Split ["/", !Ref AWS::StackId]],
-  #                       ],
-  #                     ],
-  #                   ],
-  #                 ]
-  #             - Key: StackId
-  #               Value: !Ref AWS::StackId
-  #       UserData:
-  #         Fn::Base64:
-  #           Fn::Join:
-  #             [
-  #               "",
-  #               [
-  #                 "MIME-Version: 1.0\n",
-  #                 "Content-Type: multipart/mixed; boundary=\"==MYBOUNDARY==\"\n",
-  #                 "\n",
-  #                 "--==MYBOUNDARY==\n",
-  #                 "Content-Type: text/cloud-config; charset=\"us-ascii\"\n",
-  #                 "\n",
-  #                 "runcmd:\n",
-  #                 "- file_system_id_01=",
-  #                 !Ref FSX,
-  #                 "\n",
-  #                 "- region=",
-  #                 !Ref AWS::Region,
-  #                 "\n",
-  #                 "- fsx_directory=/fsx\n",
-  #                 "- fsx_mount_name=",
-  #                 !GetAtt FSX.LustreMountName,
-  #                 "\n",
-  #                 "- amazon-linux-extras install -y lustre2.10\n",
-  #                 "- mkdir -p ${fsx_directory}\n",
-  #                 "- mount -t lustre ${file_system_id_01}.fsx.${region}.amazonaws.com@tcp:/${fsx_mount_name} ${fsx_directory}\n",
-  #                 "\n",
-  #                 "--==MYBOUNDARY==--",
-  #               ],
-  #             ]              
 
   ##################################################
   # Container Services
@@ -766,20 +204,7 @@ Resources:
         ]
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "code-repo",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
@@ -792,20 +217,7 @@ Resources:
         ScanOnPush: true
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "folding-container-repo",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
     DeletionPolicy: Retain
@@ -820,20 +232,7 @@ Resources:
         ScanOnPush: true
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "download-container-repo",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
     DeletionPolicy: Retain
@@ -922,20 +321,7 @@ Resources:
                       ]
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "codebuild-role",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
@@ -998,20 +384,7 @@ Resources:
             Resource: "*"            
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "kms",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
@@ -1041,18 +414,6 @@ Resources:
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
         Type: LINUX_CONTAINER
-      Name:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "codebuild-project",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       ResourceAccessRole: !GetAtt CodeBuildRole.Arn
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
@@ -1063,20 +424,7 @@ Resources:
       SourceVersion: refs/heads/main
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "codebuild-project",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
@@ -1131,20 +479,7 @@ Resources:
                 Resource: !GetAtt FoldingContainerRegistry.Arn
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "codepipeline-role",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
@@ -1154,18 +489,6 @@ Resources:
       ArtifactStore:
         Location: !Ref CodePipelineS3Bucket
         Type: S3
-      Name:
-        !Join [
-          "-",
-          [
-            "AWS-Alphafold",
-            "codepipeline",
-            !Select [
-              4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-            ],
-          ],
-        ]
       RestartExecutionOnUpdate: true
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
@@ -1205,20 +528,7 @@ Resources:
               RunOrder: 2
       Tags:
         - Key: Application
-          Value: AWS-Alphafold
-        - Key: Name
-          Value:
-            !Join [
-              "-",
-              [
-                "AWS-Alphafold",
-                "codepipeline",
-                !Select [
-                  4,
-                  !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-                ],
-              ],
-            ]
+          Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
@@ -1242,40 +552,15 @@ Resources:
         MaxvCpus: 256
         MinvCpus: 0
         SecurityGroupIds:
-          - !If [createNewVPC, !GetAtt VPC.DefaultSecurityGroup, !Ref DefaultSecurityGroupID]
-          # - !GetAtt VPC.DefaultSecurityGroup
+          - !Ref DefaultSecurityGroupID
         Subnets:
-          - Ref: PrivateSubnet0
+          - !Ref Subnet
         Type: EC2
       State: ENABLED
       Type: MANAGED
       Tags:
-        Application: AWS-Alphafold
+        Application: !Ref ApplicationName
         StackId: !Ref AWS::StackId
-
-  # PublicCPUComputeEnvironment:
-  #   Type: AWS::Batch::ComputeEnvironment
-  #   Properties:
-  #     ComputeResources:
-  #       AllocationStrategy: BEST_FIT_PROGRESSIVE
-  #       InstanceRole: !Ref InstanceProfile
-  #       InstanceTypes:
-  #         - m5
-  #         - r5
-  #         - c5
-  #       LaunchTemplate:
-  #         LaunchTemplateId: !Ref PublicInstanceLaunchTemplate
-  #         Version: $Latest
-  #       MaxvCpus: 256
-  #       MinvCpus: 0
-  #       Subnets:
-  #         - Ref: PublicSubnet0
-  #       Type: EC2
-  #     State: ENABLED
-  #     Type: MANAGED
-  #     Tags:
-  #       Application: AWS-Alphafold
-  #       StackId: !Ref AWS::StackId
 
   PrivateGPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -1291,27 +576,14 @@ Resources:
         MaxvCpus: 256
         MinvCpus: 0
         SecurityGroupIds:
-          - !If [createNewVPC, !GetAtt VPC.DefaultSecurityGroup, !Ref DefaultSecurityGroupID]
-          # - !GetAtt VPC.DefaultSecurityGroup
+          - !Ref DefaultSecurityGroupID
         Subnets:
-          - Ref: PrivateSubnet0
+          - !Ref Subnet
         Type: EC2
       State: ENABLED
       Type: MANAGED
       Tags:
-        Application: AWS-Alphafold
-        Name:
-          !Join [
-            "-",
-            [
-              "AWS-Alphafold",
-              "private-ce-gpu",
-              !Select [
-                4,
-                !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
-              ],
-            ],
-          ]
+        Application: !Ref ApplicationName
         StackId: !Ref AWS::StackId
 
   PrivateCPUJobQueue:
@@ -1323,20 +595,8 @@ Resources:
       Priority: 10
       State: ENABLED
       Tags:
-        Application: AWS-Alphafold
-        StackId: !Ref AWS::StackId
-
-  # PublicCPUJobQueue:
-  #   Type: AWS::Batch::JobQueue
-  #   Properties:
-  #     ComputeEnvironmentOrder:
-  #       - ComputeEnvironment: !Ref PublicCPUComputeEnvironment
-  #         Order: 1
-  #     Priority: 10
-  #     State: ENABLED
-  #     Tags:
-  #       Application: AWS-Alphafold
-  #       StackId: !Ref AWS::StackId       
+        Application: !Ref ApplicationName
+        StackId: !Ref AWS::StackId 
 
   PrivateGPUJobQueue:
     Type: AWS::Batch::JobQueue
@@ -1347,7 +607,7 @@ Resources:
       Priority: 10
       State: ENABLED
       Tags:
-        Application: AWS-Alphafold
+        Application: !Ref ApplicationName
         StackId: !Ref AWS::StackId
 
   CPUFoldingJobDefinition:
@@ -1442,7 +702,7 @@ Resources:
       RetryStrategy:
         Attempts: 3
       Tags:
-        Application: AWS-Alphafold
+        Application: !Ref ApplicationName
         StackId: !Ref AWS::StackId
       Type: container       
 
@@ -1545,7 +805,7 @@ Resources:
       RetryStrategy:
         Attempts: 3
       Tags:
-        Application: AWS-Alphafold
+        Application: !Ref ApplicationName
         StackId: !Ref AWS::StackId
       Type: container
 
@@ -1579,7 +839,7 @@ Resources:
         RetryStrategy:
           Attempts: 3
         Tags:
-          Application: AWS-Alphafold
+          Application: !Ref ApplicationName
           StackId: !Ref AWS::StackId
         Type: container      
 
@@ -1596,13 +856,13 @@ Resources:
       DefaultCodeRepository:  !GetAtt CodeRepository.CloneUrlHttp
       KmsKeyId: !GetAtt EncryptionKey.Arn
       RoleArn: !GetAtt SageMakerNotebookExecutionRole.Arn
-      SubnetId: !Ref PrivateSubnet0
+      SubnetId: !Ref Subnet
       SecurityGroupIds:
-        - !GetAtt VPC.DefaultSecurityGroup
+        - !Ref DefaultSecurityGroupID
       Tags:
-        - Key:  "Application"
-          Value:  "AWS-Alphafold"
-        - Key:  "StackId"
+        - Key:  Application
+          Value:  !Ref ApplicationName
+        - Key:  StackId
           Value:  !Ref AWS::StackId
   SageMakerNotebookExecutionRole: 
     Type: "AWS::IAM::Role"

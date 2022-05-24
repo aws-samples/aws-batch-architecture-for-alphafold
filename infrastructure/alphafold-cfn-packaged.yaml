@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Root stack for running AWS Batch Architecture for AlphaFold.
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: AlphaFold
+  StackAvailabilityZone:
+    Type: String
+    AllowedValues:
+    - a
+    - b
+    - c
+    Default: a
+  VPC:
+    Type: String
+    Default: ''
+  DefaultSecurityGroup:
+    Type: String
+    Default: ''
+  Subnet:
+    Type: String
+    Default: ''
+  FileSystemId:
+    Type: String
+    Default: ''
+  FileSystemMountName:
+    Type: String
+    Default: ''
+Conditions:
+  CreateNetwork:
+    Fn::Or:
+    - Fn::Equals:
+      - Ref: VPC
+      - ''
+    - Fn::Equals:
+      - Ref: DefaultSecurityGroup
+      - ''
+    - Fn::Equals:
+      - Ref: Subnet
+      - ''
+  CreateFileSystem:
+    Fn::Or:
+    - Fn::Equals:
+      - Ref: FileSystemId
+      - ''
+    - Fn::Equals:
+      - Ref: FileSystemMountName
+      - ''
+    - Fn::Equals:
+      - Ref: VPC
+      - ''
+    - Fn::Equals:
+      - Ref: DefaultSecurityGroup
+      - ''
+    - Fn::Equals:
+      - Ref: Subnet
+      - ''
+Resources:
+  Network:
+    Type: AWS::CloudFormation::Stack
+    Condition: CreateNetwork
+    Properties:
+      TemplateURL: https://s3.us-east-2.amazonaws.com/alphafold-cfn-build/a90b96840d9ea1bfc9ef50b3511d4541.template
+      Parameters:
+        ApplicationName:
+          Ref: ApplicationName
+        StackAvailabilityZone:
+          Fn::Join:
+          - ''
+          - - Ref: AWS::Region
+            - Ref: StackAvailabilityZone
+  FileSystem:
+    Type: AWS::CloudFormation::Stack
+    Condition: CreateFileSystem
+    Properties:
+      TemplateURL: https://s3.us-east-2.amazonaws.com/alphafold-cfn-build/b6c438e303708ff9dcc2d4be0dd49a81.template
+      Parameters:
+        ApplicationName:
+          Ref: ApplicationName
+        DefaultSecurityGroup:
+          Fn::If:
+          - CreateNetwork
+          - Fn::GetAtt:
+            - Network
+            - Outputs.DefaultSecurityGroup
+          - Ref: DefaultSecurityGroup
+        FSXForLustreStorageCapacity: 1200
+        FSxForLustreThroughput: 500
+        Subnet:
+          Fn::If:
+          - CreateNetwork
+          - Fn::GetAtt:
+            - Network
+            - Outputs.PrivateSubnet
+          - Ref: Subnet
+  BatchEnvironment:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-2.amazonaws.com/alphafold-cfn-build/dcf10784a664da7ff991f7ab558bf086.template
+      Parameters:
+        ApplicationName:
+          Ref: ApplicationName
+        DefaultSecurityGroup:
+          Fn::If:
+          - CreateNetwork
+          - Fn::GetAtt:
+            - Network
+            - Outputs.DefaultSecurityGroup
+          - Ref: DefaultSecurityGroup
+        FileSystemId:
+          Fn::If:
+          - CreateFileSystem
+          - Fn::GetAtt:
+            - FileSystem
+            - Outputs.FileSystemId
+          - Ref: FileSystemId
+        FileSystemMountName:
+          Fn::If:
+          - CreateFileSystem
+          - Fn::GetAtt:
+            - FileSystem
+            - Outputs.FileSystemMountName
+          - Ref: FileSystemMountName
+        Subnet:
+          Fn::If:
+          - CreateNetwork
+          - Fn::GetAtt:
+            - Network
+            - Outputs.PrivateSubnet
+          - Ref: Subnet
