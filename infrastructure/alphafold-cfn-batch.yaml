@@ -417,7 +417,7 @@ Resources:
       ResourceAccessRole: !GetAtt CodeBuildRole.Arn
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
-        BuildSpec: infrastructure/buildspec.yaml
+        BuildSpec: infrastructure/buildspec.yml
         GitCloneDepth: 1
         Location: !GetAtt CodeRepository.CloneUrlHttp
         Type: CODECOMMIT

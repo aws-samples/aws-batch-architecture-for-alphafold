@@ -1,3 +1,8 @@
+variables:
+  DEPLOYMENT_BUCKET_NAME: aws-hcls-ml
+  DEV_BUCKET_PREFIX: blog_post_support_materials/aws-alphafold/dev
+  PROD_BUCKET_PREFIX: blog_post_support_materials/aws-alphafold/prod
+
 default:
   image: public.ecr.aws/amazonlinux/amazonlinux:latest
 
@@ -15,13 +20,13 @@ cfn-lint:
     - pip install cfn-lint
     - pip freeze    
   script:
-    - cfn-lint -I infrastructure/cfn.yaml
+    - cfn-lint -I infrastructure/*.yaml
 
 cfn-nag:
   image: stelligent/cfn_nag
   stage: test
   script:
-    - cfn_nag_scan --input-path infrastructure/cfn.yaml
+    - cfn_nag_scan --input-path infrastructure/*.yaml
 
 secret_detection:
   stage: test
@@ -37,8 +42,9 @@ push-to-s3-dev:
     - yum update -y && yum install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
-    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/dev/aws-alphafold.zip
-    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/dev/cfn.yaml
+    - aws s3 cp aws-alphafold.zip s3://$(DEPLOYMENT_BUCKET_NAME)/$(DEV_BUCKET_PREFIX)/aws-alphafold.zip
+    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template alphafold-cfn-packaged.yaml --s3-bucket $(DEPLOYMENT_BUCKET_NAME) --s3_prefix $(DEV_BUCKET_PREFIX)
+    - aws s3 cp infrastructure/alphafold-cfn-root.yaml s3://$(DEPLOYMENT_BUCKET_NAME)/$(DEV_BUCKET_PREFIX)/alphafold-cfn-root.yaml
   only:
     - dev
 
@@ -52,6 +58,6 @@ push-to-s3-main:
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
     - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip
-    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/cfn.yaml    
+    - aws s3 cp infrastructure/*.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/cfn.yaml    
   only:
     - main
