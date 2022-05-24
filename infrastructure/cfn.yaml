@@ -45,6 +45,13 @@ Parameters:
     Description: (Optional) ID of public subnet to use. If left empty, a new public subnet will be created.
     Type: AWS::EC2::Subnet::Id
     Default: ""
+  Environment:
+    Description: Leave this as "main" unless you are testing a pre-release versions of this architecture.
+    Type: String
+    Default: main
+    AllowedValues:
+      - main
+      - dev
 Conditions:
   createSageMakerNotebook: !Equals [ !Ref 'LaunchSageMakerNotebook', 'Y' ]
   createNewVPC: !Equals [!Ref 'VPCID', ""]
@@ -648,78 +655,78 @@ Resources:
                 ],
               ]
 
-  PublicInstanceLaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateData:
-        BlockDeviceMappings:
-          - DeviceName: "/dev/xvda"
-            Ebs:
-              DeleteOnTermination: true
-              Encrypted: true
-              VolumeSize: 50
-              VolumeType: "gp2"
-        IamInstanceProfile:
-          Name: !Ref InstanceProfile
-        NetworkInterfaces:
-          - AssociatePublicIpAddress: True
-            DeviceIndex: 0
-            Groups:
-              - !GetAtt VPC.DefaultSecurityGroup
-            SubnetId: !Ref PublicSubnet0
-        TagSpecifications:
-          - ResourceType: "instance"
-            Tags:
-              - Key: Application
-                Value: AWS-Alphafold
-              - Key: Name
-                Value:
-                  !Join [
-                    "-",
-                    [
-                      "AWS-Alphafold",
-                      "public-launch-template",
-                      !Select [
-                        4,
-                        !Split [
-                          "-",
-                          !Select [2, !Split ["/", !Ref AWS::StackId]],
-                        ],
-                      ],
-                    ],
-                  ]
-              - Key: StackId
-                Value: !Ref AWS::StackId
-        UserData:
-          Fn::Base64:
-            Fn::Join:
-              [
-                "",
-                [
-                  "MIME-Version: 1.0\n",
-                  "Content-Type: multipart/mixed; boundary=\"==MYBOUNDARY==\"\n",
-                  "\n",
-                  "--==MYBOUNDARY==\n",
-                  "Content-Type: text/cloud-config; charset=\"us-ascii\"\n",
-                  "\n",
-                  "runcmd:\n",
-                  "- file_system_id_01=",
-                  !Ref FSX,
-                  "\n",
-                  "- region=",
-                  !Ref AWS::Region,
-                  "\n",
-                  "- fsx_directory=/fsx\n",
-                  "- fsx_mount_name=",
-                  !GetAtt FSX.LustreMountName,
-                  "\n",
-                  "- amazon-linux-extras install -y lustre2.10\n",
-                  "- mkdir -p ${fsx_directory}\n",
-                  "- mount -t lustre ${file_system_id_01}.fsx.${region}.amazonaws.com@tcp:/${fsx_mount_name} ${fsx_directory}\n",
-                  "\n",
-                  "--==MYBOUNDARY==--",
-                ],
-              ]              
+  # PublicInstanceLaunchTemplate:
+  #   Type: AWS::EC2::LaunchTemplate
+  #   Properties:
+  #     LaunchTemplateData:
+  #       BlockDeviceMappings:
+  #         - DeviceName: "/dev/xvda"
+  #           Ebs:
+  #             DeleteOnTermination: true
+  #             Encrypted: true
+  #             VolumeSize: 50
+  #             VolumeType: "gp2"
+  #       IamInstanceProfile:
+  #         Name: !Ref InstanceProfile
+  #       NetworkInterfaces:
+  #         - AssociatePublicIpAddress: True
+  #           DeviceIndex: 0
+  #           Groups:
+  #             - !GetAtt VPC.DefaultSecurityGroup
+  #           SubnetId: !Ref PublicSubnet0
+  #       TagSpecifications:
+  #         - ResourceType: "instance"
+  #           Tags:
+  #             - Key: Application
+  #               Value: AWS-Alphafold
+  #             - Key: Name
+  #               Value:
+  #                 !Join [
+  #                   "-",
+  #                   [
+  #                     "AWS-Alphafold",
+  #                     "public-launch-template",
+  #                     !Select [
+  #                       4,
+  #                       !Split [
+  #                         "-",
+  #                         !Select [2, !Split ["/", !Ref AWS::StackId]],
+  #                       ],
+  #                     ],
+  #                   ],
+  #                 ]
+  #             - Key: StackId
+  #               Value: !Ref AWS::StackId
+  #       UserData:
+  #         Fn::Base64:
+  #           Fn::Join:
+  #             [
+  #               "",
+  #               [
+  #                 "MIME-Version: 1.0\n",
+  #                 "Content-Type: multipart/mixed; boundary=\"==MYBOUNDARY==\"\n",
+  #                 "\n",
+  #                 "--==MYBOUNDARY==\n",
+  #                 "Content-Type: text/cloud-config; charset=\"us-ascii\"\n",
+  #                 "\n",
+  #                 "runcmd:\n",
+  #                 "- file_system_id_01=",
+  #                 !Ref FSX,
+  #                 "\n",
+  #                 "- region=",
+  #                 !Ref AWS::Region,
+  #                 "\n",
+  #                 "- fsx_directory=/fsx\n",
+  #                 "- fsx_mount_name=",
+  #                 !GetAtt FSX.LustreMountName,
+  #                 "\n",
+  #                 "- amazon-linux-extras install -y lustre2.10\n",
+  #                 "- mkdir -p ${fsx_directory}\n",
+  #                 "- mount -t lustre ${file_system_id_01}.fsx.${region}.amazonaws.com@tcp:/${fsx_mount_name} ${fsx_directory}\n",
+  #                 "\n",
+  #                 "--==MYBOUNDARY==--",
+  #               ],
+  #             ]              
 
   ##################################################
   # Container Services
@@ -731,7 +738,7 @@ Resources:
         BranchName: "main"
         S3:
           Bucket: "aws-hcls-ml"
-          Key: "blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip"
+          Key: !Sub 'blog_post_support_materials/aws-alphafold/${Environment}/aws-alphafold.zip'
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [
@@ -1233,29 +1240,29 @@ Resources:
         Application: AWS-Alphafold
         StackId: !Ref AWS::StackId
 
-  PublicCPUComputeEnvironment:
-    Type: AWS::Batch::ComputeEnvironment
-    Properties:
-      ComputeResources:
-        AllocationStrategy: BEST_FIT_PROGRESSIVE
-        InstanceRole: !Ref InstanceProfile
-        InstanceTypes:
-          - m5
-          - r5
-          - c5
-        LaunchTemplate:
-          LaunchTemplateId: !Ref PublicInstanceLaunchTemplate
-          Version: $Latest
-        MaxvCpus: 256
-        MinvCpus: 0
-        Subnets:
-          - Ref: PublicSubnet0
-        Type: EC2
-      State: ENABLED
-      Type: MANAGED
-      Tags:
-        Application: AWS-Alphafold
-        StackId: !Ref AWS::StackId
+  # PublicCPUComputeEnvironment:
+  #   Type: AWS::Batch::ComputeEnvironment
+  #   Properties:
+  #     ComputeResources:
+  #       AllocationStrategy: BEST_FIT_PROGRESSIVE
+  #       InstanceRole: !Ref InstanceProfile
+  #       InstanceTypes:
+  #         - m5
+  #         - r5
+  #         - c5
+  #       LaunchTemplate:
+  #         LaunchTemplateId: !Ref PublicInstanceLaunchTemplate
+  #         Version: $Latest
+  #       MaxvCpus: 256
+  #       MinvCpus: 0
+  #       Subnets:
+  #         - Ref: PublicSubnet0
+  #       Type: EC2
+  #     State: ENABLED
+  #     Type: MANAGED
+  #     Tags:
+  #       Application: AWS-Alphafold
+  #       StackId: !Ref AWS::StackId
 
   PrivateGPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -1305,17 +1312,17 @@ Resources:
         Application: AWS-Alphafold
         StackId: !Ref AWS::StackId
 
-  PublicCPUJobQueue:
-    Type: AWS::Batch::JobQueue
-    Properties:
-      ComputeEnvironmentOrder:
-        - ComputeEnvironment: !Ref PublicCPUComputeEnvironment
-          Order: 1
-      Priority: 10
-      State: ENABLED
-      Tags:
-        Application: AWS-Alphafold
-        StackId: !Ref AWS::StackId       
+  # PublicCPUJobQueue:
+  #   Type: AWS::Batch::JobQueue
+  #   Properties:
+  #     ComputeEnvironmentOrder:
+  #       - ComputeEnvironment: !Ref PublicCPUComputeEnvironment
+  #         Order: 1
+  #     Priority: 10
+  #     State: ENABLED
+  #     Tags:
+  #       Application: AWS-Alphafold
+  #       StackId: !Ref AWS::StackId       
 
   PrivateGPUJobQueue:
     Type: AWS::Batch::JobQueue
