@@ -157,7 +157,6 @@ def get_batch_job_info(jobId):
     """
     Retrieve and format information about a batch job.
     """
-
     job_description = batch.describe_jobs(jobs=[jobId])
         
     if len(job_description) == 0:
@@ -166,6 +165,7 @@ def get_batch_job_info(jobId):
     output = {
         "jobArn": job_description["jobs"][0]["jobArn"],
         "jobName": job_description["jobs"][0]["jobName"],
+        "jobQueue": job_description["jobs"][0]["jobQueue"],
         "jobId": job_description["jobs"][0]["jobId"],
         "status": job_description["jobs"][0]["status"],
         "createdAt": datetime.utcfromtimestamp(
@@ -173,6 +173,8 @@ def get_batch_job_info(jobId):
         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "dependsOn": job_description["jobs"][0]["dependsOn"],
         "tags": job_description["jobs"][0]["tags"],
+        "logStreamName": "",
+        "logs": "",
     }
 
     if output["status"] == "SUCCEEDED":
@@ -182,7 +184,7 @@ def get_batch_job_info(jobId):
         logs = get_batch_logs(output["logStreamName"])
         output["logs"] = logs
         output["statusReason"] = job_description['jobs'][0]['statusReason']
-    elif output["status"] == "FAILED":
+    elif output["status"] in ["FAILED", "RUNNING"]:
         try:
             output["logStreamName"] = job_description["jobs"][0]["container"][
                 "logStreamName"
@@ -191,15 +193,47 @@ def get_batch_job_info(jobId):
             output["logs"] = logs
         except Exception as e:
             logger.info("This failed job does not have logs yet.")
-            return output
-    else: # status = SUBMITTED/PENDING/RUNNABLE/STARTING/RUNNING
-        output["logStreamName"] = job_description["jobs"][0]["container"][
-            "logStreamName"
-        ]
-        logs = get_batch_logs(output["logStreamName"])
-        output["logs"] = logs  
-    
+            return output    
     return output
+
+def submit_downloading_job(
+    job_name,
+    download_mode="reduced_dbs",
+    use_spot_instances=True,
+    cpu=4,
+    memory=16, 
+    stack_name=None,
+):
+    if stack_name is None:
+        stack_name = list_alphafold_stacks()[0]["StackName"]
+    batch_resources = get_batch_resources(stack_name)
+    
+    job_definition = batch_resources["download_job_definition"]
+
+    if use_spot_instances:
+        job_queue = batch_resources["download_spot_job_queue"]
+    else:
+        job_queue = batch_resources["download_job_queue"]
+    
+    container_overrides = {
+        "command": [
+            "download_all_data.sh",
+            "/fsx",
+            download_mode         
+        ],
+        "resourceRequirements": [
+            {"value": str(cpu), "type": "VCPU"},
+            {"value": str(memory * 1000), "type": "MEMORY"},
+        ],
+    }
+    response = batch.submit_job(
+        jobDefinition=job_definition,
+        jobName=job_name,
+        jobQueue=job_queue,
+        containerOverrides=container_overrides,
+    )
+    return response
+    
 
 def submit_batch_alphafold_job(
     job_name,
