@@ -1,4 +1,6 @@
 variables:
+  AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
+  AWS_DEFAULT_REGION: us-east-1
   DEPLOYMENT_BUCKET_NAME: aws-hcls-ml
   DEV_BUCKET_PREFIX: blog_post_support_materials/aws-alphafold/dev
   PROD_BUCKET_PREFIX: blog_post_support_materials/aws-alphafold/prod
@@ -35,9 +37,6 @@ secret_detection:
 
 push-to-s3-dev:
   stage: deploy
-  variables:
-    AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
-    AWS_DEFAULT_REGION: us-east-1
   before_script:
     - yum update -y && yum install -y awscli zip
   script:
@@ -50,9 +49,6 @@ push-to-s3-dev:
 
 push-to-s3-main:
   stage: deploy
-  variables:
-    AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
-    AWS_DEFAULT_REGION: us-east-1
   before_script:
     - yum update -y && yum install -y awscli zip
   script:
