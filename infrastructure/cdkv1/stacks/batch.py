@@ -6,12 +6,22 @@ from aws_cdk.core import (
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_batch as batch
+import aws_cdk.aws_ecr as ecr
+import aws_cdk.aws_fsx as fsx
 
 mount_path = "/fsx" # do not touch
 region_name = cdk.Aws.REGION
 
 class BatchStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, vpc, sg, folding_container, download_container, lustre_file_system, **kwargs) -> None:
+    def __init__(
+            self, 
+            scope: Construct, 
+            id: str, 
+            vpc: ec2.Vpc, 
+            sg: str, 
+            folding_container: ecr.CfnRepository, 
+            download_container: ecr.CfnRepository, 
+            lustre_file_system: fsx.CfnFileSystem, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         public_subnet = None
@@ -62,9 +72,6 @@ class BatchStack(cdk.Stack):
                 ec2.UserData.custom(
                     "amazon-linux-extras install -y lustre2.10\n"
                     f"mkdir -p {mount_path}\n"
-                    # Maybe bugs in fsx.dnsName, 
-                    # extra .cn hostname in AWS china region. Current date:09/11/2021
-                    # f"mount -t lustre -o noatime,flock {dnsName}@tcp:/{mountName} {mountPath}",
                     f"mount -t lustre -o noatime,flock {file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path}\n"
                     f"echo '{file_system_id}.fsx.{region_name}.amazonaws.com@tcp:/{mount_name} {mount_path} lustre defaults,noatime,flock,_netdev 0 0' >> /etc/fstab \n"
                     "mkdir -p /tmp/alphafold"
@@ -149,6 +156,28 @@ class BatchStack(cdk.Stack):
         )
         private_compute_environment.add_depends_on(launch_template)
         
+        private_spot_compute_environment = batch.CfnComputeEnvironment(
+            self,
+            "PrivateSpotCPUComputeEnvironment",
+            compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
+                allocation_strategy="SPOT_CAPACITY_OPTIMIZED",
+                instance_role=instance_profile.attr_arn,
+                instance_types=["m5", "r5", "c5"],
+                launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
+                    launch_template_name=launch_template.launch_template_name,
+                    version=launch_template.attr_latest_version_number,
+                ),
+                maxv_cpus=256,
+                minv_cpus=0,
+                security_group_ids=[sg.security_group_id],
+                subnets=[private_subnet.subnet_id],
+                type="SPOT",
+            ),
+            state="ENABLED",
+            type="MANAGED",
+        )
+        private_spot_compute_environment.add_depends_on(launch_template)
+        
         public_compute_environment = batch.CfnComputeEnvironment(
             self,
             "PublicCPUComputeEnvironment",
@@ -170,6 +199,28 @@ class BatchStack(cdk.Stack):
             type="MANAGED",
         )
         public_compute_environment.add_depends_on(public_launch_template)
+        
+        public_spot_compute_environment = batch.CfnComputeEnvironment(
+            self,
+            "PublicSpotCPUComputeEnvironment",
+            compute_resources=batch.CfnComputeEnvironment.ComputeResourcesProperty(
+                allocation_strategy="SPOT_CAPACITY_OPTIMIZED",
+                instance_role=instance_profile.attr_arn,
+                instance_types=["m5", "r5", "c5"],
+                launch_template=batch.CfnComputeEnvironment.LaunchTemplateSpecificationProperty(
+                    launch_template_name=public_launch_template.launch_template_name,
+                    version=public_launch_template.attr_latest_version_number,
+                ),
+                maxv_cpus=256,
+                minv_cpus=0,
+                # security_group_ids=[sg.security_group_id],
+                subnets=[public_subnet.subnet_id],
+                type="SPOT",
+            ),
+            state="ENABLED",
+            type="MANAGED",
+        )
+        public_spot_compute_environment.add_depends_on(public_launch_template)
         
         gpu_compute_environment = batch.CfnComputeEnvironment(
             self,
@@ -205,6 +256,19 @@ class BatchStack(cdk.Stack):
             priority=10,
             state="ENABLED",
         )
+        
+        private_spot_cpu_queue = batch.CfnJobQueue(
+            self,
+            "PrivateSpotCPUJobQueue",
+            compute_environment_order=[
+                batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
+                    compute_environment=private_spot_compute_environment.attr_compute_environment_arn,
+                    order=1,
+                ),
+            ],
+            priority=10,
+            state="ENABLED",
+        )
 
         public_cpu_queue = batch.CfnJobQueue(
             self,
@@ -212,6 +276,19 @@ class BatchStack(cdk.Stack):
             compute_environment_order=[
                 batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
                     compute_environment=public_compute_environment.attr_compute_environment_arn,
+                    order=1,
+                ),
+            ],
+            priority=10,
+            state="ENABLED",
+        )
+
+        public_spot_cpu_queue = batch.CfnJobQueue(
+            self,
+            "PublicSpotCPUJobQueue",
+            compute_environment_order=[
+                batch.CfnJobQueue.ComputeEnvironmentOrderProperty(
+                    compute_environment=public_spot_compute_environment.attr_compute_environment_arn,
                     order=1,
                 ),
             ],

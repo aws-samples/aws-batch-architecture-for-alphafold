@@ -18,3 +18,5 @@ cdk.out/
 chalice.out/
 infrastructure/cdk.context.json
 cdk.context.json
+*.zip
+code_artifact/

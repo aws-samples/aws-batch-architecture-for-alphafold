@@ -105,10 +105,14 @@ def get_batch_resources(stack_name):
             cpu_job_definition = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "PrivateCPUJobQueue":
             cpu_job_queue = resource["PhysicalResourceId"]
+        if resource["LogicalResourceId"] == "PrivateSpotCPUJobQueue":
+            cpu_spot_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "CPUDownloadJobDefinition":
             download_job_definition = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "PublicCPUJobQueue":
             download_job_queue = resource["PhysicalResourceId"]
+        if resource["LogicalResourceId"] == "PublicSpotCPUJobQueue":
+            download_spot_job_queue = resource["PhysicalResourceId"]
     return {
         "gpu_job_definition": gpu_job_definition,
         "gpu_job_queue": gpu_job_queue,
@@ -116,6 +120,8 @@ def get_batch_resources(stack_name):
         "cpu_job_queue": cpu_job_queue,
         "download_job_definition": download_job_definition,
         "download_job_queue": download_job_queue,
+        "cpu_spot_job_queue": cpu_spot_job_queue,
+        "download_spot_job_queue": download_spot_job_queue,
     }
 
 def list_alphafold_stacks():
@@ -199,7 +205,6 @@ def submit_batch_alphafold_job(
     job_name,
     fasta_paths,
     s3_bucket,
-    is_prokaryote_list=None,
     data_dir="/mnt/data_dir/fsx",
     output_dir="alphafold",
     bfd_database_path="/mnt/bfd_database_path/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
@@ -225,11 +230,17 @@ def submit_batch_alphafold_job(
     gpu=1,
     depends_on=None,
     stack_name=None,
+    use_spot_instances=False,
 ):
 
     if stack_name is None:
         stack_name = list_alphafold_stacks()[0]["StackName"]
     batch_resources = get_batch_resources(stack_name)
+
+    # Enable this option to be able to load the MSA results if instance
+    # gets interrupted.
+    if use_spot_instances:
+        use_precomputed_msas = True
 
     container_overrides = {
         "command": [
@@ -275,11 +286,6 @@ def submit_batch_alphafold_job(
             f"--bfd_database_path={bfd_database_path}"
         )
 
-    if is_prokaryote_list is not None:
-        container_overrides["command"].append(
-            f"--is_prokaryote_list={is_prokaryote_list}"
-        )
-
     if benchmark:
         container_overrides["command"].append("--benchmark")
 
@@ -301,6 +307,9 @@ def submit_batch_alphafold_job(
         container_overrides["resourceRequirements"].append(
             {"value": str(gpu), "type": "GPU"}
         )
+    elif use_spot_instances and gpu == 0:
+        job_definition = batch_resources["cpu_job_definition"]
+        job_queue = batch_resources["cpu_spot_job_queue"]
     else:
         job_definition = batch_resources["cpu_job_definition"]
         job_queue = batch_resources["cpu_job_queue"]
