@@ -165,7 +165,7 @@ Resources:
                           "arn:aws:logs",
                           !Ref AWS::Region,
                           !Ref AWS::AccountId,
-                          "log-group:/aws/codebuild/AWS-Alphafold*",
+                          "log-group:/aws/codebuild/CodeBuildProject-*",
                         ],
                       ]
               - Effect: Allow
@@ -311,7 +311,7 @@ Resources:
       ResourceAccessRole: !GetAtt CodeBuildRole.Arn
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
-        BuildSpec: infrastructure/buildspec.yml
+        BuildSpec: infrastructure/buildspec.yaml
         GitCloneDepth: 1
         Location: !GetAtt CodeRepository.CloneUrlHttp
         Type: CODECOMMIT
