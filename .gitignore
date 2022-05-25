@@ -6,3 +6,4 @@ aws-alphafold.zip
 notebooks/data/*
 notebooks/nbhelpers/__pycache__*
 notebooks/.DS_Store
+infrastructure/*-packaged.yaml
