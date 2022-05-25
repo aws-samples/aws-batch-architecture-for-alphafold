@@ -42,9 +42,9 @@ push-to-s3-dev:
     - yum update -y && yum install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
-    - aws s3 cp aws-alphafold.zip s3://$(DEPLOYMENT_BUCKET_NAME)/$(DEV_BUCKET_PREFIX)/aws-alphafold.zip
-    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template alphafold-cfn-packaged.yaml --s3-bucket $(DEPLOYMENT_BUCKET_NAME) --s3_prefix $(DEV_BUCKET_PREFIX)
-    - aws s3 cp infrastructure/alphafold-cfn-root.yaml s3://$(DEPLOYMENT_BUCKET_NAME)/$(DEV_BUCKET_PREFIX)/alphafold-cfn-root.yaml
+    - aws s3 cp aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip
+    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $DEV_BUCKET_PREFIX
+    - aws s3 cp infrastructure/alphafold-cfn-root.yaml s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/alphafold-cfn-root.yaml
   only:
     - dev
 
@@ -57,7 +57,7 @@ push-to-s3-main:
     - yum update -y && yum install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
-    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip
-    - aws s3 cp infrastructure/*.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/cfn.yaml    
+    - aws s3 cp aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/aws-alphafold.zip
+    - aws s3 cp infrastructure/alphafold-cfn-root.yaml s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/alphafold-cfn-root.yaml
   only:
     - main
