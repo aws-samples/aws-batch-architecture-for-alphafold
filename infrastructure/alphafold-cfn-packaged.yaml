@@ -12,20 +12,50 @@ Parameters:
     - c
     Default: a
   VPC:
+    Description: (Optional) ID of VPC to use. If left empty, a new VPC will be created.
     Type: String
     Default: ''
   DefaultSecurityGroup:
+    Description: (Optional) ID of security group to use. If left empty, a new VPC
+      will be created.
     Type: String
     Default: ''
   Subnet:
+    Description: (Optional) ID of private subnet to use. If left empty, a new VPC
+      will be created.
     Type: String
     Default: ''
   FileSystemId:
+    Description: (Optional) ID of FSX for Lustre  to use. If left empty, a new FSx
+      for Lustre instance will be created.
     Type: String
     Default: ''
   FileSystemMountName:
+    Description: (Optional) Mount name of FSX for Lustre to use. If left empty, a
+      new FSx for Lustre instance will be created.
     Type: String
     Default: ''
+  Environment:
+    Description: Leave this as "main" unless you are testing a pre-release version
+      of this architecture.
+    Type: String
+    Default: main
+    AllowedValues:
+    - main
+    - dev
+  LaunchSageMakerNotebook:
+    Type: String
+    Default: Y
+    Description: Create a SageMaker Notebook Instance.
+    AllowedValues:
+    - Y
+    - N
+  AlphaFoldVersion:
+    Description: AlphaFold release to include as part of the job container
+    Type: String
+    Default: v2.1.2
+    AllowedValues:
+    - v2.1.2
 Conditions:
   CreateNetwork:
     Fn::Or:
@@ -93,14 +123,25 @@ Resources:
             - Network
             - Outputs.PrivateSubnet
           - Ref: Subnet
-  BatchEnvironment:
+  ContainerStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.us-east-2.amazonaws.com/alphafold-cfn-build/dcf10784a664da7ff991f7ab558bf086.template
+      TemplateURL: https://s3.us-east-2.amazonaws.com/alphafold-cfn-build/54591531e2f973a68d86f38e299db866.template
       Parameters:
         ApplicationName:
           Ref: ApplicationName
-        DefaultSecurityGroup:
+        Environment:
+          Ref: Environment
+        AlphaFoldVersion:
+          Ref: AlphaFoldVersion
+  BatchEnvironment:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-2.amazonaws.com/alphafold-cfn-build/5a55771a0b134e7c8a359f7e5fec8bc6.template
+      Parameters:
+        ApplicationName:
+          Ref: ApplicationName
+        DefaultSecurityGroupID:
           Fn::If:
           - CreateNetwork
           - Fn::GetAtt:
@@ -128,3 +169,17 @@ Resources:
             - Network
             - Outputs.PrivateSubnet
           - Ref: Subnet
+        CodeRepositoryURI:
+          Fn::GetAtt:
+          - ContainerStack
+          - Outputs.CodeRepositoryURI
+        FoldingContainerRegistryURI:
+          Fn::GetAtt:
+          - ContainerStack
+          - Outputs.FoldingContainerRegistryURI
+        DownloadContainerRegistryURI:
+          Fn::GetAtt:
+          - ContainerStack
+          - Outputs.DownloadContainerRegistryURI
+        LaunchSageMakerNotebook:
+          Ref: LaunchSageMakerNotebook

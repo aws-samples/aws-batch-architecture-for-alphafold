@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Deploy with
 # aws cloudformation package --template-file alphafold-cfn-root.yaml --output-template alphafold-cfn-packaged.yaml --s3-bucket alphafold-cfn-build
-# aws cloudformation deploy --template-file alphafold-cfn-packaged.yaml --stack-name aws-batch-alphafold
+# aws cloudformation deploy --template-file alphafold-cfn-packaged.yaml --capabilities CAPABILITY_IAM --stack-name aws-batch-alphafold
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Root stack for running AWS Batch Architecture for AlphaFold.
@@ -20,24 +20,39 @@ Parameters:
     Type: String
     Default: ""
   DefaultSecurityGroup:
+    Description: (Optional) ID of security group to use. If left empty, a new VPC will be created.
     Type: String
     Default: ""
   Subnet:
+    Description: (Optional) ID of private subnet to use. If left empty, a new VPC will be created.
     Type: String
     Default: ""
   FileSystemId:
+    Description: (Optional) ID of FSX for Lustre  to use. If left empty, a new FSx for Lustre instance will be created.
     Type: String
     Default: ""
   FileSystemMountName:
+    Description: (Optional) Mount name of FSX for Lustre to use. If left empty, a new FSx for Lustre instance will be created.
     Type: String
     Default: ""
   Environment:
-    Description: Leave this as "main" unless you are testing a pre-release versions of this architecture.
+    Description: Leave this as "main" unless you are testing a pre-release version of this architecture.
     Type: String
     Default: main
     AllowedValues:
       - main
       - dev
+  LaunchSageMakerNotebook:
+    Type: String 
+    Default: Y
+    Description: Create a SageMaker Notebook Instance.
+    AllowedValues: [Y, N]
+  AlphaFoldVersion:
+    Description: AlphaFold release to include as part of the job container
+    Type: String
+    Default: v2.1.2
+    AllowedValues:
+      - v2.1.2
 
 Conditions:
   CreateNetwork: !Or [ !Equals [ !Ref VPC, "" ], !Equals [ !Ref DefaultSecurityGroup, "" ], !Equals [ !Ref Subnet, "" ] ]
@@ -73,12 +88,26 @@ Resources:
             - !GetAtt Network.Outputs.PrivateSubnet
             - !Ref Subnet
 
+  ContainerStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: alphafold-cfn-container.yaml
+      Parameters:
+        ApplicationName: !Ref ApplicationName
+        Environment: !Ref Environment
+        AlphaFoldVersion: !Ref AlphaFoldVersion
+
   BatchEnvironment:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: alphafold-cfn-batch.yaml
       Parameters:
         ApplicationName: !Ref ApplicationName
+        Subnet: 
+          "Fn::If":
+            - CreateNetwork
+            - !GetAtt Network.Outputs.PrivateSubnet
+            - !Ref Subnet        
         DefaultSecurityGroupID: 
           "Fn::If":
             - CreateNetwork
@@ -94,9 +123,7 @@ Resources:
             - CreateFileSystem
             - !GetAtt FileSystem.Outputs.FileSystemMountName
             - !Ref FileSystemMountName
-        Subnet: 
-          "Fn::If":
-            - CreateNetwork
-            - !GetAtt Network.Outputs.PrivateSubnet
-            - !Ref Subnet
-        Environment: !Ref Environment
+        CodeRepositoryURI: !GetAtt ContainerStack.Outputs.CodeRepositoryURI
+        FoldingContainerRegistryURI: !GetAtt ContainerStack.Outputs.FoldingContainerRegistryURI
+        DownloadContainerRegistryURI: !GetAtt ContainerStack.Outputs.DownloadContainerRegistryURI
+        LaunchSageMakerNotebook: !Ref LaunchSageMakerNotebook
