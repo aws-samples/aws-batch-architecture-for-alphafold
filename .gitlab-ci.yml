@@ -20,7 +20,7 @@ cfn-lint:
     - pip install cfn-lint
     - pip freeze    
   script:
-    - cfn-lint -I infrastructure/*.yaml
+    - cfn-lint -I infrastructure/*cfn*.yaml
 
 cfn-nag:
   image: stelligent/cfn_nag
