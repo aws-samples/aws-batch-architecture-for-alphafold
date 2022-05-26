@@ -92,7 +92,7 @@ Resources:
             "code-repo",
             !Select [
               4,
-              !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]],
+              !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]],
             ],
           ],
         ]
@@ -113,7 +113,7 @@ Resources:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value: !Ref "AWS::StackId"
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
@@ -128,7 +128,7 @@ Resources:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value: !Ref "AWS::StackId"
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
@@ -163,8 +163,8 @@ Resources:
                         ":",
                         [
                           "arn:aws:logs",
-                          !Ref AWS::Region,
-                          !Ref AWS::AccountId,
+                          !Ref "AWS::Region",
+                          !Ref "AWS::AccountId",
                           "log-group:/aws/codebuild/CodeBuildProject-*",
                         ],
                       ]
@@ -178,7 +178,7 @@ Resources:
                 Resource:
                   - !Join [
                       "-",
-                      ["arn:aws:s3:::codepipeline", !Ref AWS::Region, "*"],
+                      ["arn:aws:s3:::codepipeline", !Ref "AWS::Region", "*"],
                     ]
                   - !Join ["", [!GetAtt CodePipelineS3Bucket.Arn, "*"]]
               - Effect: Allow
@@ -190,8 +190,8 @@ Resources:
                         ":",
                         [
                           "arn:aws:codecommit",
-                          !Ref AWS::Region,
-                          !Ref AWS::AccountId,
+                          !Ref "AWS::Region",
+                          !Ref "AWS::AccountId",
                           !GetAtt CodeRepository.Name,
                         ],
                       ]
@@ -208,8 +208,8 @@ Resources:
                         ":",
                         [
                           "arn:aws:s3:::codebuild",
-                          !Ref AWS::Region,
-                          !Ref AWS::AccountId,
+                          !Ref "AWS::Region",
+                          !Ref "AWS::AccountId",
                           "report-group/AWS-Alphafold*",
                         ],
                       ]
@@ -217,7 +217,7 @@ Resources:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value: !Ref "AWS::StackId"
 
   EncryptionKey:
     Type: "AWS::KMS::Key"
@@ -231,7 +231,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                Fn::Join: [":", ["arn:aws:iam:", !Ref AWS::AccountId, "root"]]
+                Fn::Join: [":", ["arn:aws:iam:", !Ref "AWS::AccountId", "root"]]
             Action:
               [
                 "kms:Create*",
@@ -280,7 +280,7 @@ Resources:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value: !Ref "AWS::StackId"
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
@@ -303,7 +303,7 @@ Resources:
           - Name: DOWNLOAD_IMAGE_REPO_NAME
             Value: !Ref DownloadContainerRegistry
           - Name: ACCOUNT_ID
-            Value: !Ref AWS::AccountId
+            Value: !Ref "AWS::AccountId"
         Image: aws/codebuild/standard:4.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
@@ -320,7 +320,7 @@ Resources:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value: !Ref "AWS::StackId"
 
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -375,7 +375,7 @@ Resources:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value: !Ref "AWS::StackId"
 
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -401,7 +401,7 @@ Resources:
               Namespace: SourceVariables
               OutputArtifacts:
                 - Name: SourceArtifact
-              Region: !Ref AWS::Region
+              Region: !Ref "AWS::Region"
               RunOrder: 1
         - Name: Build
           Actions:
@@ -418,13 +418,13 @@ Resources:
               Namespace: BuildVariables
               OutputArtifacts:
                 - Name: BuildArtifact
-              Region: !Ref AWS::Region
+              Region: !Ref "AWS::Region"
               RunOrder: 2
       Tags:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value: !Ref "AWS::StackId"
 
   CPUDownloadJobDefinition:
     Type: AWS::Batch::JobDefinition
@@ -460,7 +460,7 @@ Resources:
         Attempts: 3
       Tags:
         Application: !Ref ApplicationName
-        StackId: !Ref AWS::StackId
+        StackId: !Ref "AWS::StackId"
       Type: container
 
 Outputs:
