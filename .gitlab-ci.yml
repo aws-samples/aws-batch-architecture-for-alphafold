@@ -22,7 +22,7 @@ stages:
 ################################
 
 cfn-lint:
-  image: python:latest
+  image: python:3.8
   stage: lint
   before_script:
     - python --version # For debugging
@@ -66,7 +66,7 @@ push-to-s3-dev:
 ################################
 
 test_cfn:
-  image: python:latest
+  image: python:3.8
   stage: test
   before_script:
     - python --version # For debugging
