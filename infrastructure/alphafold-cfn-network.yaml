@@ -236,7 +236,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                Fn::Join: [":", ["arn:aws:iam:", !Ref AWS::AccountId, "root"]]
+                Fn::Join: [":", ["arn:aws:iam:", !Ref "AWS::AccountId", "root"]]
             Action:
               [
                 "kms:Create*",
@@ -289,7 +289,6 @@ Outputs:
     Value: !Ref VPC
   PrivateSubnet:
     Description: The private subnet
-    # Value: !Join [ ",", [ !Ref PrivateSubnet0 ]]
     Value:
       Ref: PrivateSubnet0
   DefaultSecurityGroup:
