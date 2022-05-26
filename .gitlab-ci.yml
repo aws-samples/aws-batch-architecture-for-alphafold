@@ -11,49 +11,79 @@ default:
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
 
+stages:
+  - deploy-dev
+  - test
+  - deploy-prod
+
+################################
+# .pre
+################################
+
 cfn-lint:
   image: python:latest
-  stage: test
+  stage: .pre
   before_script:
-    - python --version  # For debugging
+    - python --version # For debugging
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
     - pip install cfn-lint
-    - pip freeze    
+    - pip freeze
   script:
     - cfn-lint -I infrastructure/*cfn*.yaml
 
 cfn-nag:
   image: stelligent/cfn_nag
-  stage: test
+  stage: .pre
   script:
     - cfn_nag_scan --input-path infrastructure/*.yaml
 
 secret_detection:
-  stage: test
+  stage: .pre
   variables:
     CI_DEBUG_TRACE: "true"
 
+################################
+# deploy-dev
+################################
+
 push-to-s3-dev:
-  stage: deploy
+  stage: deploy-dev
   before_script:
     - yum update -y && yum install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
     - aws s3 cp aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip
-    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $DEV_BUCKET_PREFIX
-    - aws s3 cp infrastructure/alphafold-cfn-root.yaml s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/alphafold-cfn-root.yaml
+    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $DEV_BUCKET_PREFIX
+    - aws s3 cp infrastructure/alphafold-cfn-packaged.yaml s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/alphafold-cfn-packaged.yaml
   only:
     - dev
 
+################################
+# test
+################################
+
+test_cfn:
+  stage: test
+  before_script:
+    - yum update -y && yum install -y taskcat
+  script:
+    - taskcat run test
+  only:
+    - dev
+
+################################
+# deploy-prod
+################################
+
 push-to-s3-main:
-  stage: deploy
+  stage: deploy-prod
   before_script:
     - yum update -y && yum install -y awscli zip
   script:
-    - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
-    - aws s3 cp aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/aws-alphafold.zip
-    - aws s3 cp infrastructure/alphafold-cfn-root.yaml s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/alphafold-cfn-root.yaml
+    - aws s3 cp s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/aws-alphafold.zip
+    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $PROD_BUCKET_PREFIX
+    - aws s3 cp infrastructure/alphafold-cfn-packaged.yaml s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/alphafold-cfn-packaged.yaml
   only:
     - main
