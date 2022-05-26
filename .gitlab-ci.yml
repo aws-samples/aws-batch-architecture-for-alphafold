@@ -1,9 +1,9 @@
 variables:
-  AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
+  AWS_CREDS_TARGET_ROLE: arn:aws:iam::264410369698:role/AWS-Alphafold-GitLab-CI-Role
   AWS_DEFAULT_REGION: us-east-1
-  DEPLOYMENT_BUCKET_NAME: aws-hcls-ml
-  DEV_BUCKET_PREFIX: blog_post_support_materials/aws-alphafold/dev
-  PROD_BUCKET_PREFIX: blog_post_support_materials/aws-alphafold/prod
+  DEPLOYMENT_BUCKET_NAME: aws-batch-architecture-for-alphafold-public-artifacts
+  DEV_BUCKET_PREFIX: dev
+  PROD_BUCKET_PREFIX: prod
 
 default:
   image: public.ecr.aws/amazonlinux/amazonlinux:latest
