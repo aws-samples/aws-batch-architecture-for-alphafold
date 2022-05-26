@@ -1,5 +1,5 @@
 #!/bin/sh
-
+code_folder="code_artifact"
 if [ ! -d ${code_folder} ]; then
   mkdir ${code_folder};
 fi

@@ -6,7 +6,9 @@
 			"Effect": "Allow",
 			"Action": [
                 "batch:SubmitJob", 
-                "batch:DescribeJobs"
+                "batch:DescribeJobs",
+				"batch:ListJobs",
+				"batch:TerminateJob"
             ],
 			"Resource": "*"
 		},
