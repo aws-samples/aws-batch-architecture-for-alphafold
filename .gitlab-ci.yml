@@ -80,9 +80,6 @@ test_cfn:
     - pip install taskcat
     - pip freeze
   script:
-    - echo $AWS_PROFILE
-    - echo $AWS_CREDS_TARGET_ROLE
-    - cat $HOME/.aws/credentials
     - taskcat test run
   only:
     - dev

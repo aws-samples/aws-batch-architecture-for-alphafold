@@ -1,6 +1,6 @@
 project:
   name: aws-alphafold2
-  auth: {"default": "default"}
+  package_lambda: false
   s3_bucket: aws-batch-architecture-for-alphafold-public-artifacts
   regions:
     - us-east-1
