@@ -83,7 +83,7 @@ Conditions:
 
 Resources:
   Network:
-    Type: AWS::CloudFormation::Stack
+    Type: "AWS::CloudFormation::Stack"
     Condition: CreateNetwork
     Properties:
       TemplateURL: alphafold-cfn-network.yaml
@@ -91,10 +91,10 @@ Resources:
         ApplicationName:
           Ref: ApplicationName
         StackAvailabilityZone:
-          "Fn::Join": ["", [Ref: AWS::Region, Ref: StackAvailabilityZone]]
+          "Fn::Join": ["", [Ref: "AWS::Region", Ref: StackAvailabilityZone]]
 
   FileSystem:
-    Type: AWS::CloudFormation::Stack
+    Type: "AWS::CloudFormation::Stack"
     Condition: CreateFileSystem
     Properties:
       TemplateURL: alphafold-cfn-fsx-lustre.yaml
@@ -115,7 +115,7 @@ Resources:
             - Ref: Subnet
 
   Container:
-    Type: AWS::CloudFormation::Stack
+    Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL: alphafold-cfn-container.yaml
       Parameters:
@@ -127,7 +127,7 @@ Resources:
           Ref: AlphaFoldVersion
 
   BatchEnvironment:
-    Type: AWS::CloudFormation::Stack
+    Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL: alphafold-cfn-batch.yaml
       Parameters:
@@ -159,7 +159,7 @@ Resources:
           "Fn::GetAtt": Container.Outputs.DownloadContainerRegistryURI
 
   Notebook:
-    Type: AWS::CloudFormation::Stack
+    Type: "AWS::CloudFormation::Stack"
     Condition: CreateSageMakerNotebook
     Properties:
       TemplateURL: alphafold-cfn-notebook.yaml
@@ -180,7 +180,7 @@ Resources:
           "Fn::GetAtt": Container.Outputs.CodeRepositoryURI
 
   Cleanup:
-    Type: AWS::CloudFormation::Stack
+    Type: "AWS::CloudFormation::Stack"
     Condition: CleanUp
     Properties:
       TemplateURL: alphafold-cfn-cleanup.yaml
