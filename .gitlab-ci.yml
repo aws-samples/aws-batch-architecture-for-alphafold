@@ -12,6 +12,7 @@ include:
   - template: Security/Secret-Detection.gitlab-ci.yml
 
 stages:
+  - lint
   - deploy-dev
   - test
   - deploy-prod
@@ -22,7 +23,7 @@ stages:
 
 cfn-lint:
   image: python:latest
-  stage: .pre
+  stage: lint
   before_script:
     - python --version # For debugging
     - pip install virtualenv
@@ -35,12 +36,12 @@ cfn-lint:
 
 cfn-nag:
   image: stelligent/cfn_nag
-  stage: .pre
+  stage: lint
   script:
     - cfn_nag_scan --input-path infrastructure/*.yaml
 
 secret_detection:
-  stage: .pre
+  stage: lint
   variables:
     CI_DEBUG_TRACE: "true"
 
