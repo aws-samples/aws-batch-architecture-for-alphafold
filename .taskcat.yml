@@ -4,8 +4,6 @@ project:
   s3_bucket: aws-batch-architecture-for-alphafold-public-artifacts
   regions:
     - us-east-1
-    - us-east-2
-    - us-west-2
 tests:
   default:
     template: infrastructure/alphafold-cfn-packaged.yaml
