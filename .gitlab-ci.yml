@@ -73,6 +73,7 @@ test_cfn:
   image: python:3.8
   stage: test
   before_script:
+    - yum update -y && yum install -y awscli zip
     - python --version # For debugging
     - pip install virtualenv
     - virtualenv venv
@@ -82,6 +83,8 @@ test_cfn:
   script:
     - echo $AWS_PROFILE
     - echo $AWS_CREDS_TARGET_ROLE
+    - cat $HOME/.aws/credentials
+    - aws s3 ls s3://aws-batch-architecture-for-alphafold-public-artifacts
     - taskcat test run
   only:
     - dev
