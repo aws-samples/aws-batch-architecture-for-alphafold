@@ -13,7 +13,7 @@ Parameters:
     Type: String
     Default: "Unknown"
 ##################################################
-  # Network Configuration
+# Network Configuration
 ##################################################
 Resources:
   VPC:
@@ -64,21 +64,21 @@ Resources:
 
   VPCFlowLogsGroup:
     Type: AWS::Logs::LogGroup
-    Properties: 
+    Properties:
       KmsKeyId: !GetAtt EncryptionKey.Arn
       RetentionInDays: 120
-      Tags: 
+      Tags:
         - Key: StackId
           Value: !Ref AWS::StackId
 
   VPCFlowLog:
     Type: "AWS::EC2::FlowLog"
-    Properties: 
+    Properties:
       DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
-      LogGroupName: !Ref VPCFlowLogsGroup    
+      LogGroupName: !Ref VPCFlowLogsGroup
       ResourceId: !Ref VPC
       ResourceType: VPC
-      Tags: 
+      Tags:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
@@ -235,9 +235,9 @@ Resources:
           - Sid: Enable IAM User Permissions
             Effect: Allow
             Principal:
-              AWS: 
+              AWS:
                 Fn::Join: [":", ["arn:aws:iam:", !Ref AWS::AccountId, "root"]]
-            Action: 
+            Action:
               [
                 "kms:Create*",
                 "kms:Describe*",
@@ -267,7 +267,7 @@ Resources:
                 "kms:GenerateDataKey*",
                 "kms:DescribeKey",
               ]
-            Resource: "*"            
+            Resource: "*"
       Tags:
         - Key: Application
           Value: !Ref ApplicationName
@@ -282,14 +282,16 @@ Resources:
         - !Ref PrivateRouteTable0
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
       VpcId: !Ref VPC
-      
+
 Outputs:
   VPC:
     Description: A reference to the created VPC
     Value: !Ref VPC
   PrivateSubnet:
-    Description: The private subnets
-    Value: !Join [ ",", [ !Ref PrivateSubnet0 ]]
+    Description: The private subnet
+    # Value: !Join [ ",", [ !Ref PrivateSubnet0 ]]
+    Value:
+      Ref: PrivateSubnet0
   DefaultSecurityGroup:
     Description: ID of the default security group
     Value: !GetAtt VPC.DefaultSecurityGroup

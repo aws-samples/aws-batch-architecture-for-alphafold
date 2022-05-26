@@ -8,7 +8,7 @@ Parameters:
   ApplicationName:
     Description: Name of the application, if applicable
     Type: String
-    Default: "Unknown"
+    Default: Unknown
   DefaultSecurityGroup:
     Description: The default security group ID for the VPC
     Type: String
@@ -29,13 +29,13 @@ Parameters:
       - 250
       - 500
       - 1000
-    Default: 500    
+    Default: 500
   Subnet:
     Description: Subnet ID for the file system.
     Type: String
-  
+
 Resources:
-##################################################
+  ##################################################
   # FSx File System
   ##################################################
   FSX:
@@ -46,23 +46,28 @@ Resources:
       LustreConfiguration:
         DataCompressionType: "LZ4"
         DeploymentType: "PERSISTENT_2"
-        PerUnitStorageThroughput: !Ref FSxForLustreThroughput
+        PerUnitStorageThroughput:
+          Ref: FSxForLustreThroughput
       SecurityGroupIds:
-        - !Ref DefaultSecurityGroup
+        - Ref: DefaultSecurityGroup
       StorageCapacity: !Ref FSXForLustreStorageCapacity
       StorageType: "SSD"
       SubnetIds:
-        - !Ref Subnet
+        - Ref: Subnet
       Tags:
         - Key: Application
-          Value: !Ref ApplicationName
+          Value:
+            Ref: ApplicationName
         - Key: StackId
-          Value: !Ref AWS::StackId
+          Value:
+            Ref: AWS::StackId
 
 Outputs:
   FileSystemId:
     Description: File system ID
-    Value: !Ref FSX
+    Value:
+      Ref: FSX
   FileSystemMountName:
     Description: Mount name for file system
-    Value: !GetAtt FSX.LustreMountName
+    Value:
+      Fn::GetAtt: FSX.LustreMountName

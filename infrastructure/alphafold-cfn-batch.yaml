@@ -179,7 +179,7 @@ Resources:
       State: ENABLED
       Tags:
         Application: !Ref ApplicationName
-        StackId: !Ref AWS::StackId 
+        StackId: !Ref AWS::StackId
 
   PrivateGPUJobQueue:
     Type: AWS::Batch::JobQueue
@@ -198,18 +198,17 @@ Resources:
     Properties:
       ContainerProperties:
         Command:
-          - "-c echo hello, world"    
-        Image:
-          !Join [":", [!Ref FoldingContainerRegistryURI, "latest"]]
+          - "-c echo hello, world"
+        Image: !Join [":", [!Ref FoldingContainerRegistryURI, "latest"]]
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
           - ContainerPath: /mnt/bfd_database_path
             ReadOnly: True
-            SourceVolume: bfd        
+            SourceVolume: bfd
           - ContainerPath: /mnt/mgnify_database_path
             ReadOnly: True
-            SourceVolume: mgnify            
+            SourceVolume: mgnify
           - ContainerPath: /mnt/pdb70_database_path
             ReadOnly: True
             SourceVolume: pdb70
@@ -221,7 +220,7 @@ Resources:
             SourceVolume: pdb_mmcif
           - ContainerPath: /mnt/pdb_seqres_database_path
             ReadOnly: True
-            SourceVolume: pdb_seqres            
+            SourceVolume: pdb_seqres
           - ContainerPath: /mnt/small_bfd_database_path
             ReadOnly: True
             SourceVolume: small_bfd
@@ -230,10 +229,10 @@ Resources:
             SourceVolume: uniclust30
           - ContainerPath: /mnt/uniprot_database_path
             ReadOnly: True
-            SourceVolume: uniprot     
+            SourceVolume: uniprot
           - ContainerPath: /mnt/uniref90_database_path
             ReadOnly: True
-            SourceVolume: uniref90                   
+            SourceVolume: uniref90
           - ContainerPath: /mnt/data_dir
             ReadOnly: True
             SourceVolume: data
@@ -251,16 +250,16 @@ Resources:
               SourcePath: /fsx/bfd
           - Name: mgnify
             Host:
-              SourcePath: /fsx/mgnify    
+              SourcePath: /fsx/mgnify
           - Name: pdb70
             Host:
-              SourcePath: /fsx/pdb70   
+              SourcePath: /fsx/pdb70
           - Name: pdb_mmcif
             Host:
-              SourcePath: /fsx/pdb_mmcif  
+              SourcePath: /fsx/pdb_mmcif
           - Name: pdb_seqres
             Host:
-              SourcePath: /fsx/pdb_seqres  
+              SourcePath: /fsx/pdb_seqres
           - Name: small_bfd
             Host:
               SourcePath: /fsx/small_bfd
@@ -269,13 +268,13 @@ Resources:
               SourcePath: /fsx/uniclust30
           - Name: uniprot
             Host:
-              SourcePath: /fsx/uniprot                                                                                               
+              SourcePath: /fsx/uniprot
           - Name: uniref90
             Host:
-              SourcePath: /fsx/uniref90   
+              SourcePath: /fsx/uniref90
           - Name: data
             Host:
-              SourcePath: /    
+              SourcePath: /
           - Name: output
             Host:
               SourcePath: /tmp/alphafold
@@ -287,7 +286,7 @@ Resources:
       Tags:
         Application: !Ref ApplicationName
         StackId: !Ref AWS::StackId
-      Type: container       
+      Type: container
 
   GPUFoldingJobDefinition:
     Type: AWS::Batch::JobDefinition
@@ -300,17 +299,16 @@ Resources:
             Value: 1
           - Name: XLA_PYTHON_CLIENT_MEM_FRACTION
             Value: 4.0
-        Image:
-          !Join [":", [!Ref FoldingContainerRegistryURI, "latest"]]
+        Image: !Join [":", [!Ref FoldingContainerRegistryURI, "latest"]]
         LogConfiguration:
           LogDriver: awslogs
         MountPoints:
           - ContainerPath: /mnt/bfd_database_path
             ReadOnly: True
-            SourceVolume: bfd        
+            SourceVolume: bfd
           - ContainerPath: /mnt/mgnify_database_path
             ReadOnly: True
-            SourceVolume: mgnify            
+            SourceVolume: mgnify
           - ContainerPath: /mnt/pdb70_database_path
             ReadOnly: True
             SourceVolume: pdb70
@@ -322,7 +320,7 @@ Resources:
             SourceVolume: pdb_mmcif
           - ContainerPath: /mnt/pdb_seqres_database_path
             ReadOnly: True
-            SourceVolume: pdb_seqres            
+            SourceVolume: pdb_seqres
           - ContainerPath: /mnt/small_bfd_database_path
             ReadOnly: True
             SourceVolume: small_bfd
@@ -331,10 +329,10 @@ Resources:
             SourceVolume: uniclust30
           - ContainerPath: /mnt/uniprot_database_path
             ReadOnly: True
-            SourceVolume: uniprot     
+            SourceVolume: uniprot
           - ContainerPath: /mnt/uniref90_database_path
             ReadOnly: True
-            SourceVolume: uniref90                   
+            SourceVolume: uniref90
           - ContainerPath: /mnt/data_dir
             ReadOnly: True
             SourceVolume: data
@@ -354,16 +352,16 @@ Resources:
               SourcePath: /fsx/bfd
           - Name: mgnify
             Host:
-              SourcePath: /fsx/mgnify    
+              SourcePath: /fsx/mgnify
           - Name: pdb70
             Host:
-              SourcePath: /fsx/pdb70   
+              SourcePath: /fsx/pdb70
           - Name: pdb_mmcif
             Host:
-              SourcePath: /fsx/pdb_mmcif  
+              SourcePath: /fsx/pdb_mmcif
           - Name: pdb_seqres
             Host:
-              SourcePath: /fsx/pdb_seqres  
+              SourcePath: /fsx/pdb_seqres
           - Name: small_bfd
             Host:
               SourcePath: /fsx/small_bfd
@@ -372,13 +370,13 @@ Resources:
               SourcePath: /fsx/uniclust30
           - Name: uniprot
             Host:
-              SourcePath: /fsx/uniprot                                                                                               
+              SourcePath: /fsx/uniprot
           - Name: uniref90
             Host:
-              SourcePath: /fsx/uniref90   
+              SourcePath: /fsx/uniref90
           - Name: data
             Host:
-              SourcePath: /    
+              SourcePath: /
           - Name: output
             Host:
               SourcePath: /tmp/alphafold
@@ -393,35 +391,34 @@ Resources:
       Type: container
 
   CPUDownloadJobDefinition:
-      Type: AWS::Batch::JobDefinition
-      Properties:
-        ContainerProperties:
-          Command:
-            - "-c echo hello, world"
-          Image:
-            !Join [":", [!Ref DownloadContainerRegistryURI, "latest"]]
-          LogConfiguration:
-            LogDriver: awslogs
-          MountPoints:
-            - ContainerPath: /fsx
-              ReadOnly: False
-              SourceVolume: fsx
-          Privileged: False
-          ResourceRequirements:
-            - Type: VCPU
-              Value: 4
-            - Type: MEMORY
-              Value: 16000
-          Volumes:
-            - Name: fsx
-              Host:
-                SourcePath: /fsx
-        PlatformCapabilities:
-          - EC2
-        PropagateTags: true
-        RetryStrategy:
-          Attempts: 3
-        Tags:
-          Application: !Ref ApplicationName
-          StackId: !Ref AWS::StackId
-        Type: container      
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      ContainerProperties:
+        Command:
+          - "-c echo hello, world"
+        Image: !Join [":", [!Ref DownloadContainerRegistryURI, "latest"]]
+        LogConfiguration:
+          LogDriver: awslogs
+        MountPoints:
+          - ContainerPath: /fsx
+            ReadOnly: False
+            SourceVolume: fsx
+        Privileged: False
+        ResourceRequirements:
+          - Type: VCPU
+            Value: 4
+          - Type: MEMORY
+            Value: 16000
+        Volumes:
+          - Name: fsx
+            Host:
+              SourcePath: /fsx
+      PlatformCapabilities:
+        - EC2
+      PropagateTags: true
+      RetryStrategy:
+        Attempts: 3
+      Tags:
+        Application: !Ref ApplicationName
+        StackId: !Ref AWS::StackId
+      Type: container

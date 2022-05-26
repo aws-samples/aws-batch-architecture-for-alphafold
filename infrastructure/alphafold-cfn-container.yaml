@@ -14,7 +14,7 @@ Parameters:
   ApplicationName:
     Description: Name of the application, if applicable
     Type: String
-    Default: "Unknown"  
+    Default: "Unknown"
   Environment:
     Description: Leave this as "main" unless you are testing a pre-release versions of this architecture.
     Type: String
@@ -44,11 +44,11 @@ Resources:
         - Key: StackId
           Value: !Ref AWS::StackId
     DeletionPolicy: Retain
-    UpdateReplacePolicy : Retain
+    UpdateReplacePolicy: Retain
 
   S3BucketPolicy:
     Type: "AWS::S3::BucketPolicy"
-    Properties: 
+    Properties:
       Bucket: !Ref CodePipelineS3Bucket
       PolicyDocument:
         Version: "2012-10-17"
@@ -58,18 +58,18 @@ Resources:
               - s3:PutObject
               - s3:GetObjectVersion
             Effect: Allow
-            Resource: 
+            Resource:
               - !Sub arn:aws:s3:::${CodePipelineS3Bucket}/*
-            Principal: 
+            Principal:
               AWS: !Ref AWS::AccountId
           - Action:
               - s3:GetBucketAcl
-              - s3:GetBucketLocation  
+              - s3:GetBucketLocation
               - s3:PutBucketPolicy
             Effect: Allow
-            Resource: 
+            Resource:
               - !GetAtt CodePipelineS3Bucket.Arn
-            Principal: 
+            Principal:
               AWS: !Ref AWS::AccountId
 
   ##################################################
@@ -82,7 +82,7 @@ Resources:
         BranchName: "main"
         S3:
           Bucket: "aws-hcls-ml"
-          Key: !Sub 'blog_post_support_materials/aws-alphafold/${Environment}/aws-alphafold.zip'
+          Key: !Sub "blog_post_support_materials/aws-alphafold/${Environment}/aws-alphafold.zip"
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [
@@ -115,7 +115,7 @@ Resources:
         - Key: StackId
           Value: !Ref AWS::StackId
     DeletionPolicy: Retain
-    UpdateReplacePolicy : Retain
+    UpdateReplacePolicy: Retain
 
   DownloadContainerRegistry:
     Type: AWS::ECR::Repository
@@ -130,7 +130,7 @@ Resources:
         - Key: StackId
           Value: !Ref AWS::StackId
     DeletionPolicy: Retain
-    UpdateReplacePolicy : Retain    
+    UpdateReplacePolicy: Retain
 
   CodeBuildRole:
     Type: AWS::IAM::Role
@@ -230,9 +230,9 @@ Resources:
           - Sid: Enable IAM User Permissions
             Effect: Allow
             Principal:
-              AWS: 
+              AWS:
                 Fn::Join: [":", ["arn:aws:iam:", !Ref AWS::AccountId, "root"]]
-            Action: 
+            Action:
               [
                 "kms:Create*",
                 "kms:Describe*",
@@ -275,7 +275,7 @@ Resources:
                 "kms:GenerateDataKey*",
                 "kms:DescribeKey",
               ]
-            Resource: "*"            
+            Resource: "*"
       Tags:
         - Key: Application
           Value: !Ref ApplicationName
@@ -301,7 +301,7 @@ Resources:
           - Name: DOWNLOAD_IMAGE_TAG
             Value: latest
           - Name: DOWNLOAD_IMAGE_REPO_NAME
-            Value: !Ref DownloadContainerRegistry            
+            Value: !Ref DownloadContainerRegistry
           - Name: ACCOUNT_ID
             Value: !Ref AWS::AccountId
         Image: aws/codebuild/standard:4.0
@@ -427,46 +427,60 @@ Resources:
           Value: !Ref AWS::StackId
 
   CPUDownloadJobDefinition:
-      Type: AWS::Batch::JobDefinition
-      Properties:
-        ContainerProperties:
-          Command:
-            - "-c echo hello, world"
-          Image:
-            !Join [":", [!GetAtt DownloadContainerRegistry.RepositoryUri, "latest"]]
-          LogConfiguration:
-            LogDriver: awslogs
-          MountPoints:
-            - ContainerPath: /fsx
-              ReadOnly: False
-              SourceVolume: fsx
-          Privileged: False
-          ResourceRequirements:
-            - Type: VCPU
-              Value: 4
-            - Type: MEMORY
-              Value: 16000
-          Volumes:
-            - Name: fsx
-              Host:
-                SourcePath: /fsx
-        PlatformCapabilities:
-          - EC2
-        PropagateTags: true
-        RetryStrategy:
-          Attempts: 3
-        Tags:
-          Application: !Ref ApplicationName
-          StackId: !Ref AWS::StackId
-        Type: container      
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      ContainerProperties:
+        Command:
+          - "-c echo hello, world"
+        Image:
+          !Join [
+            ":",
+            [!GetAtt DownloadContainerRegistry.RepositoryUri, "latest"],
+          ]
+        LogConfiguration:
+          LogDriver: awslogs
+        MountPoints:
+          - ContainerPath: /fsx
+            ReadOnly: False
+            SourceVolume: fsx
+        Privileged: False
+        ResourceRequirements:
+          - Type: VCPU
+            Value: 4
+          - Type: MEMORY
+            Value: 16000
+        Volumes:
+          - Name: fsx
+            Host:
+              SourcePath: /fsx
+      PlatformCapabilities:
+        - EC2
+      PropagateTags: true
+      RetryStrategy:
+        Attempts: 3
+      Tags:
+        Application: !Ref ApplicationName
+        StackId: !Ref AWS::StackId
+      Type: container
 
 Outputs:
   CodeRepositoryURI:
     Description: Code repository URI
-    Value: !GetAtt CodeRepository.CloneUrlHttp
+    Value:
+      Fn::GetAtt: CodeRepository.CloneUrlHttp
   FoldingContainerRegistryURI:
     Description: URI of the folding container
-    Value: !GetAtt FoldingContainerRegistry.RepositoryUri
+    Value:
+      Fn::GetAtt: FoldingContainerRegistry.RepositoryUri
+  FoldingContainerRegistryName:
+    Description: Name of the folding container repository
+    Value:
+      Ref: FoldingContainerRegistry
   DownloadContainerRegistryURI:
     Description: URI of the download container
-    Value: !GetAtt DownloadContainerRegistry.RepositoryUri
+    Value:
+      Fn::GetAtt: DownloadContainerRegistry.RepositoryUri
+  s3Bucket:
+    Description: S3 bucket for CodePipeline
+    Value:
+      Ref: CodePipelineS3Bucket

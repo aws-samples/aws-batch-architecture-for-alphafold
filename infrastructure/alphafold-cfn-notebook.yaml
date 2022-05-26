@@ -8,7 +8,7 @@ Parameters:
   ApplicationName:
     Description: Name of the application, if applicable
     Type: String
-    Default: "Unknown"
+    Default: Unknown
   DefaultSecurityGroupID:
     Description: The default security group ID for the VPC
     Type: String
@@ -20,7 +20,6 @@ Parameters:
     Type: String
 
 Resources:
-
   ##################################################
   # SageMaker Notebook Instance
   ##################################################
@@ -36,9 +35,9 @@ Resources:
           - Sid: Enable IAM User Permissions
             Effect: Allow
             Principal:
-              AWS: 
+              AWS:
                 Fn::Join: [":", ["arn:aws:iam:", !Ref AWS::AccountId, "root"]]
-            Action: 
+            Action:
               [
                 "kms:Create*",
                 "kms:Describe*",
@@ -55,25 +54,24 @@ Resources:
                 "kms:ScheduleKeyDeletion",
                 "kms:CancelKeyDeletion",
               ]
-            Resource: "*"      
+            Resource: "*"
       Tags:
         - Key: Application
           Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
 
-  SageMakerNotebookExecutionRole: 
+  SageMakerNotebookExecutionRole:
     Type: "AWS::IAM::Role"
-    Properties: 
-      AssumeRolePolicyDocument: 
+    Properties:
+      AssumeRolePolicyDocument:
         Version: "2012-10-17"
-        Statement: 
-          - 
-            Effect: "Allow"
-            Principal: 
-              Service: 
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
                 - "sagemaker.amazonaws.com"
-            Action: 
+            Action:
               - "sts:AssumeRole"
       Path: "/"
       ManagedPolicyArns:
@@ -87,14 +85,14 @@ Resources:
     Properties:
       DirectInternetAccess: Enabled
       InstanceType: ml.c4.2xlarge
-      DefaultCodeRepository:  !Ref CodeRepositoryURI
+      DefaultCodeRepository: !Ref CodeRepositoryURI
       KmsKeyId: !GetAtt EncryptionKey.Arn
       RoleArn: !GetAtt SageMakerNotebookExecutionRole.Arn
       SubnetId: !Ref Subnet
       SecurityGroupIds:
         - !Ref DefaultSecurityGroupID
       Tags:
-        - Key:  Application
-          Value:  !Ref ApplicationName
-        - Key:  StackId
-          Value:  !Ref AWS::StackId
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: StackId
+          Value: !Ref AWS::StackId
