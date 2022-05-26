@@ -1,5 +1,6 @@
 project:
   name: aws-alphafold2
+  s3_bucket: aws-hcls-ml
   regions:
     - us-east-1
     - us-east-2
