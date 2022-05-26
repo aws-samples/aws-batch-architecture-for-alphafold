@@ -63,18 +63,26 @@ Conditions:
   CreateNetwork:
     Fn::Or:
       [
-        Fn::Equals: [Ref: VPC, ""],
-        Fn::Equals: [Ref: DefaultSecurityGroup, ""],
-        Fn::Equals: [Ref: Subnet, ""],
+        Fn::Equals: 
+          [Ref: VPC, ""],
+        Fn::Equals: 
+          [Ref: DefaultSecurityGroup, ""],
+        Fn::Equals: 
+          [Ref: Subnet, ""],
       ]
   CreateFileSystem:
     Fn::Or:
       [
-        Fn::Equals: [Ref: FileSystemId, ""],
-        Fn::Equals: [Ref: FileSystemMountName, ""],
-        Fn::Equals: [Ref: VPC, ""],
-        Fn::Equals: [Ref: DefaultSecurityGroup, ""],
-        Fn::Equals: [Ref: Subnet, ""],
+        Fn::Equals: 
+          [Ref: FileSystemId, ""],
+        Fn::Equals: 
+          [Ref: FileSystemMountName, ""],
+        Fn::Equals: 
+          [Ref: VPC, ""],
+        Fn::Equals: 
+          [Ref: DefaultSecurityGroup, ""],
+        Fn::Equals: 
+          [Ref: Subnet, ""],
       ]
   CreateSageMakerNotebook:
     Fn::Equals: [Ref: "LaunchSageMakerNotebook", "Y"]
