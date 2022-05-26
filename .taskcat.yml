@@ -1,6 +1,5 @@
 project:
   name: aws-alphafold2
-  role_name: AWS-AlphaFold-GitLab-CI-Role
   s3_bucket: aws-batch-architecture-for-alphafold-public-artifacts
   regions:
     - us-east-1

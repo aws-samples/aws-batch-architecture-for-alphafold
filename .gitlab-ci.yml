@@ -81,6 +81,7 @@ test_cfn:
     - pip freeze
   script:
     - echo $AWS_PROFILE
+    - echo $AWS_CREDS_TARGET_ROLE
     - taskcat test run
   only:
     - dev
