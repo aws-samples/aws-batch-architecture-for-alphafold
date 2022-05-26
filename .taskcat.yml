@@ -1,0 +1,10 @@
+project:
+  name: aws-alphafold2
+  s3_bucket: $[taskcat_autobucket]
+  regions:
+    - us-east-1
+    - us-east-2
+    - us-west-2
+tests:
+  default:
+    template: infrastructure/alphafold-cfn-packaged.yaml
