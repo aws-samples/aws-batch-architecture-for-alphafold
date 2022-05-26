@@ -68,7 +68,7 @@ push-to-s3-dev:
 test_cfn:
   stage: test
   before_script:
-    - yum update -y && yum install -y taskcat
+    - pip install taskcat
   script:
     - taskcat run test
   only:
