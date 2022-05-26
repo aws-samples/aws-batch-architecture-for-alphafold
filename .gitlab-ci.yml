@@ -66,9 +66,15 @@ push-to-s3-dev:
 ################################
 
 test_cfn:
+  image: python:latest
   stage: test
   before_script:
+    - python --version # For debugging
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
     - pip install taskcat
+    - pip freeze
   script:
     - taskcat run test
   only:
