@@ -76,7 +76,7 @@ test_cfn:
     - pip install taskcat
     - pip freeze
   script:
-    - taskcat run test
+    - taskcat test run
   only:
     - dev
 
