@@ -61,33 +61,25 @@ Parameters:
 
 Conditions:
   CreateNetwork:
-    Fn::Or:
+    "Fn::Or":
       [
-        Fn::Equals: 
-          [Ref: VPC, ""],
-        Fn::Equals: 
-          [Ref: DefaultSecurityGroup, ""],
-        Fn::Equals: 
-          [Ref: Subnet, ""],
+        "Fn::Equals": [Ref: VPC, ""],
+        "Fn::Equals": [Ref: DefaultSecurityGroup, ""],
+        "Fn::Equals": [Ref: Subnet, ""],
       ]
   CreateFileSystem:
-    Fn::Or:
+    "Fn::Or":
       [
-        Fn::Equals: 
-          [Ref: FileSystemId, ""],
-        Fn::Equals: 
-          [Ref: FileSystemMountName, ""],
-        Fn::Equals: 
-          [Ref: VPC, ""],
-        Fn::Equals: 
-          [Ref: DefaultSecurityGroup, ""],
-        Fn::Equals: 
-          [Ref: Subnet, ""],
+        "Fn::Equals": [Ref: FileSystemId, ""],
+        "Fn::Equals": [Ref: FileSystemMountName, ""],
+        "Fn::Equals": [Ref: VPC, ""],
+        "Fn::Equals": [Ref: DefaultSecurityGroup, ""],
+        "Fn::Equals": [Ref: Subnet, ""],
       ]
   CreateSageMakerNotebook:
-    Fn::Equals: [Ref: "LaunchSageMakerNotebook", "Y"]
+    "Fn::Equals": [Ref: "LaunchSageMakerNotebook", "Y"]
   CleanUp:
-    Fn::Equals: [Ref: "CleanUp", "Y"]
+    "Fn::Equals": [Ref: "CleanUp", "Y"]
 
 Resources:
   Network:
@@ -99,7 +91,7 @@ Resources:
         ApplicationName:
           Ref: ApplicationName
         StackAvailabilityZone:
-          Fn::Join: ["", [Ref: AWS::Region, Ref: StackAvailabilityZone]]
+          "Fn::Join": ["", [Ref: AWS::Region, Ref: StackAvailabilityZone]]
 
   FileSystem:
     Type: AWS::CloudFormation::Stack
@@ -110,16 +102,16 @@ Resources:
         ApplicationName:
           Ref: ApplicationName
         DefaultSecurityGroup:
-          Fn::If:
+          "Fn::If":
             - CreateNetwork
-            - Fn::GetAtt: Network.Outputs.DefaultSecurityGroup
+            - "Fn::GetAtt": Network.Outputs.DefaultSecurityGroup
             - Ref: DefaultSecurityGroup
         FSXForLustreStorageCapacity: 1200
         FSxForLustreThroughput: 500
         Subnet:
-          Fn::If:
+          "Fn::If":
             - CreateNetwork
-            - Fn::GetAtt: Network.Outputs.PrivateSubnet
+            - "Fn::GetAtt": Network.Outputs.PrivateSubnet
             - Ref: Subnet
 
   Container:
@@ -144,27 +136,27 @@ Resources:
         Subnet:
           "Fn::If":
             - CreateNetwork
-            - Fn::GetAtt: Network.Outputs.PrivateSubnet
+            - "Fn::GetAtt": Network.Outputs.PrivateSubnet
             - Ref: Subnet
         DefaultSecurityGroupID:
           "Fn::If":
             - CreateNetwork
-            - Fn::GetAtt: Network.Outputs.DefaultSecurityGroup
+            - "Fn::GetAtt": Network.Outputs.DefaultSecurityGroup
             - Ref: DefaultSecurityGroup
         FileSystemId:
           "Fn::If":
             - CreateFileSystem
-            - Fn::GetAtt: FileSystem.Outputs.FileSystemId
+            - "Fn::GetAtt": FileSystem.Outputs.FileSystemId
             - Ref: FileSystemId
         FileSystemMountName:
           "Fn::If":
             - CreateFileSystem
-            - Fn::GetAtt: FileSystem.Outputs.FileSystemMountName
+            - "Fn::GetAtt": FileSystem.Outputs.FileSystemMountName
             - Ref: FileSystemMountName
         FoldingContainerRegistryURI:
-          Fn::GetAtt: Container.Outputs.FoldingContainerRegistryURI
+          "Fn::GetAtt": Container.Outputs.FoldingContainerRegistryURI
         DownloadContainerRegistryURI:
-          Fn::GetAtt: Container.Outputs.DownloadContainerRegistryURI
+          "Fn::GetAtt": Container.Outputs.DownloadContainerRegistryURI
 
   Notebook:
     Type: AWS::CloudFormation::Stack
@@ -175,17 +167,17 @@ Resources:
         ApplicationName:
           Ref: ApplicationName
         Subnet:
-          Fn::If:
+          "Fn::If":
             - CreateNetwork
-            - Fn::GetAtt: Network.Outputs.PrivateSubnet
+            - "Fn::GetAtt": Network.Outputs.PrivateSubnet
             - Ref: Subnet
         DefaultSecurityGroupID:
-          Fn::If:
+          "Fn::If":
             - CreateNetwork
-            - Fn::GetAtt: Network.Outputs.DefaultSecurityGroup
+            - "Fn::GetAtt": Network.Outputs.DefaultSecurityGroup
             - Ref: DefaultSecurityGroup
         CodeRepositoryURI:
-          Fn::GetAtt: Container.Outputs.CodeRepositoryURI
+          "Fn::GetAtt": Container.Outputs.CodeRepositoryURI
 
   Cleanup:
     Type: AWS::CloudFormation::Stack
@@ -194,9 +186,9 @@ Resources:
       TemplateURL: alphafold-cfn-cleanup.yaml
       Parameters:
         S3Bucket:
-          Fn::GetAtt: Container.Outputs.s3Bucket
+          "Fn::GetAtt": Container.Outputs.s3Bucket
         ContainerRepo:
-          Fn::GetAtt: Container.Outputs.FoldingContainerRegistryName
+          "Fn::GetAtt": Container.Outputs.FoldingContainerRegistryName
 
 Outputs:
   ApplicationName:
