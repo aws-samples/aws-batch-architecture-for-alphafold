@@ -80,6 +80,7 @@ test_cfn:
     - pip install taskcat
     - pip freeze
   script:
+    - echo $AWS_PROFILE
     - taskcat --profile $AWS_PROFILE test run
   only:
     - dev
