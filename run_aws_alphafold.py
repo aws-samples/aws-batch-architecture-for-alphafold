@@ -521,6 +521,13 @@ def main(argv):
                     logging.info(f"Creating directory {os.path.dirname(features_path)}")
                     os.makedirs(os.path.dirname(features_path))
                 s3.download_file(FLAGS.s3_bucket, features_path, features_path)
+
+                ### 5/27/2022: Also download timings.json
+                output_dir = os.path.join(FLAGS.output_dir, fasta_name)
+                timings_output_path = os.path.join(output_dir, "timings.json")
+                s3.download_file(FLAGS.s3_bucket, timings_output_path, timings_output_path)
+                ########################################
+
             except BaseException as err:
                 logging.info(
                     f"Unable to download {features_path} from s3://{s3_features_url} to {features_path}"
