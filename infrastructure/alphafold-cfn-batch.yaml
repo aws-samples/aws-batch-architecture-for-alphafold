@@ -59,14 +59,12 @@ Resources:
   InstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
-      InstanceProfileName: !Ref ApplicationName
       Roles:
         - !Ref EC2InstanceRole
 
   InstanceLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: !Ref ApplicationName
       LaunchTemplateData:
         BlockDeviceMappings:
           - DeviceName: "/dev/xvda"
