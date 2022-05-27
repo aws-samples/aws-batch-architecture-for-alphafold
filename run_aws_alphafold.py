@@ -328,6 +328,17 @@ def predict_structure(
     logging.info('Final timings for %s: %s', fasta_name, timings)
 
     timings_output_path = os.path.join(output_dir, 'timings.json')
+
+    ### ---------------------------------------------    
+    ### Modified to add support for 2-step jobs
+    ### Add back the features timing from the step 1 if timings.json presents
+    ### https://github.com/aws-samples/aws-batch-architecture-for-alphafold/pull/3/files
+    if os.path.exists(timings_output_path):
+        with open(timings_output_path, 'r') as f:
+            features_timing = json.load(f)
+        timings['features'] = features_timing['features']
+    ### --------------------------------------------- 
+
     with open(timings_output_path, 'w') as f:
         f.write(json.dumps(timings, indent=4))
 
