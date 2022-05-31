@@ -65,8 +65,8 @@ class VpcStack(cdk.Stack):
         # Network Configuration
         vpc_id = os.environ.get("vpc_id", None)
         use_default_vpc = bool(int(os.environ.get("use_default_vpc", None)))
-
-        if use_default_vpc:
+        
+        if use_default_vpc: 
             self.vpc = ec2.Vpc.from_lookup(self, 'LokaFoldVPC', is_default=True)
             self.sg = os.environ.get("default_vpc_sg", None)
         elif vpc_id is None or vpc_id == '':
@@ -152,7 +152,6 @@ class VpcStack(cdk.Stack):
             )
             self.sg = self.vpc.vpc_default_security_group
         else:
-
             self.vpc = ec2.Vpc.from_vpc_attributes(
                 self,
                 "LokaFoldVPC",
@@ -167,5 +166,3 @@ class VpcStack(cdk.Stack):
             self.private_subnet = self.vpc.public_subnets[0]
             self.public_subnet = self.vpc.private_subnets[0]
             self.sg = os.environ.get("default_vpc_sg", None)
-
-

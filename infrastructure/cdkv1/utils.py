@@ -1,5 +1,7 @@
 import os
 import boto3
+from dotenv import load_dotenv
+load_dotenv()
 
 session = boto3.session.Session(profile_name=os.environ.get("aws_named_profile"))
 cloudformation = session.client("cloudformation")
