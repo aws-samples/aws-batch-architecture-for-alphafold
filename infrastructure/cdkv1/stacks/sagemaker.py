@@ -1,3 +1,4 @@
+import os
 from aws_cdk import core as cdk
 from aws_cdk.core import (
     Aws,
@@ -15,7 +16,6 @@ class SageMakerStack(cdk.Stack):
                  id: str, 
                  vpc: ec2.Vpc, 
                  sg: str, 
-                 repo: codecommit.CfnRepository, 
                  key: kms.Key, 
                  launch_sagemaker: bool,
                  **kwargs) -> None:
@@ -65,7 +65,7 @@ class SageMakerStack(cdk.Stack):
                 "LokaFoldNotebookInstance",
                 direct_internet_access="Enabled",
                 instance_type="ml.c4.2xlarge",
-                default_code_repository=repo.attr_clone_url_http,
+                default_code_repository=os.environ.get("code_repo"),
                 kms_key_id=key.key_arn,
                 role_arn=notebook_role.role_arn,
                 subnet_id=private_subnet.subnet_id,
