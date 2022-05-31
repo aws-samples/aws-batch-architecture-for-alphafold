@@ -117,20 +117,20 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
-  DownloadContainerRegistry:
-    Type: AWS::ECR::Repository
-    Properties:
-      EncryptionConfiguration:
-        EncryptionType: AES256
-      ImageScanningConfiguration:
-        ScanOnPush: true
-      Tags:
-        - Key: Application
-          Value: !Ref ApplicationName
-        - Key: StackId
-          Value: !Ref "AWS::StackId"
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+  # DownloadContainerRegistry:
+  #   Type: AWS::ECR::Repository
+  #   Properties:
+  #     EncryptionConfiguration:
+  #       EncryptionType: AES256
+  #     ImageScanningConfiguration:
+  #       ScanOnPush: true
+  #     Tags:
+  #       - Key: Application
+  #         Value: !Ref ApplicationName
+  #       - Key: StackId
+  #         Value: !Ref "AWS::StackId"
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
 
   CodeBuildRole:
     Type: AWS::IAM::Role
@@ -300,8 +300,8 @@ Resources:
             Value: !Ref AlphaFoldVersion
           - Name: DOWNLOAD_IMAGE_TAG
             Value: latest
-          - Name: DOWNLOAD_IMAGE_REPO_NAME
-            Value: !Ref DownloadContainerRegistry
+          # - Name: DOWNLOAD_IMAGE_REPO_NAME
+            # Value: !Ref DownloadContainerRegistry
           - Name: ACCOUNT_ID
             Value: !Ref "AWS::AccountId"
         Image: aws/codebuild/standard:4.0
@@ -426,43 +426,6 @@ Resources:
         - Key: StackId
           Value: !Ref "AWS::StackId"
 
-  CPUDownloadJobDefinition:
-    Type: AWS::Batch::JobDefinition
-    Properties:
-      ContainerProperties:
-        Command:
-          - "-c echo hello, world"
-        Image:
-          !Join [
-            ":",
-            [!GetAtt DownloadContainerRegistry.RepositoryUri, "latest"],
-          ]
-        LogConfiguration:
-          LogDriver: awslogs
-        MountPoints:
-          - ContainerPath: /fsx
-            ReadOnly: False
-            SourceVolume: fsx
-        Privileged: False
-        ResourceRequirements:
-          - Type: VCPU
-            Value: 4
-          - Type: MEMORY
-            Value: 16000
-        Volumes:
-          - Name: fsx
-            Host:
-              SourcePath: /fsx
-      PlatformCapabilities:
-        - EC2
-      PropagateTags: true
-      RetryStrategy:
-        Attempts: 3
-      Tags:
-        Application: !Ref ApplicationName
-        StackId: !Ref "AWS::StackId"
-      Type: container
-
 Outputs:
   CodeRepositoryURI:
     Description: Code repository URI
@@ -476,10 +439,10 @@ Outputs:
     Description: Name of the folding container repository
     Value:
       Ref: FoldingContainerRegistry
-  DownloadContainerRegistryURI:
-    Description: URI of the download container
-    Value:
-      Fn::GetAtt: DownloadContainerRegistry.RepositoryUri
+  # DownloadContainerRegistryURI:
+  #   Description: URI of the download container
+  #   Value:
+  #     Fn::GetAtt: DownloadContainerRegistry.RepositoryUri
   s3Bucket:
     Description: S3 bucket for CodePipeline
     Value:

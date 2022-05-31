@@ -1,8 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 # Deploy with
-# aws cloudformation package --template-file alphafold-cfn-root.yaml --output-template alphafold-cfn-packaged.yaml --s3-bucket alphafold-cfn-build
-# aws cloudformation deploy --template-file alphafold-cfn-packaged.yaml --capabilities CAPABILITY_IAM --stack-name aws-batch-alphafold --parameter-overrides VPC=vpc-0ed8c8f15fe9244ae DefaultSecurityGroup=sg-023becfedd6b7d954 Subnet=subnet-040ae3cdbc5433c4e Environment=dev FileSystemId=fs-0cad8ec14da5267f5 FileSystemMountName=ki3jtbmv
+# aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket alphafold-cfn-build
+# aws cloudformation deploy --template-file infrastructure/alphafold-cfn-packaged.yaml --capabilities CAPABILITY_IAM --stack-name aws-batch-alphafold2 --parameter-overrides VPC=vpc-0ed8c8f15fe9244ae DefaultSecurityGroup=sg-023becfedd6b7d954 Subnet=subnet-040ae3cdbc5433c4e Environment=dev FileSystemId=fs-0e4ca95b6befaf3e1 FileSystemMountName=pkwztbmv
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Root stack for running AWS Batch Architecture for AlphaFold.
@@ -17,10 +17,20 @@ Parameters:
     Default: v2.1.2
     AllowedValues:
       - v2.1.2
+  CleanUp:
+    Description: (Optional) Delete all resources when deleting stack, including data?
+    Type: String
+    Default: Y
+    AllowedValues: [Y, N]      
   DefaultSecurityGroup:
     Description: (Optional) ID of security group to use. If left empty, a new VPC will be created.
     Type: String
     Default: ""
+  EnableSpotInstanceTypes:
+    Type: String
+    Default: Y
+    Description: (Optional) Should the stack include an additional CPU compute environment with spot instance types for cost savings?
+    AllowedValues: [Y, N]     
   Environment:
     Description: Leave this as "main" unless you are testing a pre-release version of this architecture.
     Type: String
@@ -41,6 +51,7 @@ Parameters:
     Default: Y
     Description: Create a SageMaker Notebook Instance.
     AllowedValues: [Y, N]
+   
   StackAvailabilityZone:
     Type: String
     AllowedValues: [a, b, c]
@@ -53,20 +64,9 @@ Parameters:
     Description: (Optional) ID of VPC to use. If left empty, a new VPC will be created.
     Type: String
     Default: ""
-  CleanUp:
-    Description: (Optional) Delete all resources when deleting stack, including data?
-    Type: String
-    Default: Y
-    AllowedValues: [Y, N]
+
 
 Conditions:
-  CreateNetwork:
-    "Fn::Or":
-      [
-        "Fn::Equals": [Ref: VPC, ""],
-        "Fn::Equals": [Ref: DefaultSecurityGroup, ""],
-        "Fn::Equals": [Ref: Subnet, ""],
-      ]
   CreateFileSystem:
     "Fn::Or":
       [
@@ -76,10 +76,17 @@ Conditions:
         "Fn::Equals": [Ref: DefaultSecurityGroup, ""],
         "Fn::Equals": [Ref: Subnet, ""],
       ]
+  CreateNetwork:
+    "Fn::Or":
+      [
+        "Fn::Equals": [Ref: VPC, ""],
+        "Fn::Equals": [Ref: DefaultSecurityGroup, ""],
+        "Fn::Equals": [Ref: Subnet, ""],
+      ]
   CreateSageMakerNotebook:
     "Fn::Equals": [Ref: "LaunchSageMakerNotebook", "Y"]
   CleanUp:
-    "Fn::Equals": [Ref: "CleanUp", "Y"]
+    "Fn::Equals": [Ref: "CleanUp", "Y"] 
 
 Resources:
   Network:
@@ -143,6 +150,8 @@ Resources:
             - CreateNetwork
             - "Fn::GetAtt": Network.Outputs.DefaultSecurityGroup
             - Ref: DefaultSecurityGroup
+        EnableSpotInstanceTypes:
+          Ref: EnableSpotInstanceTypes
         FileSystemId:
           "Fn::If":
             - CreateFileSystem
@@ -155,8 +164,8 @@ Resources:
             - Ref: FileSystemMountName
         FoldingContainerRegistryURI:
           "Fn::GetAtt": Container.Outputs.FoldingContainerRegistryURI
-        DownloadContainerRegistryURI:
-          "Fn::GetAtt": Container.Outputs.DownloadContainerRegistryURI
+        # DownloadContainerRegistryURI:
+        #   "Fn::GetAtt": Container.Outputs.DownloadContainerRegistryURI
 
   Notebook:
     Type: "AWS::CloudFormation::Stack"

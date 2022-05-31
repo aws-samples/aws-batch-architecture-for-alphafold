@@ -12,6 +12,11 @@ Parameters:
   DefaultSecurityGroupID:
     Description: The default security group ID for the VPC
     Type: String
+  EnableSpotInstanceTypes:
+    Type: String
+    Default: Y
+    Description: Should we use spot instance types for the CPU-bound data prep jobs? GPU-bound prediction jobs will continue to use on-demand instance types.
+    AllowedValues: [Y, N]   
   FileSystemId:
     Description: ID of the FSx for the Lustre file system
     Type: String
@@ -26,7 +31,12 @@ Parameters:
     Type: String
   DownloadContainerRegistryURI:
     Description: URI of the download container
+    Default: public.ecr.aws/alphafold-on-aws/downloader
     Type: String
+
+Conditions:
+  EnableSpotCPUs:
+    "Fn::Equals": [Ref: "EnableSpotInstanceTypes", "Y"]
 
 Resources:
   ##################################################
@@ -117,7 +127,7 @@ Resources:
   # Batch Environment
   ##################################################
 
-  PrivateCPUComputeEnvironment:
+  PrivateCPUComputeEnvironmentOnDemand:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
       ComputeResources:
@@ -143,6 +153,71 @@ Resources:
         Application: !Ref ApplicationName
         StackId: !Ref "AWS::StackId"
 
+  SpotFleetRole:
+    Type: AWS::IAM::Role
+    Condition: EnableSpotCPUs
+    Properties:
+      Description: "Required service policies to support tagging spot fleet instances on AWS Batch"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - spotfleet.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: StackId
+          Value: !Ref AWS::StackId
+        
+  AWSServiceRoleForEC2SpotServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Condition: EnableSpotCPUs
+    Properties:
+      AWSServiceName: spot.amazonaws.com
+      Description: Default EC2 Spot Service Linked Role
+
+  AWSServiceRoleForEC2SpotFleetServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Condition: EnableSpotCPUs
+    Properties:
+      AWSServiceName: spotfleet.amazonaws.com
+      Description: Default EC2 Spot Fleet Service Linked Role
+
+  PrivateCPUComputeEnvironmentSpot:
+    Type: AWS::Batch::ComputeEnvironment
+    Condition: EnableSpotCPUs
+    Properties:
+      ComputeResources:
+        AllocationStrategy: SPOT_CAPACITY_OPTIMIZED
+        BidPercentage: 100
+        InstanceRole: !Ref InstanceProfile
+        InstanceTypes:
+          - optimal
+        LaunchTemplate:
+          LaunchTemplateId: 
+            Ref: InstanceLaunchTemplate
+          Version: $Latest
+        MaxvCpus: 256
+        MinvCpus: 0
+        SecurityGroupIds:
+          - Ref: DefaultSecurityGroupID
+        SpotIamFleetRole:
+          "Fn::GetAtt": SpotFleetRole.Arn
+        Subnets:
+          - Ref: Subnet
+        Type: SPOT
+      State: ENABLED
+      Type: MANAGED
+      Tags:
+        Application: !Ref ApplicationName
+        StackId: !Ref "AWS::StackId"        
+
   PrivateGPUComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
@@ -167,17 +242,30 @@ Resources:
         Application: !Ref ApplicationName
         StackId: !Ref "AWS::StackId"
 
-  PrivateCPUJobQueue:
+  PrivateCPUJobQueueOnDemand:
     Type: AWS::Batch::JobQueue
     Properties:
       ComputeEnvironmentOrder:
-        - ComputeEnvironment: !Ref PrivateCPUComputeEnvironment
+        - ComputeEnvironment: !Ref PrivateCPUComputeEnvironmentOnDemand
           Order: 1
       Priority: 10
       State: ENABLED
       Tags:
         Application: !Ref ApplicationName
         StackId: !Ref "AWS::StackId"
+
+  PrivateCPUJobQueueSpot:
+    Type: AWS::Batch::JobQueue
+    Condition: EnableSpotCPUs
+    Properties:
+      ComputeEnvironmentOrder:
+        - ComputeEnvironment: !Ref PrivateCPUComputeEnvironmentSpot
+          Order: 1
+      Priority: 10
+      State: ENABLED
+      Tags:
+        Application: !Ref ApplicationName
+        StackId: !Ref "AWS::StackId"        
 
   PrivateGPUJobQueue:
     Type: AWS::Batch::JobQueue
