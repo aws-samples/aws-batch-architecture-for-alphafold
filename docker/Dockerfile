@@ -77,9 +77,8 @@ RUN pip3 install --upgrade pip \
 ### Modified by AWS to update cuda version and add boto3   
     && pip3 install --upgrade jax jaxlib>=0.1.69+cuda${CUDA/./} -f \
       https://storage.googleapis.com/jax-releases/jax_releases.html \
-    && pip3 install boto3
+    && pip3 install boto3 protobuf==3.20.0 # Address https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates
 ### ---------------------------------------------     
-
 # Apply OpenMM patch.
 WORKDIR /opt/conda/lib/python3.7/site-packages
 RUN patch -p0 < /app/alphafold/docker/openmm.patch

@@ -91,6 +91,7 @@ def get_batch_resources(stack_name):
 
     # stack_name = af_stacks[0]["StackName"]
     stack_resources = cfn.list_stack_resources(StackName=stack_name)
+    cpu_job_queue_spot = None
     for resource in stack_resources["StackResourceSummaries"]:
         if resource["LogicalResourceId"] == "GPUFoldingJobDefinition":
             gpu_job_definition = resource["PhysicalResourceId"]
@@ -98,15 +99,20 @@ def get_batch_resources(stack_name):
             gpu_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "CPUFoldingJobDefinition":
             cpu_job_definition = resource["PhysicalResourceId"]
-        if resource["LogicalResourceId"] == "PrivateCPUJobQueue":
-            cpu_job_queue = download_job_queue = resource["PhysicalResourceId"]
+        # if resource["LogicalResourceId"] == "PrivateCPUJobQueue":
+        #     cpu_job_queue = download_job_queue = resource["PhysicalResourceId"]
+        if resource["LogicalResourceId"] == "PrivateCPUJobQueueOnDemand":
+            cpu_job_queue_od = download_job_queue = resource["PhysicalResourceId"]        
+        if resource["LogicalResourceId"] == "PrivateCPUJobQueueSpot":
+            cpu_job_queue_spot = resource["PhysicalResourceId"]                    
         if resource["LogicalResourceId"] == "CPUDownloadJobDefinition":
             download_job_definition = resource["PhysicalResourceId"]
     return {
         "gpu_job_definition": gpu_job_definition,
         "gpu_job_queue": gpu_job_queue,
         "cpu_job_definition": cpu_job_definition,
-        "cpu_job_queue": cpu_job_queue,
+        "cpu_job_queue_od": cpu_job_queue_od,
+        "cpu_job_queue_spot": cpu_job_queue_spot,
         "download_job_definition": download_job_definition,
         "download_job_queue": download_job_queue,
     }
@@ -306,6 +312,7 @@ def submit_batch_alphafold_job(
     gpu=1,
     depends_on=None,
     stack_name=None,
+    use_spot_instances=False,
 ):
 
     if stack_name is None:
@@ -377,6 +384,8 @@ def submit_batch_alphafold_job(
         container_overrides["command"].append("--logtostderr")
 
     if gpu > 0:
+        if use_spot_instances:
+            print("Spot instance queue not available for GPU jobs. Using on-demand queue instead.")
         job_definition = batch_resources["gpu_job_definition"]
         job_queue = batch_resources["gpu_job_queue"]
         container_overrides["resourceRequirements"].append(
@@ -384,7 +393,13 @@ def submit_batch_alphafold_job(
         )
     else:
         job_definition = batch_resources["cpu_job_definition"]
-        job_queue = batch_resources["cpu_job_queue"]
+        if use_spot_instances and batch_resources["cpu_job_queue_spot"] is not None:
+            job_queue = batch_resources["cpu_job_queue_spot"]
+        elif use_spot_instances and batch_resources["cpu_job_queue_spot"] is None:
+            print("Spot instance queue not available. Using on-demand queue instead.")
+            job_queue = batch_resources["cpu_job_queue_od"]
+        else:
+            job_queue = batch_resources["cpu_job_queue_od"]
 
     print(container_overrides)
     if depends_on is None:
