@@ -5,9 +5,10 @@
 ### ---------------------------------------------
 ### Modified by Amazon Web Services (AWS) to update cuda version and add Alphafold
 ### parameter
-ARG CUDA=11.4.2
-ARG AF_VERSION=v2.1.2
-FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
+ARG CUDA=11.6.2
+ARG AF_VERSION=v2.2.0
+ARG UBUNTU_VERSION=20.04
+FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu${UBUNTU_VERSION}
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
@@ -22,7 +23,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       cmake \
 ### ---------------------------------------------
 ### Modified by AWS to update cuda version    
-      cuda-command-line-tools-11.4 \
+      cuda-command-line-tools-${CUDA/%.?/} \
 ### ---------------------------------------------
       git \
       hmmer \
@@ -46,29 +47,30 @@ RUN git clone --branch v3.3.0 https://github.com/soedinglab/hh-suite.git /tmp/hh
     && rm -rf /tmp/hh-suite
 
 # Install Miniconda package manager.
+
 RUN wget -q -P /tmp \
-  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-    && bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda \
-    && rm /tmp/Miniconda3-latest-Linux-x86_64.sh
+  https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh \
+  && bash /tmp/Mambaforge-Linux-x86_64.sh -b -p /opt/mamba \
+  && rm /tmp/Mambaforge-Linux-x86_64.sh
 
 # Install conda packages.
-ENV PATH="/opt/conda/bin:$PATH"
-RUN conda update -qy conda \
-    && conda install -y -c conda-forge \
+ENV PATH="/opt/mamba/bin:$PATH"
+RUN mamba update -qy mamba \
+    && mamba install -y -c conda-forge \
       openmm=7.5.1 \
 ### ---------------------------------------------
 ### Modified by AWS to update cuda version and add awscli   
-      cudatoolkit==${CUDA} \
+      cudatoolkit~=${CUDA/%.?/} \
       pdbfixer \
       pip \
-      python=3.7 \
+      python=3.9 \
       awscli
 
 RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alphafold.git /app/alphafold
+
 COPY run_aws_alphafold.py /app/alphafold
 ### ---------------------------------------------     
-RUN wget -q -P /app/alphafold/alphafold/common/ \
-  https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
+RUN aws s3 cp s3://aws-batch-architecture-for-alphafold-public-artifacts/stereo_chemical_props/stereo_chemical_props.txt /app/alphafold/alphafold/common/
 
 # Install pip packages.
 RUN pip3 install --upgrade pip \
@@ -77,10 +79,10 @@ RUN pip3 install --upgrade pip \
 ### Modified by AWS to update cuda version and add boto3   
     && pip3 install --upgrade jax jaxlib>=0.1.69+cuda${CUDA/./} -f \
       https://storage.googleapis.com/jax-releases/jax_releases.html \
-    && pip3 install boto3 protobuf==3.20.0 # Address https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates
+    && pip3 install boto3 protobuf==3.20.1 --force-reinstall
 ### ---------------------------------------------     
 # Apply OpenMM patch.
-WORKDIR /opt/conda/lib/python3.7/site-packages
+WORKDIR /opt/mamba/lib/python3.9/site-packages
 RUN patch -p0 < /app/alphafold/docker/openmm.patch
 
 ### ---------------------------------------------
