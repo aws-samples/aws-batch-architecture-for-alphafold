@@ -146,6 +146,7 @@ class VpcStack(cdk.Stack):
                 subnet_id=self.vpc.private_subnets[0].subnet_id,
                 route_table_id=self.private_route_table.attr_route_table_id,
             )
+            private_subnet_route_association.add_depends_on(public_subnet_route_association)
 
             endpoint = self.vpc.add_gateway_endpoint(
                 "S3Endpoint", service=ec2.GatewayVpcEndpointAwsService.S3

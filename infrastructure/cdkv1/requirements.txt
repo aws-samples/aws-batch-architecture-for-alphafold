@@ -7,6 +7,7 @@ aws_cdk.aws-kms==1.156.1
 aws_cdk.aws-ecr==1.156.1
 aws-cdk.aws-s3-deployment==1.156.1
 aws-cdk.aws-s3-assets==1.156.1
+aws-cdk.aws-codestarconnections==1.156.1
 python-dotenv==0.20.0
 chalice[cdk]
 -r "lokafold-app/requirements.txt"

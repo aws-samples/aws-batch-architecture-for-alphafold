@@ -21,10 +21,3 @@ class StorageStack(cdk.Stack):
             removal_policy=cdk.RemovalPolicy.RETAIN,
             versioned=False,
         )
-        self.code_asset = s3_assets.Asset(
-            self, 
-            "LokaFoldCodeAsset",
-            path=os.environ.get("code_artifact_zip")
-        )
-        self.code_bucket = self.code_asset.bucket
-        

@@ -7,15 +7,13 @@ from aws_cdk.core import (
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_ecr as ecr
 import aws_cdk.aws_s3 as s3
-import aws_cdk.aws_codecommit as codecommit
 import aws_cdk.aws_codebuild as codebuild
 import aws_cdk.aws_codepipeline as codepipeline
 import aws_cdk.aws_kms as kms
-import aws_cdk.aws_s3_assets as s3_assets
 
 
 class CodePipelineStack(cdk.Stack):
-    def __init__(self, scope: Construct, id: str, key: kms.Key, code_asset: s3_assets.Asset, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, key: kms.Key, github_connection, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # TODO: move to .env        
@@ -52,21 +50,6 @@ class CodePipelineStack(cdk.Stack):
                 principals=[iam.AnyPrincipal()],
             ),
         )
-
-        # Container Services
-        self.repo = codecommit.CfnRepository(
-            self,
-            "CodeRepository",
-            repository_name="LokaFold-code-repo",
-            code=codecommit.CfnRepository.CodeProperty(
-                branch_name="main",
-                s3=codecommit.CfnRepository.S3Property(
-                    bucket=code_asset.s3_bucket_name,
-                    key=code_asset.s3_object_key,
-                ),
-            ),
-        )
-        self.repo.apply_removal_policy(cdk.RemovalPolicy.RETAIN)
         
         self.folding_container = ecr.CfnRepository(
             self,
@@ -130,13 +113,7 @@ class CodePipelineStack(cdk.Stack):
                             "s3:GetBucketAcl",
                             "s3:GetBucketLocation",
                         ],
-                        resources=[f"arn:aws:s3:::codepipeline-{Aws.REGION}-*"],
-                    ),
-                    iam.PolicyStatement(
-                        actions=["codecommit:GitPull"],
-                        resources=[
-                            f"arn:aws:codecommit:{Aws.REGION}:{Aws.ACCOUNT_ID}:{self.repo.repository_name}"
-                        ],
+                        resources=[bucket.bucket_arn],
                     ),
                     iam.PolicyStatement(
                         actions=[
@@ -150,6 +127,14 @@ class CodePipelineStack(cdk.Stack):
                             f"arn:aws:s3:::codebuild:{Aws.REGION}:{Aws.ACCOUNT_ID}:report-group/AWS-Alphafold*"
                         ],
                     ),
+                    iam.PolicyStatement(
+                        actions=[
+                            "codestar-connections:UseConnection",
+                        ],
+                        resources=[
+                            github_connection.attr_connection_arn
+                        ],
+                    ),
                 ],
             )
         )
@@ -157,7 +142,7 @@ class CodePipelineStack(cdk.Stack):
         codebuild_project = codebuild.CfnProject(
             self,
             "CodeBuildProject",
-            artifacts=codebuild.CfnProject.ArtifactsProperty(type="NO_ARTIFACTS"),
+            artifacts=codebuild.CfnProject.ArtifactsProperty(type="CODEPIPELINE"),
             encryption_key=key.key_id,
             cache=codebuild.CfnProject.ProjectCacheProperty(
                 type="LOCAL",
@@ -174,7 +159,7 @@ class CodePipelineStack(cdk.Stack):
                         value=self.folding_container.repository_name,
                     ),
                     codebuild.CfnProject.EnvironmentVariableProperty(
-                        name="AF_VERSION", value=os.environ.get("AF_VERSION", "v2.1.2")
+                        name="AF_VERSION", value=os.environ.get("alphafold_version", "v2.2.0")
                     ),
                     codebuild.CfnProject.EnvironmentVariableProperty(
                         name="DOWNLOAD_IMAGE_TAG", value="latest"
@@ -196,12 +181,9 @@ class CodePipelineStack(cdk.Stack):
             resource_access_role=codebuild_role.role_arn,
             service_role=codebuild_role.role_arn,
             source=codebuild.CfnProject.SourceProperty(
-                type="CODECOMMIT",
-                build_spec="infrastructure/buildspec.yaml",
-                git_clone_depth=1,
-                location=self.repo.attr_clone_url_http,
+                type="CODEPIPELINE",
+                build_spec="infrastructure/buildspec.yaml"
             ),
-            source_version="refs/heads/main",
         )
         
         codepipeline_role = iam.Role(
@@ -222,6 +204,11 @@ class CodePipelineStack(cdk.Stack):
                                 "codecommit:UploadArchive",
                             ],
                             resources=["*"],
+                        ),
+                        iam.PolicyStatement(
+                            effect=iam.Effect.ALLOW,
+                            actions=["codestar-connections:UseConnection"],
+                            resources=[github_connection.attr_connection_arn],
                         ),
                         iam.PolicyStatement(
                             effect=iam.Effect.ALLOW,
@@ -255,11 +242,13 @@ class CodePipelineStack(cdk.Stack):
             ]
         )
 
-        source_configuration = {
-            "RepositoryName": self.repo.repository_name,
+        source_stage_configuration = {
+            "ConnectionArn": github_connection.attr_connection_arn,
+            "FullRepositoryId": "LokaHQ/LokaFold-AWSBatch",
             "BranchName": "main",
-            "PollForSourceChanges": "false",
+            "OutputArtifactFormat": "CODEBUILD_CLONE_REF",
         }
+
         build_configuration = {"ProjectName": codebuild_project.name}
         
         self.pipeline = codepipeline.CfnPipeline(
@@ -280,10 +269,10 @@ class CodePipelineStack(cdk.Stack):
                             action_type_id=codepipeline.CfnPipeline.ActionTypeIdProperty(
                                 category="Source",
                                 owner="AWS",
-                                provider="CodeCommit",
+                                provider="CodeStarSourceConnection",
                                 version="1",
                             ),
-                            configuration=source_configuration,
+                            configuration=source_stage_configuration,
                             namespace="SourceVariables",
                             output_artifacts=[
                                 codepipeline.CfnPipeline.OutputArtifactProperty(
