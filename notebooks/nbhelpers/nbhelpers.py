@@ -99,8 +99,6 @@ def get_batch_resources(stack_name):
             gpu_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "CPUFoldingJobDefinition":
             cpu_job_definition = resource["PhysicalResourceId"]
-        # if resource["LogicalResourceId"] == "PrivateCPUJobQueue":
-        #     cpu_job_queue = download_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "PrivateCPUJobQueueOnDemand":
             cpu_job_queue_od = download_job_queue = resource["PhysicalResourceId"]        
         if resource["LogicalResourceId"] == "PrivateCPUJobQueueSpot":
@@ -286,7 +284,6 @@ def submit_batch_alphafold_job(
     job_name,
     fasta_paths,
     s3_bucket,
-    is_prokaryote_list=None,
     data_dir="/mnt/data_dir/fsx",
     output_dir="alphafold",
     bfd_database_path="/mnt/bfd_database_path/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
@@ -313,6 +310,7 @@ def submit_batch_alphafold_job(
     depends_on=None,
     stack_name=None,
     use_spot_instances=False,
+    run_relax=True
 ):
 
     if stack_name is None:
@@ -332,6 +330,7 @@ def submit_batch_alphafold_job(
             f"--db_preset={db_preset}",
             f"--model_preset={model_preset}",
             f"--s3_bucket={s3_bucket}",
+            f"--run_relax={run_relax}",
         ],
         "resourceRequirements": [
             {"value": str(cpu), "type": "VCPU"},
@@ -346,6 +345,7 @@ def submit_batch_alphafold_job(
         container_overrides["command"].append(
             f"--pdb_seqres_database_path={pdb_seqres_database_path}"
         )
+        print("If multimer prediction failes due to Amber relaxation, re-run with run_relax=False")
     else:
         container_overrides["command"].append(
             f"--pdb70_database_path={pdb70_database_path}"
@@ -361,11 +361,6 @@ def submit_batch_alphafold_job(
         )
         container_overrides["command"].append(
             f"--bfd_database_path={bfd_database_path}"
-        )
-
-    if is_prokaryote_list is not None:
-        container_overrides["command"].append(
-            f"--is_prokaryote_list={is_prokaryote_list}"
         )
 
     if benchmark:
@@ -419,7 +414,6 @@ def submit_batch_alphafold_job(
         )
 
     return response
-
 
 def get_run_metrics(bucket, job_name):
     timings_uri = sagemaker.s3.s3_path_join(bucket, job_name, "timings.json")
