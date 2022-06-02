@@ -6,21 +6,15 @@ version: 0.2
 phases:
   pre_build:
     commands:
+      - sudo apt-get -y update && sudo apt-get -y install skopeo
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - aws ecr-public get-login-password --region $AWS_DEFAULT_REGION | skopeo login --username AWS --password-stdin public.ecr.aws/alphafold-on-aws
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | skopeo login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
   build:
     commands:
       - echo Build started on `date`
-      - echo Building the folding Docker image
-      - docker build -t $FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG --build-arg AF_VERSION=$AF_VERSION docker/folding
-      - docker tag $FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
-      - echo Building the download Docker image
-      - docker build -t $DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG docker/download
-      - docker tag $DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
-  post_build:
-    commands:
+      - echo Copying the folding Docker image
+      - skopeo copy docker://public.ecr.aws/alphafold-on-aws/folding-$ENVIRONMENT:latest docker://$ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
+      - echo Copying the download Docker image
+      - skopeo copy docker://public.ecr.aws/alphafold-on-aws/download-$ENVIRONMENT:latest docker://$ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
       - echo Build completed on `date`
-      - echo Pushing the folding Docker image
-      - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
-      - echo Pushing the download Docker image
-      - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
