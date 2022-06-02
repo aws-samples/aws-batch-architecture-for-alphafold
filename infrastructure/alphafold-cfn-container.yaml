@@ -304,8 +304,8 @@ Resources:
             Value: !Ref DownloadContainerRegistry
           - Name: ACCOUNT_ID
             Value: !Ref "AWS::AccountId"
-          - Name: ENVIRONMENT
-            Value: !Ref Environment
+          # - Name: ENVIRONMENT
+          #   Value: !Ref Environment
         Image: aws/codebuild/standard:4.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
