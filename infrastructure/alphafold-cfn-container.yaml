@@ -181,6 +181,7 @@ Resources:
                       ["arn:aws:s3:::codepipeline", !Ref "AWS::Region", "*"],
                     ]
                   - !Join ["", [!GetAtt CodePipelineS3Bucket.Arn, "*"]]
+                  - "arn:aws:s3:::aws-batch-architecture-for-alphafold-public-artifacts/*"
               - Effect: Allow
                 Action:
                   - codecommit:GitPull
