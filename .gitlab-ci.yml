@@ -120,7 +120,7 @@ push-to-s3-main:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]  
   before_script:
-    - yum update -y && yum install -y awscli zip
+    - apt update -y && apt install -y awscli zip
   script:
     - aws s3 cp s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$MAIN_BUCKET_PREFIX/aws-alphafold.zip
     - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $MAIN_BUCKET_PREFIX --region $AWS_DEFAULT_REGION
