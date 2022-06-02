@@ -81,8 +81,8 @@ Resources:
       Code:
         BranchName: "main"
         S3:
-          Bucket: "aws-hcls-ml"
-          Key: !Sub "blog_post_support_materials/aws-alphafold/${Environment}/aws-alphafold.zip"
+          Bucket: "aws-batch-architecture-for-alphafold-public-artifacts"
+          Key: !Sub "${Environment}/aws-alphafold.zip"
       RepositoryDescription: Code for running Alphafold on AWS
       RepositoryName:
         !Join [
@@ -304,6 +304,8 @@ Resources:
             Value: !Ref DownloadContainerRegistry
           - Name: ACCOUNT_ID
             Value: !Ref "AWS::AccountId"
+          - Name: ENVIRONMENT
+            Value: !Ref Environment
         Image: aws/codebuild/standard:4.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
