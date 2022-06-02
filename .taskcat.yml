@@ -6,6 +6,8 @@ project:
     - us-east-1
     - us-east-2
     - us-west-2
+  parameters:
+    Environment: dev
 tests:
   default:
     template: infrastructure/alphafold-cfn-packaged.yaml
