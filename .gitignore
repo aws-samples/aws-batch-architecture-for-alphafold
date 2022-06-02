@@ -9,3 +9,5 @@ infrastructure/alphafold-cfn-packaged.yaml
 notebooks/data/*
 taskcat_outputs/
 random_commands.sh
+.github/
+.pytest_cache/

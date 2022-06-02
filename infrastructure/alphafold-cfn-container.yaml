@@ -117,20 +117,20 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
-  # DownloadContainerRegistry:
-  #   Type: AWS::ECR::Repository
-  #   Properties:
-  #     EncryptionConfiguration:
-  #       EncryptionType: AES256
-  #     ImageScanningConfiguration:
-  #       ScanOnPush: true
-  #     Tags:
-  #       - Key: Application
-  #         Value: !Ref ApplicationName
-  #       - Key: StackId
-  #         Value: !Ref "AWS::StackId"
-  #   DeletionPolicy: Retain
-  #   UpdateReplacePolicy: Retain
+  DownloadContainerRegistry:
+    Type: AWS::ECR::Repository
+    Properties:
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: StackId
+          Value: !Ref "AWS::StackId"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
 
   CodeBuildRole:
     Type: AWS::IAM::Role
@@ -300,8 +300,8 @@ Resources:
             Value: !Ref AlphaFoldVersion
           - Name: DOWNLOAD_IMAGE_TAG
             Value: latest
-          # - Name: DOWNLOAD_IMAGE_REPO_NAME
-            # Value: !Ref DownloadContainerRegistry
+          - Name: DOWNLOAD_IMAGE_REPO_NAME
+            Value: !Ref DownloadContainerRegistry
           - Name: ACCOUNT_ID
             Value: !Ref "AWS::AccountId"
         Image: aws/codebuild/standard:4.0
