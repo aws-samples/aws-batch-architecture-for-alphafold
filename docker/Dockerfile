@@ -31,6 +31,16 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       kalign \
       tzdata \
       wget \
+      # Address https://ubuntu.com/security/CVE-2022-24407
+      libsasl2-modules-sql=2.1.27+dfsg-2ubuntu0.1 \ 
+      # Address https://ubuntu.com/security/CVE-2022-24407, https://ubuntu.com/security/CVE-2021-3711,
+      # and https://ubuntu.com/security/CVE-2022-0778
+      openssl=1.1.1f-1ubuntu2.13 \
+      # Address https://ubuntu.com/security/CVE-2021-33910
+      systemd=245.4-4ubuntu3.17 \
+      # Address additional MEDIUM vulnerabilities
+      apt dpkg e2fsprogs gcc libc6 gzip libgcrypt20 libzstd1 zstd lz4 libnettle7 slapd=2.4.49+dfsg-2ubuntu1.9 \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Compile HHsuite from source.
