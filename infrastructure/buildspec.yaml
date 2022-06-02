@@ -14,7 +14,11 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Copying the folding Docker image
-      - skopeo copy docker://public.ecr.aws/alphafold-on-aws/folding-$ENVIRONMENT:latest docker://$ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
+      - docker pull public.ecr.aws/alphafold-on-aws/folding-$ENVIRONMENT:latest
+      - docker tag public.ecr.aws/alphafold-on-aws/folding-$ENVIRONMENT:latest $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
+      - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$FOLDING_IMAGE_REPO_NAME:$FOLDING_IMAGE_TAG
       - echo Copying the download Docker image
-      - skopeo copy docker://public.ecr.aws/alphafold-on-aws/download-$ENVIRONMENT:latest docker://$ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
+      - docker pull public.ecr.aws/alphafold-on-aws/download-$ENVIRONMENT:latest
+      - docker tag public.ecr.aws/alphafold-on-aws/download-$ENVIRONMENT:latest $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
+      - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$DOWNLOAD_IMAGE_REPO_NAME:$DOWNLOAD_IMAGE_TAG
       - echo Build completed on `date`
