@@ -5,10 +5,11 @@
 ### ---------------------------------------------
 ### Modified by Amazon Web Services (AWS) to update cuda version and add Alphafold
 ### parameter
-ARG CUDA=11.7.0
+ARG CUDA=11.1
 ARG AF_VERSION=v2.2.0
-ARG UBUNTU_VERSION=22.04
-FROM nvcr.io/nvidia/cuda:${CUDA}-runtime-ubuntu${UBUNTU_VERSION}
+ARG UBUNTU_VERSION=20.04
+FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu${UBUNTU_VERSION}
+
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
@@ -18,16 +19,18 @@ ARG AF_VERSION
 # Use bash to support string substitution.
 SHELL ["/bin/bash", "-c"]
 
+# Address https://github.com/deepmind/alphafold/issues/463#issuecomment-1124881779
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       build-essential \
       cmake \
-      cuda-command-line-tools-${CUDA/%.?/} \
+      cuda-command-line-tools-${CUDA} \
       git \
       hmmer \
       kalign \
       tzdata \
       wget \
-    && apt-get install -y --only-upgrade openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Compile HHsuite from source.
@@ -50,12 +53,15 @@ RUN wget -q -P /tmp \
 ENV PATH="/opt/mamba/bin:$PATH"
 RUN mamba update -qy mamba \
     && mamba install -y -c conda-forge \
-      openmm==7.5.1 \
-      cudatoolkit==${CUDA/%.?/} \
+      openmm=7.5.1 \
+      cudatoolkit=${CUDA_VERSION} \
       pdbfixer \
       pip \
-      python==3.9 \
-      awscli
+      python=3.9 \
+      awscli \
+      boto3 \
+      protobuf=3.20.1 \
+      six=1.15.0
 
 RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alphafold.git /app/alphafold
 
@@ -67,13 +73,16 @@ RUN aws s3 cp s3://aws-batch-architecture-for-alphafold-public-artifacts/stereo_
 # Install pip packages.
 RUN pip3 install --upgrade pip \
     && pip3 install -r /app/alphafold/requirements.txt \
-    && pip3 install --upgrade jax jaxlib==0.3.10 -f \    
-      https://storage.googleapis.com/jax-releases/jax_releases.html \
-    && pip3 install boto3 protobuf==3.20.1 six==1.15.0 botocore==1.27.0 --force-reinstall
+    && pip3 install --upgrade jax==0.2.14 jaxlib==0.1.69+cuda${CUDA/./} -f \    
+      https://storage.googleapis.com/jax-releases/jax_releases.html 
+
 ### ---------------------------------------------     
 # Apply OpenMM patch.
 WORKDIR /opt/mamba/lib/python3.9/site-packages
 RUN patch -p0 < /app/alphafold/docker/openmm.patch
+
+# Add SETUID bit to the ldconfig binary so that non-root users can run it.
+RUN chmod u+s /sbin/ldconfig.real
 
 # Clean up
 RUN rm -rf /app/alphafold/docker /app/alphafold/imgs /app/alphafold/notebooks /app/alphafold/scripts
