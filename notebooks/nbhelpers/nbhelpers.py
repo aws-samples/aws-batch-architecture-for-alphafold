@@ -310,7 +310,8 @@ def submit_batch_alphafold_job(
     depends_on=None,
     stack_name=None,
     use_spot_instances=False,
-    run_relax=True
+    run_relax=True,
+    num_multimer_predictions_per_model=1
 ):
 
     if stack_name is None:
@@ -344,6 +345,9 @@ def submit_batch_alphafold_job(
         )
         container_overrides["command"].append(
             f"--pdb_seqres_database_path={pdb_seqres_database_path}"
+        )
+        container_overrides["command"].append(
+            f"--num_multimer_predictions_per_model={num_multimer_predictions_per_model}"
         )
         print("If multimer prediction failes due to Amber relaxation, re-run with run_relax=False")
     else:
