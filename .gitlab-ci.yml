@@ -3,11 +3,11 @@ variables:
   AWS_DEFAULT_REGION: us-east-1
   DEPLOYMENT_BUCKET_NAME: aws-batch-architecture-for-alphafold-public-artifacts
   DEV_BUCKET_PREFIX: dev
-  PROD_BUCKET_PREFIX: prod
+  MAIN_BUCKET_PREFIX: main
   DEV_DOWNLOAD_ECR: public.ecr.aws/alphafold-on-aws/download-dev:latest
   DEV_FOLDING_ECR: public.ecr.aws/alphafold-on-aws/folding-dev:latest
-  PROD_DOWNLOAD_ECR: public.ecr.aws/alphafold-on-aws/download:latest
-  PROD_FOLDING_ECR: public.ecr.aws/alphafold-on-aws/folding:latest
+  MAIN_DOWNLOAD_ECR: public.ecr.aws/alphafold-on-aws/download-main:latest
+  MAIN_FOLDING_ECR: public.ecr.aws/alphafold-on-aws/folding-main:latest
 
 
 default:
@@ -20,7 +20,7 @@ stages:
   - lint
   - deploy-dev
   - test
-  - deploy-prod
+  - deploy-main
 
 ################################
 # .pre
@@ -64,11 +64,9 @@ push-to-s3-dev:
     - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $DEV_BUCKET_PREFIX --region $AWS_DEFAULT_REGION
     - aws s3 cp infrastructure/alphafold-cfn-packaged.yaml s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/alphafold-cfn-packaged.yaml
     - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/alphafold-on-aws
-    - docker build -t download-dev docker/download
-    - docker tag download-dev:latest $DEV_DOWNLOAD_ECR
+    - docker build -t $DEV_DOWNLOAD_ECR docker/download
     - docker push $DEV_DOWNLOAD_ECR
-    - docker build -t folding-dev docker/folding
-    - docker tag folding-dev:latest $DEV_FOLDING_ECR
+    - docker build -t $DEV_FOLDING_ECR docker/folding
     - docker push $DEV_FOLDING_ECR    
   artifacts:
     paths:
@@ -97,23 +95,21 @@ test_cfn:
     - dev
 
 ################################
-# deploy-prod
+# deploy-main
 ################################
 
 push-to-s3-main:
-  stage: deploy-prod
+  stage: deploy-main
   before_script:
     - yum update -y && yum install -y awscli zip
   script:
-    - aws s3 cp s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/aws-alphafold.zip
-    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $PROD_BUCKET_PREFIX --region $AWS_DEFAULT_REGION
-    - aws s3 cp infrastructure/alphafold-cfn-packaged.yaml s3://$DEPLOYMENT_BUCKET_NAME/$PROD_BUCKET_PREFIX/alphafold-cfn-packaged.yaml
+    - aws s3 cp s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$MAIN_BUCKET_PREFIX/aws-alphafold.zip
+    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $MAIN_BUCKET_PREFIX --region $AWS_DEFAULT_REGION
+    - aws s3 cp infrastructure/alphafold-cfn-packaged.yaml s3://$DEPLOYMENT_BUCKET_NAME/$MAIN_BUCKET_PREFIX/alphafold-cfn-packaged.yaml
     - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/alphafold-on-aws
-    - docker build -t download-prod docker/download
-    - docker tag download-prod:latest $PROD_DOWNLOAD_ECR
-    - docker push $PROD_DOWNLOAD_ECR
-    - docker build -t folding-prod docker/folding
-    - docker tag folding-prod:latest $PROD_FOLDING_ECR
-    - docker push $PROD_FOLDING_ECR        
+    - docker build -t $MAIN_DOWNLOAD_ECR docker/download
+    - docker push $MAIN_DOWNLOAD_ECR
+    - docker build -t MAIN_FOLDING_ECR docker/folding
+    - docker push $MAIN_FOLDING_ECR        
   only:
     - main
