@@ -60,7 +60,7 @@ push-to-s3-dev:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   before_script:
-    - yum update -y && yum install -y awscli zip
+    - apt update -y && apt install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
     - aws s3 cp aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip
