@@ -198,7 +198,9 @@ Resources:
         BidPercentage: 100
         InstanceRole: !Ref InstanceProfile
         InstanceTypes:
-          - optimal
+          - m5
+          - r5
+          - c5
         LaunchTemplate:
           LaunchTemplateId: 
             Ref: InstanceLaunchTemplate
