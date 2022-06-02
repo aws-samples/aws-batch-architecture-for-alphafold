@@ -6,7 +6,6 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - sudo apt-get -y update && sudo apt-get -y install skopeo
       - echo Logging in to Amazon ECR...
       - aws ecr-public get-login-password --region $AWS_DEFAULT_REGION | skopeo login --username AWS --password-stdin public.ecr.aws/alphafold-on-aws
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | skopeo login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
