@@ -21,7 +21,7 @@ fi
 
 DOWNLOAD_DIR="$1"
 ROOT_DIR="${DOWNLOAD_DIR}/pdb70"
-SOURCE_URL="s3://aws-batch-architecture-for-alphafold-public-artifacts/pdb70/pdb70_from_mmcif_200401.tar.gz"
+SOURCE_URL="s3://aws-batch-architecture-for-alphafold-public-artifacts/pdb70/pdb70_from_mmcif_220313.tar.gz"
 BASENAME=$(basename "${SOURCE_URL}")
 
 mkdir --parents "${ROOT_DIR}"
