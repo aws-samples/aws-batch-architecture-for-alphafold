@@ -44,6 +44,14 @@ Parameters:
     AllowedValues:
       - main
       - dev
+  VPC:
+    Description: (Optional) ID of VPC to use. If left empty, a new VPC will be created.
+    Type: String
+    Default: ""     
+  Subnet:
+    Description: (Optional) ID of private subnet to use. If left empty, a new VPC will be created.
+    Type: String
+    Default: ""     
   DefaultSecurityGroup:
     Description: (Optional) ID of security group to use. If left empty, a new VPC will be created.
     Type: String
@@ -55,15 +63,7 @@ Parameters:
   FileSystemMountName:
     Description: (Optional) Mount name of FSX for Lustre to use. If left empty, a new FSx for Lustre instance will be created.
     Type: String
-    Default: ""
-  Subnet:
-    Description: (Optional) ID of private subnet to use. If left empty, a new VPC will be created.
-    Type: String
-    Default: ""
-  VPC:
-    Description: (Optional) ID of VPC to use. If left empty, a new VPC will be created.
-    Type: String
-    Default: ""
+    Default: ""    
 
 Conditions:
   CreateFileSystem:
