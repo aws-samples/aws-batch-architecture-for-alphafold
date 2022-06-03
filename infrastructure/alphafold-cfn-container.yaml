@@ -8,8 +8,9 @@ Parameters:
   AlphaFoldVersion:
     Description: AlphaFold release to include as part of the job container
     Type: String
-    Default: v2.1.2
+    Default: v2.2.0
     AllowedValues:
+      - v2.2.0
       - v2.1.2
   ApplicationName:
     Description: Name of the application, if applicable

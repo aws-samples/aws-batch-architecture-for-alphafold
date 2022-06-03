@@ -14,8 +14,9 @@ Parameters:
   AlphaFoldVersion:
     Description: AlphaFold release to include as part of the job container
     Type: String
-    Default: v2.1.2
+    Default: v2.2.0
     AllowedValues:
+      - v2.2.0
       - v2.1.2
   CleanUp:
     Description: (Optional) Delete all resources when deleting stack, including data?
