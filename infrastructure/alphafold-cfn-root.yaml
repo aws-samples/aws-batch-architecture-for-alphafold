@@ -19,19 +19,24 @@ Parameters:
       - v2.2.0
       - v2.1.2
   CleanUp:
-    Description: (Optional) Delete all resources when deleting stack, including data?
+    Description: Delete all resources when deleting stack, including data?
     Type: String
     Default: Y
     AllowedValues: [Y, N]      
-  DefaultSecurityGroup:
-    Description: (Optional) ID of security group to use. If left empty, a new VPC will be created.
+  LaunchSageMakerNotebook:
     Type: String
-    Default: ""
+    Default: Y
+    Description: Create a SageMaker Notebook Instance.
+    AllowedValues: [Y, N]       
+  StackAvailabilityZone:
+    Type: String
+    AllowedValues: [a, b, c]
+    Default: a    
   EnableSpotInstanceTypes:
     Type: String
     Default: Y
-    Description: (Optional) Should the stack include an additional CPU compute environment with spot instance types for cost savings?
-    AllowedValues: [Y, N]     
+    Description: Should the stack include an additional CPU compute environment with spot instance types for cost savings?
+    AllowedValues: [Y, N]      
   Environment:
     Description: Leave this as "main" unless you are testing a pre-release version of this architecture.
     Type: String
@@ -39,6 +44,10 @@ Parameters:
     AllowedValues:
       - main
       - dev
+  DefaultSecurityGroup:
+    Description: (Optional) ID of security group to use. If left empty, a new VPC will be created.
+    Type: String
+    Default: ""
   FileSystemId:
     Description: (Optional) ID of FSX for Lustre  to use. If left empty, a new FSx for Lustre instance will be created.
     Type: String
@@ -47,16 +56,6 @@ Parameters:
     Description: (Optional) Mount name of FSX for Lustre to use. If left empty, a new FSx for Lustre instance will be created.
     Type: String
     Default: ""
-  LaunchSageMakerNotebook:
-    Type: String
-    Default: Y
-    Description: Create a SageMaker Notebook Instance.
-    AllowedValues: [Y, N]
-   
-  StackAvailabilityZone:
-    Type: String
-    AllowedValues: [a, b, c]
-    Default: a
   Subnet:
     Description: (Optional) ID of private subnet to use. If left empty, a new VPC will be created.
     Type: String
@@ -65,7 +64,6 @@ Parameters:
     Description: (Optional) ID of VPC to use. If left empty, a new VPC will be created.
     Type: String
     Default: ""
-
 
 Conditions:
   CreateFileSystem:
@@ -165,8 +163,8 @@ Resources:
             - Ref: FileSystemMountName
         FoldingContainerRegistryURI:
           "Fn::GetAtt": Container.Outputs.FoldingContainerRegistryURI
-        # DownloadContainerRegistryURI:
-        #   "Fn::GetAtt": Container.Outputs.DownloadContainerRegistryURI
+        DownloadContainerRegistryURI:
+          "Fn::GetAtt": Container.Outputs.DownloadContainerRegistryURI
 
   Notebook:
     Type: "AWS::CloudFormation::Stack"
