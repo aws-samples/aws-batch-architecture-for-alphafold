@@ -184,6 +184,14 @@ Resources:
                   - "arn:aws:s3:::aws-batch-architecture-for-alphafold-public-artifacts/*"
               - Effect: Allow
                 Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketAcl
+                  - s3:GetBucketLocation
+                Resource:
+                  - "arn:aws:s3:::aws-batch-architecture-for-alphafold-public-artifacts*"                  
+              - Effect: Allow
+                Action:
                   - codecommit:GitPull
                 Resource:
                   - Fn::Join:
