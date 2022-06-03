@@ -314,8 +314,6 @@ Resources:
             Value: !Ref DownloadContainerRegistry
           - Name: ACCOUNT_ID
             Value: !Ref "AWS::AccountId"
-          # - Name: ENVIRONMENT
-          #   Value: !Ref Environment
         Image: aws/codebuild/standard:4.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
@@ -451,10 +449,10 @@ Outputs:
     Description: Name of the folding container repository
     Value:
       Ref: FoldingContainerRegistry
-  # DownloadContainerRegistryURI:
-  #   Description: URI of the download container
-  #   Value:
-  #     Fn::GetAtt: DownloadContainerRegistry.RepositoryUri
+  DownloadContainerRegistryURI:
+    Description: URI of the download container
+    Value:
+      Fn::GetAtt: DownloadContainerRegistry.RepositoryUri
   s3Bucket:
     Description: S3 bucket for CodePipeline
     Value:

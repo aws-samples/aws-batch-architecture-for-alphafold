@@ -31,7 +31,6 @@ Parameters:
     Type: String
   DownloadContainerRegistryURI:
     Description: URI of the download container
-    Default: public.ecr.aws/alphafold-on-aws/downloader
     Type: String
 
 Conditions:

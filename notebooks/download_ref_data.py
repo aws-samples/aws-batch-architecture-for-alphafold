@@ -11,7 +11,7 @@ batch = boto3.client("batch")
 def _parse_args():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stack_name", type=str, default=None)
+    parser.add_argument("--batch_substack_name", type=str, default=None)
     parser.add_argument("--job_name", type=str, default="download_job")
     parser.add_argument("--script", type=str, default="all")
     parser.add_argument("--cpu", type=int, default=4)
@@ -23,7 +23,7 @@ def _parse_args():
 
 
 def submit_download_data_job(
-    stack_name,
+    batch_substack_name,
     job_name,
     script,
     cpu,
@@ -32,9 +32,9 @@ def submit_download_data_job(
     download_mode,
 ):
 
-    if stack_name is None:
-        stack_name = nbhelpers.list_alphafold_stacks()[0]["StackName"]
-    batch_resources = nbhelpers.get_batch_resources(stack_name)
+    if batch_substack_name is None:
+        batch_substack_name = nbhelpers.list_alphafold_stacks()[0]["StackName"]
+    batch_resources = nbhelpers.get_batch_resources(batch_substack_name)
     job_definition = batch_resources["download_job_definition"]
     job_queue = batch_resources["download_job_queue"]
 
@@ -78,8 +78,8 @@ if __name__ == "__main__":
         responses = []
         for script in all_scripts:
             script_response = submit_download_data_job(
-                stack_name=args.stack_name,
-                job_name=args.job_name + "-" + script,
+                batch_substack_name=args.batch_substack_name,
+                job_name=args.job_name + "-" + script.replace(".sh",""),
                 script=script,
                 cpu=args.cpu,
                 memory=args.memory,
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     elif args.script.upper() == "PARAMETERS_ONLY":
         parameters_only_script = "download_alphafold_params_s3.sh"
         response = submit_download_data_job(
-            stack_name=args.stack_name,
+            batch_substack_name=args.batch_substack_name,
             job_name=args.job_name,
             script=parameters_only_script,
             cpu=args.cpu,
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     else:
         response = submit_download_data_job(
-            stack_name=args.stack_name,
+            batch_substack_name=args.batch_substack_name,
             job_name=args.job_name,
             script=args.script,
             cpu=args.cpu,
