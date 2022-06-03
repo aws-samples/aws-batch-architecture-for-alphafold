@@ -8,12 +8,16 @@
 ARG CUDA=11.1
 ARG AF_VERSION=v2.2.0
 ARG UBUNTU_VERSION=20.04
+ARG AWS_DEFAULT_REGION
+ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu${UBUNTU_VERSION}
 
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
 ARG AF_VERSION
+ARG AWS_DEFAULT_REGION
+ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 ### ---------------------------------------------
 
 # Use bash to support string substitution.
