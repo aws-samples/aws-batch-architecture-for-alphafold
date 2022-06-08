@@ -27,7 +27,7 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 3. Provide a name for your stack, leave the other parameters as their default, and select **Next**.
 4. Select **I acknowledge that AWS CloudFormation might create IAM resources with custom names**.
 5. Choose **Create stack**.
-6. Wait 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
+6. Wait 15 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
 
 ### Launch SageMaker Notebook
 (If **LaunchSageMakerNotebook** set to Y)
@@ -44,7 +44,7 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 3. Use the URL to clone the repository into your Jupyter notebook environment of choice, such as SageMaker Studio.
 
 ### Populate FSx for Lustre File System
-1. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, open a terminal in your notebooks environment and run the following commands from the AWS-AlphaFold directory:
+1. If you set the **DownloadFsxData** parameter to **Y**, CloudFormation will automatically start a series of Batch jobs to populate the FSx for Lustre instance with a number of common sequence databases. If you set this parameter to **N** you will instead need to manually populate the file system. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, open a terminal in your notebooks environment and run the following commands from the AWS-AlphaFold directory:
 
 ```
 > pip install -r notebooks/notebook-requirements.txt
@@ -63,10 +63,9 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
   - Select a different value for **FSXForLustreStorageCapacity** if you want to provision a larger file system. The default value of 1200 GB is sufficient to store compressed instances of the Alphafold parameters and all standard sequence databases, BFD (small and reduced), Mgnify, PDB70, PDB mmCIF, Uniclust30, Uniref90, UniProt, and PDB SeqRes datasets. However, you can specify a larger value if you need to store additional data.
   - Select a different value for for **FSxForLustreThroughput** if you have unique performance needs. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
   - Select "Y" for **LaunchSageMakerNotebook** if you want to launch a managed sagemaker notebook instance to quickly run the provided Jupyter notebook.
-  - Select "N" for the **CleanUp** parameter if you want to retain the S3 bucket and ECR repositories associated with your stack after deletion.
-  - Select "Y" for the **EnableSpotInstanceTypes** parameter if you want to enable lower-cost spot instances for the data preparation jobs.
   - Provide values for the **VPC**, **Subnet**, and **DefaultSecurityGroup** parameters to use existing network resources. If one or more of those parameters are left empty, CloudFormation will create a new VPC and FSx for Lustre instance for the stack.
   - Provide values for the **FileSystemId** and **FileSystemMountName** parameters to use an existing FSx for Lustre file system. If one or more of these parameters are left empty, CloudFormation will create a new file system for the stack.
+  - Select "Y" for **DownloadFsxData** to automatically populate the FSx for Lustre file system with common sequence databases.
 
 -----
 ## Usage

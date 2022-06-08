@@ -38,6 +38,7 @@ Resources:
           import boto3
           import cfnresponse
           import logging
+          import pathlib
           LOGGER = logging.getLogger()
           LOGGER.setLevel(logging.INFO)
           boto_session = boto3.session.Session()
@@ -67,7 +68,7 @@ Resources:
                           script_response = submit_download_data_job(
                               job_queue=event["ResourceProperties"]["JobQueue"],
                               job_definition=event["ResourceProperties"]["JobDefinition"],
-                              job_name="download_job",
+                              job_name=pathlib.Path(script),
                               script=script,
                               cpu=4,
                               memory=16,

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added support for AlphaFold v2.2.0
 - Added support for existing VPCs and FSx for Lustre instances
+- Added option to automatically download reference data to FSx
 - Added support for spot instances for data prep jobs
 - Updated data download script to pull sequence databases and parameters from S3
 - Updated data download script to retrieve ref data in parallel
