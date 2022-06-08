@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Deploy with
 # aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket alphafold-cfn-build
-# aws cloudformation deploy --template-file infrastructure/alphafold-cfn-packaged.yaml --capabilities CAPABILITY_IAM --stack-name aws-batch-alphafold220602 --parameter-overrides VPC=vpc-0ed8c8f15fe9244ae DefaultSecurityGroup=sg-023becfedd6b7d954 Subnet=subnet-040ae3cdbc5433c4e Environment=dev FileSystemId=fs-0e4ca95b6befaf3e1 FileSystemMountName=pkwztbmv
+# aws cloudformation deploy --template-file infrastructure/alphafold-cfn-packaged.yaml --capabilities CAPABILITY_IAM --stack-name aws-batch-alphafold220603 --parameter-overrides DownloadFsxData=Y VPC=vpc-0ed8c8f15fe9244ae DefaultSecurityGroup=sg-023becfedd6b7d954 Subnet=subnet-040ae3cdbc5433c4e Environment=dev FileSystemId=fs-0e4ca95b6befaf3e1 FileSystemMountName=pkwztbmv
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Root stack for running AWS Batch Architecture for AlphaFold.
@@ -64,6 +64,10 @@ Parameters:
     Description: (Optional) Mount name of FSX for Lustre to use. If left empty, a new FSx for Lustre instance will be created.
     Type: String
     Default: ""    
+  # DownloadFsxData:
+  #   Description: Automatically populate FSx for Lustre file system with model parameters and sequence databases?
+  #   Type: String
+  #   Default: "N"
 
 Conditions:
   CreateFileSystem:
@@ -86,6 +90,8 @@ Conditions:
     "Fn::Equals": [Ref: "LaunchSageMakerNotebook", "Y"]
   CleanUp:
     "Fn::Equals": [Ref: "CleanUp", "Y"] 
+  # DownloadFsxDataCondition:
+  #   "Fn::Equals": [Ref: "DownloadFsxData", "Y"] 
 
 Resources:
   Network:
@@ -193,10 +199,20 @@ Resources:
     Properties:
       TemplateURL: alphafold-cfn-cleanup.yaml
       Parameters:
-        S3Bucket:
-          "Fn::GetAtt": Container.Outputs.s3Bucket
-        ContainerRepo:
+        # S3Bucket:
+        #   "Fn::GetAtt": Container.Outputs.s3Bucket
+        FoldingContainerRepo:
           "Fn::GetAtt": Container.Outputs.FoldingContainerRegistryName
+        DownloadContainerRepo:
+          "Fn::GetAtt": Container.Outputs.DownloadContainerRegistryName          
+
+  # DownloadData:
+  #   Type: "AWS::CloudFormation::Stack"
+  #   DependsOn:
+  #     - BatchEnvironment
+  #   # Condition: DownloadFsxDataCondition
+  #   Properties:
+  #     TemplateURL: alphafold-cfn-download.yaml
 
 Outputs:
   ApplicationName:

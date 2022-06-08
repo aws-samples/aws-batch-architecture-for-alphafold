@@ -44,8 +44,8 @@ Resources:
           Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref AWS::StackId
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
 
   S3BucketPolicy:
     Type: "AWS::S3::BucketPolicy"
@@ -115,8 +115,8 @@ Resources:
           Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref "AWS::StackId"
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
 
   DownloadContainerRegistry:
     Type: AWS::ECR::Repository
@@ -130,8 +130,8 @@ Resources:
           Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref "AWS::StackId"
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    # DeletionPolicy: Retain
+    # UpdateReplacePolicy: Retain
 
   CodeBuildRole:
     Type: AWS::IAM::Role
@@ -166,7 +166,7 @@ Resources:
                           "arn:aws:logs",
                           !Ref "AWS::Region",
                           !Ref "AWS::AccountId",
-                          "log-group:/aws/codebuild/CodeBuildProject-*",
+                          "log-group:/aws/codebuild/CodeBuildProject*",
                         ],
                       ]
               - Effect: Allow
@@ -292,12 +292,12 @@ Resources:
         - Key: StackId
           Value: !Ref "AWS::StackId"
 
-  CodeBuildProject:
+  CodeBuildProjectFolding:
     Type: AWS::CodeBuild::Project
     Properties:
       Artifacts:
         Type: NO_ARTIFACTS
-      Description: Build Docker container for Alphafold execution on AWS Batch
+      Description: Build folding Docker container for Alphafold execution on AWS Batch
       EncryptionKey: !Ref EncryptionKey
       Environment:
         ComputeType: BUILD_GENERAL1_MEDIUM
@@ -321,7 +321,7 @@ Resources:
       ResourceAccessRole: !GetAtt CodeBuildRole.Arn
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
-        BuildSpec: infrastructure/buildspec.yaml
+        BuildSpec: infrastructure/buildspec_folding.yaml
         GitCloneDepth: 1
         Location: !GetAtt CodeRepository.CloneUrlHttp
         Type: CODECOMMIT
@@ -331,6 +331,40 @@ Resources:
           Value: !Ref ApplicationName
         - Key: StackId
           Value: !Ref "AWS::StackId"
+
+  CodeBuildProjectDownload:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Description: Build download Docker container for Alphafold execution on AWS Batch
+      EncryptionKey: !Ref EncryptionKey
+      Environment:
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        EnvironmentVariables:
+          - Name: DOWNLOAD_IMAGE_TAG
+            Value: latest
+          - Name: DOWNLOAD_IMAGE_REPO_NAME
+            Value: !Ref DownloadContainerRegistry
+          - Name: ACCOUNT_ID
+            Value: !Ref "AWS::AccountId"
+        Image: aws/codebuild/standard:4.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: true
+        Type: LINUX_CONTAINER
+      ResourceAccessRole: !GetAtt CodeBuildRole.Arn
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Source:
+        BuildSpec: infrastructure/buildspec_download.yaml
+        GitCloneDepth: 1
+        Location: !GetAtt CodeRepository.CloneUrlHttp
+        Type: CODECOMMIT
+      SourceVersion: refs/heads/main
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: StackId
+          Value: !Ref "AWS::StackId"          
 
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -375,7 +409,9 @@ Resources:
                   - codebuild:StartBuild
                   - codebuild:BatchGetBuildBatches
                   - codebuild:StartBuildBatch
-                Resource: !GetAtt CodeBuildProject.Arn
+                Resource: 
+                  - !GetAtt CodeBuildProjectFolding.Arn
+                  - !GetAtt CodeBuildProjectDownload.Arn                  
                 Effect: Allow
               - Effect: Allow
                 Action:
@@ -415,21 +451,36 @@ Resources:
               RunOrder: 1
         - Name: Build
           Actions:
-            - Name: Build
+            - Name: BuildFolding
               ActionTypeId:
                 Category: Build
                 Owner: AWS
                 Provider: CodeBuild
                 Version: 1
               Configuration:
-                ProjectName: !Ref CodeBuildProject
+                ProjectName: !Ref CodeBuildProjectFolding
               InputArtifacts:
                 - Name: SourceArtifact
-              Namespace: BuildVariables
+              Namespace: BuildVariablesFolding
               OutputArtifacts:
-                - Name: BuildArtifact
+                - Name: FoldingBuildArtifact
               Region: !Ref "AWS::Region"
               RunOrder: 2
+            - Name: BuildDownload
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Configuration:
+                ProjectName: !Ref CodeBuildProjectDownload
+              InputArtifacts:
+                - Name: SourceArtifact
+              Namespace: BuildVariablesDownload
+              OutputArtifacts:
+                - Name: DownloadBuildArtifact
+              Region: !Ref "AWS::Region"
+              RunOrder: 2              
       Tags:
         - Key: Application
           Value: !Ref ApplicationName
@@ -453,6 +504,10 @@ Outputs:
     Description: URI of the download container
     Value:
       Fn::GetAtt: DownloadContainerRegistry.RepositoryUri
+  DownloadContainerRegistryName:
+    Description: Name of the download container repository
+    Value:
+      Ref: DownloadContainerRegistry      
   s3Bucket:
     Description: S3 bucket for CodePipeline
     Value:

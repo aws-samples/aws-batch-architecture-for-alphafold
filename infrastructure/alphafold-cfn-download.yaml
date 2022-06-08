@@ -1,0 +1,41 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Automatically download Data to FSx for Lustre instance
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  DownloadFsxDataLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: start_download_job/
+      Description: Delete S3 bucket
+      Handler: index.lambda_handler
+      MemorySize: 512
+      Role:
+        Fn::GetAtt: LambdaExecutionRole.Arn
+      Runtime: python3.8
+      Timeout: 10
+
+  DownloadFsxData:
+    Type: Custom::ResourceForDownloadingData
+    Properties:
+      ServiceToken:
+        Fn::GetAtt: DownloadFsxDataLambda.Arn
