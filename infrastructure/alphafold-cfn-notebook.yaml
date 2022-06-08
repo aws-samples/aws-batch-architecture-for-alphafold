@@ -3,7 +3,7 @@
 
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Creates a stack for running Alphafold on AWS Batch.
+  Creates a SageMaker notebook instance.
 Parameters:
   ApplicationName:
     Description: Name of the application, if applicable

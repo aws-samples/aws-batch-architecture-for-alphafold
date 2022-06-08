@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Automatically download Data to FSx for Lustre instance
+  Download data to FSx for Lustre.
 
 Parameters:
   JobQueue:
@@ -26,7 +26,6 @@ Resources:
             Action:
               - "sts:AssumeRole"
       ManagedPolicyArns:
-        # - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
         - "arn:aws:iam::aws:policy/AWSBatchFullAccess"
         - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
         - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -111,6 +110,35 @@ Resources:
                       cfnresponse.FAILED,
                       {"response": "Exception during processing"},
                   )
+
+          def submit_download_data_job(
+            job_definition,
+            job_queue,
+            job_name="download_job",
+            script="all",
+            cpu=4,
+            memory=16,
+            download_dir="/fsx",
+          ):
+            container_overrides = {
+                "command": [script, download_dir],
+                "resourceRequirements": [
+                    {"value": str(cpu), "type": "VCPU"},
+                    {"value": str(memory * 1000), "type": "MEMORY"},
+                ],
+            }
+            LOGGER.info(f"Job definition is {job_definition}")
+            LOGGER.info(f"Job name is {job_name}")
+            LOGGER.info(f"Job queue is {job_queue}")
+            LOGGER.info(f"Container overrides are {container_overrides}")
+            response = batch.submit_job(
+                jobDefinition=job_definition,
+                jobName=job_name,
+                jobQueue=job_queue,
+                containerOverrides=container_overrides,
+            )
+            LOGGER.info(f"Response is {response}")
+            return response
       Description: Download data to FSx
       Handler: index.lambda_handler
       MemorySize: 512
@@ -119,12 +147,12 @@ Resources:
       Runtime: python3.8
       Timeout: 10
 
-  DownloadFsxData:
-    Type: Custom::ResourceForDownloadingData
-    Properties:
-      ServiceToken:
-        Fn::GetAtt: DownloadFsxDataLambda.Arn
-      JobQueue:
-        Ref: JobQueue
-      JobDefinition:
-        Ref: JobDefinition
+  # DownloadFsxData:
+  #   Type: Custom::ResourceForDownloadingData
+  #   Properties:
+  #     ServiceToken:
+  #       Fn::GetAtt: DownloadFsxDataLambda.Arn
+  #     JobQueue:
+  #       Ref: JobQueue
+  #     JobDefinition:
+  #       Ref: JobDefinition
