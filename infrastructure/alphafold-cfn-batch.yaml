@@ -12,11 +12,6 @@ Parameters:
   DefaultSecurityGroupID:
     Description: The default security group ID for the VPC
     Type: String
-  EnableSpotInstanceTypes:
-    Type: String
-    Default: Y
-    Description: Should we use spot instance types for the CPU-bound data prep jobs? GPU-bound prediction jobs will continue to use on-demand instance types.
-    AllowedValues: [Y, N]   
   FileSystemId:
     Description: ID of the FSx for the Lustre file system
     Type: String
@@ -32,10 +27,6 @@ Parameters:
   DownloadContainerRegistryURI:
     Description: URI of the download container
     Type: String
-
-Conditions:
-  EnableSpotCPUs:
-    "Fn::Equals": [Ref: "EnableSpotInstanceTypes", "Y"]
 
 Resources:
   ##################################################
@@ -154,7 +145,6 @@ Resources:
 
   SpotFleetRole:
     Type: AWS::IAM::Role
-    Condition: EnableSpotCPUs
     Properties:
       Description: "Required service policies to support tagging spot fleet instances on AWS Batch"
       AssumeRolePolicyDocument:
@@ -176,21 +166,18 @@ Resources:
         
   AWSServiceRoleForEC2SpotServiceLinkedRole:
     Type: AWS::IAM::ServiceLinkedRole
-    Condition: EnableSpotCPUs
     Properties:
       AWSServiceName: spot.amazonaws.com
       Description: Default EC2 Spot Service Linked Role
 
   AWSServiceRoleForEC2SpotFleetServiceLinkedRole:
     Type: AWS::IAM::ServiceLinkedRole
-    Condition: EnableSpotCPUs
     Properties:
       AWSServiceName: spotfleet.amazonaws.com
       Description: Default EC2 Spot Fleet Service Linked Role
 
   PrivateCPUComputeEnvironmentSpot:
     Type: AWS::Batch::ComputeEnvironment
-    Condition: EnableSpotCPUs
     Properties:
       ComputeResources:
         AllocationStrategy: SPOT_CAPACITY_OPTIMIZED
@@ -233,9 +220,9 @@ Resources:
         MaxvCpus: 256
         MinvCpus: 0
         SecurityGroupIds:
-          - !Ref DefaultSecurityGroupID
+          - Ref: DefaultSecurityGroupID
         Subnets:
-          - !Ref Subnet
+          - Ref: Subnet
         Type: EC2
       State: ENABLED
       Type: MANAGED
@@ -257,7 +244,6 @@ Resources:
 
   PrivateCPUJobQueueSpot:
     Type: AWS::Batch::JobQueue
-    Condition: EnableSpotCPUs
     Properties:
       ComputeEnvironmentOrder:
         - ComputeEnvironment: !Ref PrivateCPUComputeEnvironmentSpot
@@ -509,3 +495,32 @@ Resources:
         Application: !Ref ApplicationName
         StackId: !Ref "AWS::StackId"
       Type: container
+
+Outputs:
+  LaunchTemplate:
+    Description: Launch template for EC2 instances.
+    Value:
+      Ref: InstanceLaunchTemplate
+  CPUOnDemandJobQueue:
+    Description: Job queue for on-demand CPU instances.
+    Value:
+      Ref: PrivateCPUJobQueueOnDemand
+  CPUSpotJobQueue:
+    Description: Job queue for spot CPU instances.
+    Value:
+      Ref: PrivateCPUJobQueueSpot
+  GPUJobQueue:
+    Description: Job queue for on-demand GPU instances.
+    Value: PrivateGPUJobQueue
+  CPUFoldingJobDefinition:
+    Description: Job definition for running folding jobs on CPU instances.
+    Value:
+      Ref: CPUFoldingJobDefinition
+  GPUFoldingJobDefinition:
+    Description: Job definition for running folding jobs on GPU instances.
+    Value:
+      Ref: GPUFoldingJobDefinition
+  CPUDownloadJobDefinition:
+    Description: Job definition for running download jobs on CPU instances.
+    Value:
+      Ref: CPUDownloadJobDefinition
