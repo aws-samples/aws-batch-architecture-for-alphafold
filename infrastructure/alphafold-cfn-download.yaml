@@ -4,6 +4,14 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Automatically download Data to FSx for Lustre instance
 
+Parameters:
+  JobQueue:
+    Description: Batch job queue for running download job.
+    Type: String
+  JobDefinition:
+    Description: Batch job definition for running download job.
+    Type: String
+
 Resources:
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -18,7 +26,8 @@ Resources:
             Action:
               - "sts:AssumeRole"
       ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        # - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/AWSBatchFullAccess"
         - "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
         - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
@@ -39,3 +48,7 @@ Resources:
     Properties:
       ServiceToken:
         Fn::GetAtt: DownloadFsxDataLambda.Arn
+      JobQueue:
+        Ref: JobQueue
+      JobDefinition:
+        Ref: JobDefinition
