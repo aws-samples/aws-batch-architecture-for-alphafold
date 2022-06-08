@@ -32,7 +32,7 @@ cfn-lint:
     - pip install cfn-lint
     - pip freeze
   script:
-    - cfn-lint -I infrastructure/*cfn*.yaml
+    - cfn-lint -I infrastructure/*cfn*.yaml -i W3002 # Ignore warning about cfn package req
 
 cfn-nag:
   image: stelligent/cfn_nag
