@@ -87,7 +87,7 @@ if __name__ == "__main__":
                 download_mode=args.download_mode,
             )
             responses.append(script_response)
-        response = str(script_response)
+        response = str(responses)
 
     elif args.script.upper() == "PARAMETERS_ONLY":
         parameters_only_script = "download_alphafold_params_s3.sh"
