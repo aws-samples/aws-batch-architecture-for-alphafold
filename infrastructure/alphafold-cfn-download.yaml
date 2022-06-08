@@ -68,7 +68,7 @@ Resources:
                           script_response = submit_download_data_job(
                               job_queue=event["ResourceProperties"]["JobQueue"],
                               job_definition=event["ResourceProperties"]["JobDefinition"],
-                              job_name=pathlib.Path(script),
+                              job_name=pathlib.Path(script).stem,
                               script=script,
                               cpu=4,
                               memory=16,
