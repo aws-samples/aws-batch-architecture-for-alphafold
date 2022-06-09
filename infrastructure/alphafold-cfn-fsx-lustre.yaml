@@ -3,7 +3,7 @@
 
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Creates an FSx for Lustre file system
+  alphafold-cfn-fsx-lustre.yaml: Creates an FSx for Lustre file system
 Parameters:
   ApplicationName:
     Description: Name of the application, if applicable

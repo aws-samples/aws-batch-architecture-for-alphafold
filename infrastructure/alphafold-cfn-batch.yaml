@@ -3,7 +3,7 @@
 
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Creates Batch computing environment.
+  alphafold-cfn-batch.yaml: Creates Batch computing environment.
 Parameters:
   ApplicationName:
     Description: Name of the application, if applicable

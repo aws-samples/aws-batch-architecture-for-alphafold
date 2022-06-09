@@ -3,7 +3,7 @@
 
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Creates container building and hosting resources.
+  alphafold-cfn-container.yaml: Creates container building and hosting resources.
 Parameters:
   AlphaFoldVersion:
     Description: AlphaFold release to include as part of the job container

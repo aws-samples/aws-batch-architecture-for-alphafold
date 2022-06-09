@@ -3,7 +3,7 @@
 
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Creates a VPC with 1 private and 1 public subnet
+  alphafold-cfn-network.yaml: Creates a VPC with 1 private and 1 public subnet
 Parameters:
   StackAvailabilityZone:
     Description: Availability zone to deploy stack resources

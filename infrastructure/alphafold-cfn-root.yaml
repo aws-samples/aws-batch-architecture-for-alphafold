@@ -5,7 +5,7 @@
 # aws cloudformation deploy --template-file infrastructure/alphafold-cfn-packaged.yaml --capabilities CAPABILITY_IAM --stack-name aws-batch-alphafold220603B --parameter-overrides DownloadFsxData=Y LaunchSageMakerNotebook=N Environment=dev VPC=vpc-0ed8c8f15fe9244ae DefaultSecurityGroup=sg-023becfedd6b7d954 Subnet=subnet-040ae3cdbc5433c4e FileSystemId=fs-0e4ca95b6befaf3e1 FileSystemMountName=pkwztbmv
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Root stack for running AWS Batch Architecture for AlphaFold.
+  alphafold-cfn-root.yaml: Root stack for running AWS Batch Architecture for AlphaFold.
 
 Parameters:
   ApplicationName:
