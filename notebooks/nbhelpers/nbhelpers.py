@@ -79,10 +79,9 @@ def list_alphafold_stacks():
     for stack in cfn.list_stacks(
         StackStatusFilter=["CREATE_COMPLETE", "UPDATE_COMPLETE"]
     )["StackSummaries"]:
-        if "Alphafold on AWS Batch" in stack.get("TemplateDescription", []) and "BatchEnvironment" in stack.get("StackName", []):
+        if "alphafold-cfn-batch.yaml" in stack.get("TemplateDescription", []):
             af_stacks.append(stack)
     return af_stacks
-
 
 def get_batch_resources(stack_name):
     """
