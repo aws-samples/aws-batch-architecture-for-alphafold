@@ -19,7 +19,7 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 
 1. Choose **Launch Stack**:
 
-    [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-batch-architecture-for-alphafold-public-artifacts.s3.amazonaws.com/dev/alphafold-cfn-packaged.yaml)
+    [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-batch-architecture-for-alphafold-public-artifacts.s3.amazonaws.com/main/alphafold-cfn-packaged.yaml)
 
 2. Specify the following required parameters:
   - For **Stack Name**, enter a value unique to your account and region.
