@@ -5,34 +5,46 @@
 ### ---------------------------------------------
 ### Modified by Amazon Web Services (AWS) to update cuda version and add Alphafold
 ### parameter
-ARG CUDA=11.4.2
-ARG AF_VERSION=v2.1.2
-FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu18.04
+ARG CUDA=11.1
+ARG AF_VERSION=v2.2.0
+ARG UBUNTU_VERSION=20.04
+ARG AWS_DEFAULT_REGION
+ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+FROM nvcr.io/nvidia/cuda:${CUDA}-cudnn8-runtime-ubuntu${UBUNTU_VERSION}
+
 # FROM directive resets ARGS, so we specify again (the value is retained if
 # previously set).
 ARG CUDA
 ARG AF_VERSION
+ARG AWS_DEFAULT_REGION
+ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 ### ---------------------------------------------
 
 # Use bash to support string substitution.
 SHELL ["/bin/bash", "-c"]
 
+# Address https://github.com/deepmind/alphafold/issues/463#issuecomment-1124881779
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       build-essential \
       cmake \
-### ---------------------------------------------
-### Modified by AWS to update cuda version    
-      cuda-command-line-tools-11.4 \
-### ---------------------------------------------
+      cuda-command-line-tools-${CUDA} \
       git \
       hmmer \
       kalign \
       tzdata \
       wget \
-### ---------------------------------------------
-### Modified by AWS to address openssl issue identified during testing
-    && apt-get install -y --only-upgrade openssl \
-### ---------------------------------------------
+      # Address https://ubuntu.com/security/CVE-2022-24407
+      libsasl2-modules-sql=2.1.27+dfsg-2ubuntu0.1 \ 
+      # Address https://ubuntu.com/security/CVE-2022-24407, https://ubuntu.com/security/CVE-2021-3711,
+      # and https://ubuntu.com/security/CVE-2022-0778
+      openssl=1.1.1f-1ubuntu2.13 \
+      # Address https://ubuntu.com/security/CVE-2021-33910
+      systemd=245.4-4ubuntu3.17 \
+      # Address additional MEDIUM vulnerabilities
+      apt dpkg e2fsprogs gcc libc6 gzip libgcrypt20 libzstd1 zstd lz4 libnettle7 slapd=2.4.49+dfsg-2ubuntu1.9 \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Compile HHsuite from source.
@@ -45,48 +57,48 @@ RUN git clone --branch v3.3.0 https://github.com/soedinglab/hh-suite.git /tmp/hh
     && popd \
     && rm -rf /tmp/hh-suite
 
-# Install Miniconda package manager.
+# Install mambaforge package manager.
 RUN wget -q -P /tmp \
-  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-    && bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda \
-    && rm /tmp/Miniconda3-latest-Linux-x86_64.sh
+  https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh \
+  && bash /tmp/Mambaforge-Linux-x86_64.sh -b -p /opt/mamba \
+  && rm /tmp/Mambaforge-Linux-x86_64.sh
 
 # Install conda packages.
-ENV PATH="/opt/conda/bin:$PATH"
-RUN conda update -qy conda \
-    && conda install -y -c conda-forge \
+ENV PATH="/opt/mamba/bin:$PATH"
+RUN mamba update -qy mamba \
+    && mamba install -y -c conda-forge \
       openmm=7.5.1 \
-### ---------------------------------------------
-### Modified by AWS to update cuda version and add awscli   
-      cudatoolkit==${CUDA} \
+      cudatoolkit=${CUDA_VERSION} \
       pdbfixer \
       pip \
-      python=3.7 \
-      awscli
+      python=3.9 \
+      awscli \
+      boto3 \
+      protobuf=3.20.1 \
+      six=1.15.0
 
 RUN git clone --branch ${AF_VERSION} --depth 1 https://github.com/deepmind/alphafold.git /app/alphafold
+
 COPY run_aws_alphafold.py /app/alphafold
+
 ### ---------------------------------------------     
-RUN wget -q -P /app/alphafold/alphafold/common/ \
-  https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
+RUN aws s3 cp s3://aws-batch-architecture-for-alphafold-public-artifacts/stereo_chemical_props/stereo_chemical_props.txt /app/alphafold/alphafold/common/
 
 # Install pip packages.
 RUN pip3 install --upgrade pip \
     && pip3 install -r /app/alphafold/requirements.txt \
-### ---------------------------------------------
-### Modified by AWS to update cuda version and add boto3   
-    && pip3 install --upgrade jax jaxlib>=0.1.69+cuda${CUDA/./} -f \
-      https://storage.googleapis.com/jax-releases/jax_releases.html \
-    && pip3 install boto3
-### ---------------------------------------------     
+    && pip3 install --upgrade jax==0.2.14 jaxlib==0.1.69+cuda${CUDA/./} -f \    
+      https://storage.googleapis.com/jax-releases/jax_releases.html 
 
+### ---------------------------------------------     
 # Apply OpenMM patch.
-WORKDIR /opt/conda/lib/python3.7/site-packages
+WORKDIR /opt/mamba/lib/python3.9/site-packages
 RUN patch -p0 < /app/alphafold/docker/openmm.patch
 
-### ---------------------------------------------
-### Modified by AWS to clean up container
-  
+# Add SETUID bit to the ldconfig binary so that non-root users can run it.
+RUN chmod u+s /sbin/ldconfig.real
+
+# Clean up
 RUN rm -rf /app/alphafold/docker /app/alphafold/imgs /app/alphafold/notebooks /app/alphafold/scripts
 ### ---------------------------------------------     
 

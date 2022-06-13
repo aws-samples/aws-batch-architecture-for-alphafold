@@ -79,10 +79,9 @@ def list_alphafold_stacks():
     for stack in cfn.list_stacks(
         StackStatusFilter=["CREATE_COMPLETE", "UPDATE_COMPLETE"]
     )["StackSummaries"]:
-        if "Alphafold on AWS Batch" in stack["TemplateDescription"]:
+        if "alphafold-cfn-batch.yaml" in stack.get("TemplateDescription", []):
             af_stacks.append(stack)
     return af_stacks
-
 
 def get_batch_resources(stack_name):
     """
@@ -91,6 +90,7 @@ def get_batch_resources(stack_name):
 
     # stack_name = af_stacks[0]["StackName"]
     stack_resources = cfn.list_stack_resources(StackName=stack_name)
+    cpu_job_queue_spot = None
     for resource in stack_resources["StackResourceSummaries"]:
         if resource["LogicalResourceId"] == "GPUFoldingJobDefinition":
             gpu_job_definition = resource["PhysicalResourceId"]
@@ -98,17 +98,18 @@ def get_batch_resources(stack_name):
             gpu_job_queue = resource["PhysicalResourceId"]
         if resource["LogicalResourceId"] == "CPUFoldingJobDefinition":
             cpu_job_definition = resource["PhysicalResourceId"]
-        if resource["LogicalResourceId"] == "PrivateCPUJobQueue":
-            cpu_job_queue = download_job_queue = resource["PhysicalResourceId"]
+        if resource["LogicalResourceId"] == "PrivateCPUJobQueueOnDemand":
+            cpu_job_queue_od = download_job_queue = resource["PhysicalResourceId"]        
+        if resource["LogicalResourceId"] == "PrivateCPUJobQueueSpot":
+            cpu_job_queue_spot = resource["PhysicalResourceId"]                    
         if resource["LogicalResourceId"] == "CPUDownloadJobDefinition":
             download_job_definition = resource["PhysicalResourceId"]
-        # if resource["LogicalResourceId"] == "PublicCPUJobQueue":
-        #     download_job_queue = resource["PhysicalResourceId"]
     return {
         "gpu_job_definition": gpu_job_definition,
         "gpu_job_queue": gpu_job_queue,
         "cpu_job_definition": cpu_job_definition,
-        "cpu_job_queue": cpu_job_queue,
+        "cpu_job_queue_od": cpu_job_queue_od,
+        "cpu_job_queue_spot": cpu_job_queue_spot,
         "download_job_definition": download_job_definition,
         "download_job_queue": download_job_queue,
     }
@@ -282,7 +283,6 @@ def submit_batch_alphafold_job(
     job_name,
     fasta_paths,
     s3_bucket,
-    is_prokaryote_list=None,
     data_dir="/mnt/data_dir/fsx",
     output_dir="alphafold",
     bfd_database_path="/mnt/bfd_database_path/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt",
@@ -308,6 +308,9 @@ def submit_batch_alphafold_job(
     gpu=1,
     depends_on=None,
     stack_name=None,
+    use_spot_instances=False,
+    run_relax=True,
+    num_multimer_predictions_per_model=1
 ):
 
     if stack_name is None:
@@ -327,6 +330,7 @@ def submit_batch_alphafold_job(
             f"--db_preset={db_preset}",
             f"--model_preset={model_preset}",
             f"--s3_bucket={s3_bucket}",
+            f"--run_relax={run_relax}",
         ],
         "resourceRequirements": [
             {"value": str(cpu), "type": "VCPU"},
@@ -341,6 +345,10 @@ def submit_batch_alphafold_job(
         container_overrides["command"].append(
             f"--pdb_seqres_database_path={pdb_seqres_database_path}"
         )
+        container_overrides["command"].append(
+            f"--num_multimer_predictions_per_model={num_multimer_predictions_per_model}"
+        )
+        print("If multimer prediction failes due to Amber relaxation, re-run with run_relax=False")
     else:
         container_overrides["command"].append(
             f"--pdb70_database_path={pdb70_database_path}"
@@ -356,11 +364,6 @@ def submit_batch_alphafold_job(
         )
         container_overrides["command"].append(
             f"--bfd_database_path={bfd_database_path}"
-        )
-
-    if is_prokaryote_list is not None:
-        container_overrides["command"].append(
-            f"--is_prokaryote_list={is_prokaryote_list}"
         )
 
     if benchmark:
@@ -379,6 +382,8 @@ def submit_batch_alphafold_job(
         container_overrides["command"].append("--logtostderr")
 
     if gpu > 0:
+        if use_spot_instances:
+            print("Spot instance queue not available for GPU jobs. Using on-demand queue instead.")
         job_definition = batch_resources["gpu_job_definition"]
         job_queue = batch_resources["gpu_job_queue"]
         container_overrides["resourceRequirements"].append(
@@ -386,7 +391,13 @@ def submit_batch_alphafold_job(
         )
     else:
         job_definition = batch_resources["cpu_job_definition"]
-        job_queue = batch_resources["cpu_job_queue"]
+        if use_spot_instances and batch_resources["cpu_job_queue_spot"] is not None:
+            job_queue = batch_resources["cpu_job_queue_spot"]
+        elif use_spot_instances and batch_resources["cpu_job_queue_spot"] is None:
+            print("Spot instance queue not available. Using on-demand queue instead.")
+            job_queue = batch_resources["cpu_job_queue_od"]
+        else:
+            job_queue = batch_resources["cpu_job_queue_od"]
 
     print(container_overrides)
     if depends_on is None:
@@ -406,7 +417,6 @@ def submit_batch_alphafold_job(
         )
 
     return response
-
 
 def get_run_metrics(bucket, job_name):
     timings_uri = sagemaker.s3.s3_path_join(bucket, job_name, "timings.json")

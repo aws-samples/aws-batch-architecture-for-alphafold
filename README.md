@@ -19,21 +19,15 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 
 1. Choose **Launch Stack**:
 
-    [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-hcls-ml.s3.amazonaws.com/blog_post_support_materials/aws-alphafold/main/cfn.yaml)
+    [![Launch Stack](imgs/LaunchStack.jpg)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://aws-batch-architecture-for-alphafold-public-artifacts.s3.amazonaws.com/dev/alphafold-cfn-packaged.yaml)
 
 2. Specify the following required parameters:
   - For **Stack Name**, enter a value unique to your account and region.
   - For **StackAvailabilityZone** choose an availability zone.
-3. If needed, specify the following optional parameters:
-  - Select a different value for **AlphaFoldVersion** if you want to include another version of the public Alphafold repo in your Batch job container.
-  - Specify a different value for **CodeRepoBucket** and **CodeRepoKey** if you want to populate your AWS-Alphafold CodeCommit repository with custom code stored in another S3 bucket.
-  - Select a different value for **FSXForLustreStorageCapacity** if you want to provision a larger file system. The default value of 1200 GB is sufficient to store compressed instances of the Alphafold parameters, BFD (small and reduced), Mgnify, PDB70, PDB mmCIF, Uniclust30, Uniref90, UniProt, and PDB SeqRes datasets.
-  - Select a different value for for **FSxForLustreThroughput** if you have unique performance needs. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
-  - Select Y for **LaunchSageMakerNotebook** if you want to launch a managed sagemaker notebook instance to quickly run the provided Jupyter notebook.
-
+3. Provide a name for your stack, leave the other parameters as their default, and select **Next**.
 4. Select **I acknowledge that AWS CloudFormation might create IAM resources with custom names**.
 5. Choose **Create stack**.
-6. Wait 30 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
+6. Wait 15 minutes for AWS CloudFormation to create the infrastructure stack and AWS CodeBuild to build and publish the AWS-AlphaFold container to Amazon Elastic Container Registry (Amazon ECR).
 
 ### Launch SageMaker Notebook
 (If **LaunchSageMakerNotebook** set to Y)
@@ -50,32 +44,28 @@ This repository includes the CloudFormation template, Jupyter Notebook, and supp
 3. Use the URL to clone the repository into your Jupyter notebook environment of choice, such as SageMaker Studio.
 
 ### Populate FSx for Lustre File System
-1. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, open a terminal in your notebooks environment and run the following commands from the AWS-AlphaFold directory:
+1. If you set the **DownloadFsxData** parameter to **Y**, CloudFormation will automatically start a series of Batch jobs to populate the FSx for Lustre instance with a number of common sequence databases. If you set this parameter to **N** you will instead need to manually populate the file system. Once the CloudFormation stack is in a CREATE_COMPLETE status, you can begin populating the FSx for Lustre file system with the necessary sequence databases. To do this automatically, open a terminal in your notebooks environment and run the following commands from the AWS-AlphaFold directory:
 
 ```
 > pip install -r notebooks/notebook-requirements.txt
-> python notebooks/download_ref_data.py --stack_name <STACK NAME>
+> python notebooks/download_ref_data.py
 ```
 
-Replacing `<STACK NAME>` with the name of your cloudformation stack. By default, this will download the "reduced_dbs" version of bfd. You can download the entire database instead by specifying the --download_mode full_dbs option.
-
-NOTE: If you're having trouble downloading PDB mmCIF you have two options:
-
-1. Update the `download_pdb_mmcif.sh` script to use a different mirror, per the DeepMind instructions, then rebuild the container by pushing the repo to CodeCommit and releasing the CodePipeline, or
-2. Download a snapshot of the PDB mmCIF data from S3 by running the following commands:
-
-```
-> python notebooks/download_ref_data.py --stack_name <STACK NAME> --script download_pdb_mmcif_from_s3.sh
-> python notebooks/download_ref_data.py --stack_name <STACK NAME> --script download_all_data_but_mmcif.sh
-
-```
-
-2. It will take several hours to populate the file system. You can track its progress by navigating to the file system in the FSx for Lustre console.
+2. It will take 3 to 4 hours to populate the file system, depending on your region. You can track its progress by navigating to the file system in the FSx for Lustre console.
 
 ### Cleaning Up
-1. To delete all provisioned resources from from your account, navigate to [S3](https://console.aws.amazon.com/s3) and search for your stack name. This should return a bucket named `<STACK NAME>` followed by `codepipelines3bucket` a random key. Select the bucket and then **Delete**.
-2. Navigate to [ECR](https://console.aws.amazon.com/ecr) and search for your stack name. This should return two container repositories named `<STACK ID>` followed by either `downloadcontainerregistry` or `foldingcontainerregistry`. Select both repositories and then **Delete**.
-3. Finally, navigate to [Cloud Formation](https://console.aws.amazon.com/cloudformation), select your stack, and then **Delete**. 
+1. To delete all provisioned resources from from your account, navigate to [Cloud Formation](https://console.aws.amazon.com/cloudformation), select your stack, and then **Delete**. 
+
+-----
+## Optional Template Parameters
+  - Select a different value for **AlphaFoldVersion** if you want to include another version of the public Alphafold repo in your Batch job container.
+  - Specify a different value for **CodeRepoBucket** and **CodeRepoKey** if you want to populate your AWS-Alphafold CodeCommit repository with custom code stored in another S3 bucket.
+  - Select a different value for **FSXForLustreStorageCapacity** if you want to provision a larger file system. The default value of 1200 GB is sufficient to store compressed instances of the Alphafold parameters and all standard sequence databases, BFD (small and reduced), Mgnify, PDB70, PDB mmCIF, Uniclust30, Uniref90, UniProt, and PDB SeqRes datasets. However, you can specify a larger value if you need to store additional data.
+  - Select a different value for for **FSxForLustreThroughput** if you have unique performance needs. The default is 500 MB/s/TB. Select a higher value for performance-sensitive workloads and a lower value for cost-sensitive workloads.
+  - Select "Y" for **LaunchSageMakerNotebook** if you want to launch a managed sagemaker notebook instance to quickly run the provided Jupyter notebook.
+  - Provide values for the **VPC**, **Subnet**, and **DefaultSecurityGroup** parameters to use existing network resources. If one or more of those parameters are left empty, CloudFormation will create a new VPC and FSx for Lustre instance for the stack.
+  - Provide values for the **FileSystemId** and **FileSystemMountName** parameters to use an existing FSx for Lustre file system. If one or more of these parameters are left empty, CloudFormation will create a new file system for the stack.
+  - Select "Y" for **DownloadFsxData** to automatically populate the FSx for Lustre file system with common sequence databases.
 
 -----
 ## Usage

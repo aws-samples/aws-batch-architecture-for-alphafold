@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2022-06-03
+
+### Fixed
+- Resolved issue where timings.json file was not properly passed between the data prep and folding jobs (Identified by PR https://github.com/aws-samples/aws-batch-architecture-for-alphafold/pull/3)
+- Resolved compatibility issue with Protobuf version (https://github.com/deepmind/alphafold/issues/478)
+
+### Changed
+
+- Added support for AlphaFold v2.2.0
+- Added support for existing VPCs and FSx for Lustre instances
+- Added option to automatically download reference data to FSx
+- Decreased data prep job cost by as much as 75% by using spot instance types.
+- Updated data download script to pull sequence databases and parameters from S3
+- Decreased data download time by 41% by retrieving ref data in parallel
+- Refactored CloudFormation template to use nested stacks
+- Added CloudFormation tests with Taskcat
+- Updated folding container to Python 3.9, Ubuntu 20.04, and mamba
+
 ## [1.0.2] - 2022-05-20
 
 ### Fixed

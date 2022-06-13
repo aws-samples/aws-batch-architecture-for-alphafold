@@ -43,12 +43,6 @@ flags.DEFINE_list(
     'multiple sequences, then it will be folded as a multimer. Paths should be '
     'separated by commas. All FASTA paths must have a unique basename as the '
     'basename is used to name the output directories for each prediction.')
-flags.DEFINE_list(
-    'is_prokaryote_list', None, 'Optional for multimer system, not used by the '
-    'single chain system. This list should contain a boolean for each fasta '
-    'specifying true where the target complex is from a prokaryote, and false '
-    'where it is not, or where the origin is unknown. These values determine '
-    'the pairing method for the MSA.')
 
 flags.DEFINE_string('data_dir', None, 'Path to directory of supporting data.')
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
@@ -107,6 +101,11 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
                      'that even if this is set, Alphafold may still not be '
                      'deterministic, because processes like GPU inference are '
                      'nondeterministic.')
+flags.DEFINE_integer('num_multimer_predictions_per_model', 5, 'How many '
+                     'predictions (each with a different random seed) will be '
+                     'generated per model. E.g. if this is 2 and there are 5 '
+                     'models then there will be 10 predictions per input. '
+                     'Note: this FLAG only applies if model_preset=multimer')
 flags.DEFINE_boolean('use_precomputed_msas', False, 'Whether to read MSAs that '
                      'have been written to disk instead of running the MSA '
                      'tools. The MSA files are looked up in the output '
@@ -119,7 +118,7 @@ flags.DEFINE_boolean('run_relax', True, 'Whether to run the final relaxation '
                      'result in predictions with distracting stereochemical '
                      'violations but might help in case you are having issues '
                      'with the relaxation stage.')
-flags.DEFINE_boolean('use_gpu_relax', None, 'Whether to relax on GPU. '
+flags.DEFINE_boolean('use_gpu_relax', True, 'Whether to relax on GPU. '
                      'Relax on GPU can be much faster than CPU, so it is '
                      'recommended to enable if possible. GPUs must be available'
                      ' if this setting is enabled.')
@@ -176,10 +175,8 @@ def predict_structure(
     amber_relaxer: relax.AmberRelaxation,
     benchmark: bool,
     random_seed: int,
-    is_prokaryote: Optional[bool] = None,
 ### ---------------------------------------------
 ### Modified by AWS to add support for 2-step jobs
-
     features_path: Optional[str] = None,
     run_features_only: Optional[bool] = False,
 ### ---------------------------------------------
@@ -205,15 +202,9 @@ def predict_structure(
         feature_dict = pickle.load(open(features_path, "rb"))
     else:
 ### ---------------------------------------------        
-        if is_prokaryote is None:
-            feature_dict = data_pipeline.process(
+        feature_dict = data_pipeline.process(
             input_fasta_path=fasta_path,
             msa_output_dir=msa_output_dir)
-        else:
-            feature_dict = data_pipeline.process(
-                input_fasta_path=fasta_path,
-                msa_output_dir=msa_output_dir,
-                is_prokaryote=is_prokaryote)
         timings['features'] = time.time() - t_0
 
         # Write out features as a pickled dictionary.
@@ -328,6 +319,15 @@ def predict_structure(
     logging.info('Final timings for %s: %s', fasta_name, timings)
 
     timings_output_path = os.path.join(output_dir, 'timings.json')
+    ### ---------------------------------------------    
+    ### Modified to add support for 2-step jobs
+    ### Add back the features timing from the step 1 if timings.json presents
+    ### https://github.com/aws-samples/aws-batch-architecture-for-alphafold/pull/3/files
+    if os.path.exists(timings_output_path):
+        with open(timings_output_path, 'r') as f:
+            features_timing = json.load(f)
+        timings['features'] = features_timing['features']
+    ### --------------------------------------------- 
     with open(timings_output_path, 'w') as f:
         f.write(json.dumps(timings, indent=4))
 
@@ -368,21 +368,6 @@ def main(argv):
     if len(fasta_names) != len(set(fasta_names)):
         raise ValueError('All FASTA paths must have a unique basename.')
 
-    # Check that is_prokaryote_list has same number of elements as fasta_paths,
-    # and convert to bool.
-    if FLAGS.is_prokaryote_list:
-        if len(FLAGS.is_prokaryote_list) != len(FLAGS.fasta_paths):
-            raise ValueError('--is_prokaryote_list must either be omitted or match '
-                'length of --fasta_paths.')
-        is_prokaryote_list = []
-        for s in FLAGS.is_prokaryote_list:
-            if s in ('true', 'false'):
-                is_prokaryote_list.append(s == 'true')
-            else:
-                raise ValueError('--is_prokaryote_list must contain comma separated '
-                    'true or false values.')
-    else:  # Default is_prokaryote to False.
-        is_prokaryote_list = [False] * len(fasta_names)
 ### ---------------------------------------------
 ### Modified by AWS to add support for 2-step jobs.
 
@@ -434,12 +419,14 @@ def main(argv):
         use_precomputed_msas=FLAGS.use_precomputed_msas)
 
     if run_multimer_system:
+        num_predictions_per_model = FLAGS.num_multimer_predictions_per_model
         data_pipeline = pipeline_multimer.DataPipeline(
             monomer_data_pipeline=monomer_data_pipeline,
             jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
             uniprot_database_path=FLAGS.uniprot_database_path,
             use_precomputed_msas=FLAGS.use_precomputed_msas)
     else:
+        num_predictions_per_model = 1
         data_pipeline = monomer_data_pipeline
 
     model_runners = {}
@@ -453,7 +440,8 @@ def main(argv):
         model_params = data.get_model_haiku_params(
             model_name=model_name, data_dir=FLAGS.data_dir)
         model_runner = model.RunModel(model_config, model_params)
-        model_runners[model_name] = model_runner
+        for i in range(num_predictions_per_model):
+            model_runners[f'{model_name}_pred_{i}'] = model_runner
 
     logging.info('Have %d models: %s', len(model_runners),
                 list(model_runners.keys()))
@@ -471,12 +459,11 @@ def main(argv):
 
     random_seed = FLAGS.random_seed
     if random_seed is None:
-        random_seed = random.randrange(sys.maxsize // len(model_names))
+        random_seed = random.randrange(sys.maxsize // len(model_runners))
     logging.info('Using random seed %d for the data pipeline', random_seed)
 
     # Predict structure for each of the sequences.
     for i, fasta_path in enumerate(FLAGS.fasta_paths):
-        is_prokaryote = is_prokaryote_list[i] if run_multimer_system else None
         fasta_name = fasta_names[i]
 ### ---------------------------------------------
 ### Modified by AWS to add support for 2-step jobs and data storage in S3.
@@ -510,6 +497,13 @@ def main(argv):
                     logging.info(f"Creating directory {os.path.dirname(features_path)}")
                     os.makedirs(os.path.dirname(features_path))
                 s3.download_file(FLAGS.s3_bucket, features_path, features_path)
+
+                ### 5/27/2022: Also download timings.json
+                output_dir = os.path.join(FLAGS.output_dir, fasta_name)
+                timings_output_path = os.path.join(output_dir, "timings.json")
+                s3.download_file(FLAGS.s3_bucket, timings_output_path, timings_output_path)
+                ########################################
+
             except BaseException as err:
                 logging.info(
                     f"Unable to download {features_path} from s3://{s3_features_url} to {features_path}"
@@ -529,10 +523,8 @@ def main(argv):
             amber_relaxer=amber_relaxer,
             benchmark=FLAGS.benchmark,
             random_seed=random_seed,
-            is_prokaryote=is_prokaryote,
 ### ---------------------------------------------            
 ### Modified by AWS to add support for 2-step jobs.
-           
             features_path=features_path,
             run_features_only=FLAGS.run_features_only            
         )
@@ -542,7 +534,6 @@ def main(argv):
         logging.info(f"Uploading {FLAGS.output_dir} to {FLAGS.s3_bucket}")
         upload_data(FLAGS.output_dir, f"s3://{FLAGS.s3_bucket}/{FLAGS.output_dir}")
     # ----------------------------
-
 
 def parse_s3_url(url):
     """Returns an (s3 bucket, key name/prefix) tuple from a url with an s3 scheme. (From SageMaker s3 utils)
@@ -559,7 +550,6 @@ def parse_s3_url(url):
             "Expecting 's3' scheme, got: {} in {}.".format(parsed_url.scheme, url)
         )
     return parsed_url.netloc, parsed_url.path.lstrip("/")
-
 
 def upload_data(path, desired_s3_uri, s3=boto3.client("s3"), extra_args=None):
     """Upload local file or directory to S3. (From SageMaker Session)
@@ -626,11 +616,6 @@ if __name__ == '__main__':
             'template_mmcif_dir',
             'max_template_date',
             'obsolete_pdbs_path',
-### ---------------------------------------------            
-### Modified by AWS to resolve issue found in testing.
-            
-            #'use_gpu_relax',
-### ---------------------------------------------            
         ])
 
     app.run(main)

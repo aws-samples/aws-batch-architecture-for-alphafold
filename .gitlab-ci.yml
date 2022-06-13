@@ -1,57 +1,101 @@
+variables:
+  AWS_CREDS_TARGET_ROLE: arn:aws:iam::264410369698:role/AWS-AlphaFold-GitLab-CI-Role
+  AWS_DEFAULT_REGION: us-east-1
+  DEPLOYMENT_BUCKET_NAME: aws-batch-architecture-for-alphafold-public-artifacts
+  DEV_BUCKET_PREFIX: dev
+  MAIN_BUCKET_PREFIX: main
+
 default:
   image: public.ecr.aws/amazonlinux/amazonlinux:latest
 
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
 
+stages:
+  - lint
+  - deploy-dev
+  - test
+  - deploy-main
+
+################################
+# .pre
+################################
+
 cfn-lint:
-  image: python:latest
-  stage: test
+  image: python:3.8
+  stage: lint
   before_script:
-    - python --version  # For debugging
+    - python --version # For debugging
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
     - pip install cfn-lint
-    - pip freeze    
+    - pip freeze
   script:
-    - cfn-lint -I infrastructure/cfn.yaml
+    - cfn-lint -I infrastructure/*cfn*.yaml -i W3002 # Ignore warning about cfn package req
 
 cfn-nag:
   image: stelligent/cfn_nag
-  stage: test
+  stage: lint
   script:
-    - cfn_nag_scan --input-path infrastructure/cfn.yaml
+    - cfn_nag_scan --input-path infrastructure/*.yaml
 
 secret_detection:
-  stage: test
+  stage: lint
   variables:
     CI_DEBUG_TRACE: "true"
 
+################################
+# deploy-dev
+################################
+
 push-to-s3-dev:
-  stage: deploy
-  variables:
-    AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
-    AWS_DEFAULT_REGION: us-east-1
+  stage: deploy-dev
   before_script:
     - yum update -y && yum install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
-    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/dev/aws-alphafold.zip
-    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/dev/cfn.yaml
+    - aws s3 cp aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/aws-alphafold.zip
+    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $DEV_BUCKET_PREFIX --region $AWS_DEFAULT_REGION
+    - aws s3 cp infrastructure/alphafold-cfn-packaged.yaml s3://$DEPLOYMENT_BUCKET_NAME/$DEV_BUCKET_PREFIX/alphafold-cfn-packaged.yaml
+  artifacts:
+    paths:
+      - infrastructure/alphafold-cfn-packaged.yaml
+    expire_in: 1 day
   only:
     - dev
 
+################################
+# test
+################################
+
+test_cfn:
+  image: python:3.8
+  stage: test
+  before_script:
+    - python --version # For debugging
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install taskcat
+    - pip freeze
+  script:
+    - taskcat test run
+  only:
+    - dev
+
+################################
+# deploy-main
+################################
+
 push-to-s3-main:
-  stage: deploy
-  variables:
-    AWS_CREDS_TARGET_ROLE: arn:aws:iam::111918798052:role/AWS-Alphafold-GitLab-CI-Role
-    AWS_DEFAULT_REGION: us-east-1
+  stage: deploy-main
   before_script:
     - yum update -y && yum install -y awscli zip
   script:
     - zip -r aws-alphafold.zip . -x .\*/\* -x .gitlab-ci.yml
-    - aws s3 cp aws-alphafold.zip s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/aws-alphafold.zip
-    - aws s3 cp infrastructure/cfn.yaml s3://aws-hcls-ml/blog_post_support_materials/aws-alphafold/main/cfn.yaml    
+    - aws s3 cp aws-alphafold.zip s3://$DEPLOYMENT_BUCKET_NAME/$MAIN_BUCKET_PREFIX/aws-alphafold.zip
+    - aws cloudformation package --template-file infrastructure/alphafold-cfn-root.yaml --output-template infrastructure/alphafold-cfn-packaged.yaml --s3-bucket $DEPLOYMENT_BUCKET_NAME --s3-prefix $MAIN_BUCKET_PREFIX --region $AWS_DEFAULT_REGION
+    - aws s3 cp infrastructure/alphafold-cfn-packaged.yaml s3://$DEPLOYMENT_BUCKET_NAME/$MAIN_BUCKET_PREFIX/alphafold-cfn-packaged.yaml      
   only:
     - main
