@@ -12,10 +12,11 @@ Parameters:
   AlphaFoldVersion:
     Description: AlphaFold release to include as part of the job container
     Type: String
-    Default: v2.2.0
+    Default: v2.2.2
     AllowedValues:
       - v2.2.0
       - v2.1.2
+      - v2.2.2
   LaunchSageMakerNotebook:
     Type: String
     Default: Y
