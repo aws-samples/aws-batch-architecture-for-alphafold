@@ -5,8 +5,8 @@
 ### ---------------------------------------------
 ### Modified by Amazon Web Services (AWS) to update cuda version and add Alphafold
 ### parameter
-ARG CUDA=11.1
-ARG AF_VERSION=v2.2.0
+ARG CUDA=11.1.1
+ARG AF_VERSION=v2.2.2
 ARG UBUNTU_VERSION=20.04
 ARG AWS_DEFAULT_REGION
 ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -23,13 +23,10 @@ ARG AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 # Use bash to support string substitution.
 SHELL ["/bin/bash", "-c"]
 
-# Address https://github.com/deepmind/alphafold/issues/463#issuecomment-1124881779
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
-
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       build-essential \
       cmake \
-      cuda-command-line-tools-${CUDA} \
+      cuda-command-line-tools-$(cut -f1,2 -d- <<< ${CUDA//./-}) \
       git \
       hmmer \
       kalign \
@@ -39,7 +36,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       libsasl2-modules-sql=2.1.27+dfsg-2ubuntu0.1 \ 
       # Address https://ubuntu.com/security/CVE-2022-24407, https://ubuntu.com/security/CVE-2021-3711,
       # and https://ubuntu.com/security/CVE-2022-0778
-      openssl=1.1.1f-1ubuntu2.13 \
+      openssl \
       # Address https://ubuntu.com/security/CVE-2021-33910
       systemd=245.4-4ubuntu3.17 \
       # Address additional MEDIUM vulnerabilities
@@ -87,8 +84,11 @@ RUN aws s3 cp s3://aws-batch-architecture-for-alphafold-public-artifacts/stereo_
 # Install pip packages.
 RUN pip3 install --upgrade pip \
     && pip3 install -r /app/alphafold/requirements.txt \
-    && pip3 install --upgrade jax==0.2.14 jaxlib==0.1.69+cuda${CUDA/./} -f \    
-      https://storage.googleapis.com/jax-releases/jax_releases.html 
+    && pip3 install --upgrade \
+      jax==0.2.14 \
+      jaxlib==0.1.69+cuda$(cut -f1,2 -d. <<< ${CUDA} | sed 's/\.//g') \
+      -f https://storage.googleapis.com/jax-releases/jax_releases.html \
+      -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 ### ---------------------------------------------     
 # Apply OpenMM patch.
