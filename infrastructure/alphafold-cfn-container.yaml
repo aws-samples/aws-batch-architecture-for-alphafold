@@ -12,6 +12,7 @@ Parameters:
     AllowedValues:
       - v2.2.0
       - v2.1.2
+      - v2.2.2
   ApplicationName:
     Description: Name of the application, if applicable
     Type: String
