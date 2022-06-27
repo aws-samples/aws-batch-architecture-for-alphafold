@@ -7,7 +7,7 @@ Both AlphaFold 2 and RoseTTAFold use a multi-track transformer architecture trai
 
 Running both the MSA and structure prediction steps in the same computing environment can be cost inefficient, because the expensive GPU resources required for the prediction sit unused while the MSA step runs. Instead, using a high-performance computing (HPC) service like [AWS Batch](https://aws.amazon.com/batch/) allows us to run each step as a containerized job with the best fit of CPU, memory, and GPU resources.
 
-This repository includes the CloudFormation template, Jupyter Notebook, and supporting code to run the Alphafold v2.0 algorithm on AWS Batch. 
+This repository includes the CloudFormation template, Jupyter Notebook, and supporting code to run the Alphafold v2 algorithm on AWS Batch. 
 
 -----
 ## Architecture Diagram
